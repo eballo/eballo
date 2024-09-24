@@ -1,0 +1,19 @@
+# Brewfile - Work
+
+tap "homebrew/bundle"
+tap "homebrew/cask"
+
+brew "npm"
+brew "nvm"
+brew "yarn"
+
+brew "awscli"
+brew "localstack-cli"
+brew "terraform"             # automate infrastructure [https://www.terraform.io/]
+
+cask "slack"
+cask "jetbrains-toolbox"
+
+# brew libpq                 # postgres tool
+# brew "postgresql"
+# brew "redis"

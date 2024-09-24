@@ -1,0 +1,49 @@
+# Brewfile - Basic
+
+tap "homebrew/services"
+tap "homebrew/bundle"
+tap "homebrew/services"
+
+# Install Homebrew packages
+brew "git"
+brew "zsh"
+brew "gh"
+brew "node"
+brew "pyenv"
+brew "pyenv-virtualenv"
+brew "black"
+brew "wget"
+brew "curl"
+brew "tree"
+brew "tmux"
+brew "openssl"
+brew "zsh-syntax-highlighting"
+brew "mas"
+brew "vim"
+brew "ffmpeg"
+
+# Install Homebrew Cask applications (GUI apps)
+cask "google-chrome"
+cask "firefox"
+cask "opera"
+cask "iterm2"
+cask "spectacle"
+cask "docker"
+cask "spotify"
+cask "vlc"
+cask "visual-studio-code"
+
+# Install Fonts
+cask "font-fira-code"
+cask "font-source-code-pro"
+cask "font-lato"
+cask "font-montserrat"
+cask "font-nunito"
+cask "font-open-sans"
+cask "font-oswald"
+cask "font-poppins"
+cask "font-raleway"
+cask "font-roboto"
+
+# Install Mac App Store apps
+mas "Xcode", id: 497799835

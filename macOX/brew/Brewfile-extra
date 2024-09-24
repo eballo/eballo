@@ -1,0 +1,12 @@
+# Brewfile - Extra
+
+brew "graphviz"
+cask "adobe-digital-editions"
+cask "vnc-viewer"
+cask "little-snitch"
+cask "raspberry-pi-imager"
+cask "discord"
+cask "keka"
+cask "calibre"
+cask "sony-ps-remote-play"
+cask "textual"

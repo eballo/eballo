@@ -1,0 +1,18 @@
+# Brewfile - Security
+
+tap "homebrew/bundle"
+tap "homebrew/services"
+
+# Install Homebrew packages
+# brew "aircrack-ng"           # next-gen auth cracker [https://aircrack-ng.org/]
+# brew "certbot" if OS.linux?  # formerly letsencrypt [https://certbot.eff.org/]
+# brew "ffuf"                  # fast web fuzzer (in Go) [https://github.com/ffuf/ffuf]
+brew "fzf"                   # cli fuzzy finder (in Go) [https://github.com/junegunn/fzf]
+# brew "grype"                 # container vuln scanner [https://github.com/anchore/grype]
+# brew "hydra"                 # net logon cracker [https://github.com/vanhauser-thc/thc-hydra]
+# brew "john"                  # password cracker [https://www.openwall.com/john/]
+brew "nmap"                  # port scanner [https://nmap.org/]
+# brew "rustscan"              # a modern port scanner [https://github.com/RustScan/RustScan]
+# brew "socat"                 # bidirectional byte streams [http://www.dest-unreach.org/socat/]
+# brew "sslscan"               # sslscan test suite [https://github.com/rbsec/sslscan]
+# brew "trivy"                 # kubernetes vuln/misconfiguration scanner [https://github.com/aquasecurity/trivy]
