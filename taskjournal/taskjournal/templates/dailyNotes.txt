@@ -1,0 +1,8 @@
+==== Daily Tasks Performed ===
+
+Created: {{creation_time}}
+
+Sprint XX
+
+Tasks:
+{{tasks}}
