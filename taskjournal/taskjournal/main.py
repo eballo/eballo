@@ -8,7 +8,8 @@ from utils import get_week_folder, create_daily_notes_file, finalize_daily_notes
     create_retro_file, create_week_summary
 
 BASE_DIR = "/Users/eballo/Documents/DailyNotes/"
-template_file_path = "templates/dailyNotes.txt"
+BASE_PROJECT= "/Users/eballo/Documents/work/eballo/eballo/taskjournal/taskjournal/"
+DAILY_NOTES_TEMPLATE = BASE_PROJECT + "templates/dailyNotes.txt"
 
 def main():
     parser = argparse.ArgumentParser(description="Daily Task Tracker Command Line Tool")
@@ -26,7 +27,7 @@ def main():
 
     if args.command == "daily-start":
         if not os.path.exists(daily_notes_file):
-            create_daily_notes_file(daily_notes_file, template_file_path)
+            create_daily_notes_file(daily_notes_file, DAILY_NOTES_TEMPLATE)
             print(f"Daily notes file created: {daily_notes_file}")
         else:
             print(f"Daily notes file already exists: {daily_notes_file}")
