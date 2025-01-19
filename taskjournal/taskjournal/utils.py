@@ -10,6 +10,11 @@ def get_week_folder(base_dir:str, date:datetime)-> str:
     return week_folder
 
 
+def write_file(file_path: str, content: str, mode: str = "w") -> None:
+    """Write content to a file with the given mode."""
+    with open(file_path, mode) as file:
+        file.write(content)
+
 def create_daily_notes_file(file_path: str, template_path: str) -> None:
     """Create a daily file using a template and adding a creation timestamp.
 
@@ -29,12 +34,11 @@ def create_daily_notes_file(file_path: str, template_path: str) -> None:
     daily_notes_content = template_content.replace("{{creation_time}}", creation_time)
 
     # Add default tasks with [ ] placeholders
-    default_tasks = "\n".join(["[ ] Task 1", "[ ] Task 2", "[ ] Task 3"])
+    default_tasks = "\n".join(["[ ] Check emails", "[ ] Attend stand-up", "[ ] Plan tasks"])
     daily_notes_content = daily_notes_content.replace("{{tasks}}", default_tasks)
 
     # Write the daily notes file
-    with open(file_path, "w") as daily_file:
-        daily_file.write(daily_notes_content)
+    write_file(file_path, daily_notes_content)
 
 
 def finalize_daily_notes(file_path:str) -> None:
@@ -44,11 +48,18 @@ def finalize_daily_notes(file_path:str) -> None:
         file.write(f"\nFinalized: {final_time}\n")
 
 
-def create_week_summary(week_folder:str) -> None:
+def create_week_summary(week_folder: str) -> None:
     """Create a week summary file."""
     summary_file = os.path.join(week_folder, "week-summary.txt")
-    with open(summary_file, "w") as file:
-        file.write("==== Weekly Summary ===\n\n")
+    if not os.path.exists(summary_file):
+        write_file(summary_file, "==== Weekly Summary ===\n\n")
+    # Aggregate daily notes into the week summary
+    for file_name in sorted(os.listdir(week_folder)):
+        if file_name.endswith("-DailyNotes.txt"):
+            with open(os.path.join(week_folder, file_name), "r") as daily_file:
+                daily_content = daily_file.read()
+            write_file(summary_file, f"\n{file_name}:\n{daily_content}\n", mode="a")
+
 
 
 def create_retro_file(week_folder):
