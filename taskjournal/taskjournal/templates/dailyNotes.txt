@@ -5,4 +5,7 @@ Created: {{creation_time}}
 Sprint XX
 
 Tasks:
+
 {{tasks}}
+
+Summary:

@@ -7,9 +7,13 @@ from datetime import datetime
 from utils import get_week_folder, create_daily_notes_file, finalize_daily_notes, \
     create_retro_file, create_week_summary
 
-BASE_DIR = "/Users/eballo/Documents/DailyNotes/"
-BASE_PROJECT= "/Users/eballo/Documents/work/eballo/eballo/taskjournal/taskjournal/"
+BASE_DIR = "/Users/eballo/work/DailyNotes/"
+BASE_PROJECT= "/Users/eballo/work/eballo/taskjournal/taskjournal/"
+
+# Template paths
 DAILY_NOTES_TEMPLATE = BASE_PROJECT + "templates/dailyNotes.txt"
+WEEK_SUMMARY_TEMPLATE = BASE_PROJECT + "templates/weekSummary.txt"
+RETRO_TEMPLATE = BASE_PROJECT + "templates/retro.txt"
 
 def main():
     parser = argparse.ArgumentParser(description="Daily Task Tracker Command Line Tool")
@@ -40,11 +44,11 @@ def main():
             print(f"Daily notes file does not exist: {daily_notes_file}")
 
     elif args.command == "retro":
-        retro_file = create_retro_file(week_folder)
+        retro_file = create_retro_file(week_folder, RETRO_TEMPLATE)
         print(f"Retro file ensured: {retro_file}")
 
     elif args.command == "week-summary":
-        create_week_summary(week_folder)
+        create_week_summary(week_folder, WEEK_SUMMARY_TEMPLATE)
         print(f"Week summary file ensured: {os.path.join(week_folder, 'week-summary.txt')}")
 
 if __name__ == "__main__":

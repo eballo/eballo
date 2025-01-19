@@ -1,0 +1,15 @@
+==== Week Summary ===
+
+Total time: {{total_time}}
+
+Tasks completed:
+
+{{done_tasks}}
+
+Tasks not completed:
+
+{{pending_tasks}}
+
+Summary:
+
+{{summary}}
