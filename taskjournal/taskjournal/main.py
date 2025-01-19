@@ -1,21 +1,16 @@
-#!/usr/bin/env python3
+#!/Users/eballo/work/eballo/taskjournal/.venv/bin/python
 
 import os
 import argparse
 from datetime import datetime
 
+from constants import BASE_DIR, DAILY_NOTES_TEMPLATE, WEEK_SUMMARY_TEMPLATE, RETRO_TEMPLATE
 from utils import get_week_folder, create_daily_notes_file, finalize_daily_notes, \
     create_retro_file, create_week_summary
 
-BASE_DIR = "/Users/eballo/work/DailyNotes/"
-BASE_PROJECT= "/Users/eballo/work/eballo/taskjournal/taskjournal/"
-
-# Template paths
-DAILY_NOTES_TEMPLATE = BASE_PROJECT + "templates/dailyNotes.txt"
-WEEK_SUMMARY_TEMPLATE = BASE_PROJECT + "templates/weekSummary.txt"
-RETRO_TEMPLATE = BASE_PROJECT + "templates/retro.txt"
 
 def main():
+
     parser = argparse.ArgumentParser(description="Daily Task Tracker Command Line Tool")
     parser.add_argument("command", choices=["daily-start", "daily-finish", "retro", "week-summary"], help="Command to execute.")
     args = parser.parse_args()
