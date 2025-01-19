@@ -4,7 +4,9 @@ import pytest
 from datetime import datetime
 from unittest.mock import patch, mock_open
 
-from utils import get_week_folder, write_file, create_daily_notes_file, finalize_daily_notes, create_week_summary, \
+from freezegun import freeze_time
+
+from taskjournal.utils import get_week_folder, write_file, create_daily_notes_file, finalize_daily_notes, create_week_summary, \
     create_retro_file
 
 
@@ -35,31 +37,38 @@ def test_write_file(mock_file):
     mock_file.assert_called_once_with(file_path, "w")
     mock_file().write.assert_called_once_with(content)
 
+@freeze_time("2025-01-19 10:00:00")
 @patch("builtins.open", new_callable=mock_open, read_data="Template with {{creation_time}} and {{tasks}}.")
-@patch("utils.datetime")
-def test_create_daily_notes_file(mock_datetime, mock_file):
-    mock_datetime.now.return_value = datetime(2025, 1, 19, 10, 0, 0)
+def test_create_daily_notes_file(mock_file):
     file_path = "daily_notes.txt"
     template_path = "template.txt"
 
+    # Call the function to test
     create_daily_notes_file(file_path, template_path)
 
+    # Verify the template file was read and the daily notes file was written
     mock_file.assert_any_call(template_path, "r")
     mock_file.assert_any_call(file_path, "w")
 
+    # Verify the written content
     written_content = mock_file().write.call_args[0][0]
     assert "2025-01-19 10:00:00" in written_content
     assert "[ ] Check emails" in written_content
+    assert "[ ] Attend stand-up" in written_content
+    assert "[ ] Plan tasks" in written_content
 
+@freeze_time("2025-01-19 18:00:00")
 @patch("builtins.open", new_callable=mock_open)
-@patch("utils.datetime")
-def test_finalize_daily_notes(mock_datetime, mock_file):
-    mock_datetime.now.return_value = datetime(2025, 1, 19, 18, 0, 0)
+def test_finalize_daily_notes(mock_file):
     file_path = "daily_notes.txt"
 
+    # Call the function under test
     finalize_daily_notes(file_path)
 
+    # Assert the file was opened in append mode
     mock_file.assert_called_once_with(file_path, "a")
+
+    # Assert the correct content was written to the file
     mock_file().write.assert_called_once_with("\nFinalized: 2025-01-19 18:00:00\n")
 
 @patch("os.path.exists", return_value=False)
