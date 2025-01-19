@@ -22,7 +22,7 @@ def base_dir(tmp_path):
 def week_folder(base_dir, mock_datetime_now):
     return get_week_folder(base_dir, mock_datetime_now)
 
-@patch("utils.datetime")
+@patch("taskjournal.utils.datetime")
 def test_get_week_folder(mock_datetime, base_dir):
     mock_datetime.now.return_value = datetime(2025, 1, 19)
     date = mock_datetime.now()
