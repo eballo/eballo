@@ -1,7 +1,10 @@
 import os
 from dotenv import load_dotenv
 
-dotenv_path = os.path.join(os.getcwd(), ".env")
+current_file_path = os.path.abspath(__file__)
+current_dir = os.path.dirname(current_file_path)
+dotenv_path = os.path.join(current_dir, ".env")
+
 load_dotenv(dotenv_path)
 
 # Constants loaded from .env

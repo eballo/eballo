@@ -1,6 +1,6 @@
 ==== Daily Tasks Performed ===
 
-Created: {{creation_time}}
+Start time: {{creation_time}}
 
 Sprint XX
 

@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def get_week_folder(base_dir:str, date:datetime)-> str:
@@ -64,11 +64,11 @@ def get_tasks_from_daily_notes(file_path: str) -> tuple:
 
 def get_default_tasks() -> list:
     """Return the default tasks based on the day of the week."""
-    default_tasks = ["[ ] Check emails", "[ ] Attend stand-up", "[ ] Plan tasks"]
+    default_tasks = ["[ ] Check emails"]
     day_of_week = datetime.now().strftime("%A")
 
     if day_of_week == "Wednesday":
-        default_tasks.extend(["[ ] Check refinement tasks", "[ ] Go to refinement"])
+        default_tasks.extend(["[ ] Check refinement tasks"])
     elif day_of_week == "Thursday" and (datetime.now().isocalendar()[1] % 2 == 0):
         default_tasks.append("[ ] Get ready for the retro points")
     elif day_of_week == "Friday":
@@ -92,6 +92,45 @@ def get_total_time_from_daily_notes(daily_file_path: str) -> int:
                     continue
 
     return total_time
+
+def calculate_working_hours(daily_notes_file:str) -> (str, str, str):
+    """
+    Calculate current working hours and estimated finish time based on the 'Created' timestamp
+    in the daily notes file.
+    """
+    try:
+        with open(daily_notes_file, "r") as file:
+            for line in file:
+                if line.startswith("Start time:"):
+                    # Extract the timestamp from the line
+                    created_time_str = line.split("Start time:")[1].strip()
+                    created_time = datetime.strptime(created_time_str, "%Y-%m-%d %H:%M:%S")
+                    break
+            else:
+                print("No 'Created' timestamp found in the file.")
+                return None, None, None
+
+        current_time = datetime.now()
+
+        # Calculate elapsed hours
+        elapsed_time = current_time - created_time
+        elapsed_hours = elapsed_time.total_seconds() / 3600
+
+        finish_time = estimated_finish_time(created_time)
+
+        return created_time_str, elapsed_hours, finish_time
+
+    except Exception as e:
+        print(f"Error calculating working hours: {e}")
+        return None, None
+
+
+def estimated_finish_time(created_time):
+    # Estimate finish time (assuming an 8-hour workday)
+    workday_hours = 9
+    finish_time = created_time + timedelta(hours=workday_hours)
+    return finish_time
+
 
 def create_daily_notes_file(file_path: str, template_path: str) -> None:
     """Create a daily file using a template and adding a creation timestamp.
@@ -118,6 +157,8 @@ def create_daily_notes_file(file_path: str, template_path: str) -> None:
     # Write the daily notes file
     write_file(file_path, daily_notes_content)
 
+    return estimated_finish_time(creation_time)
+
 
 def finalize_daily_notes(file_path: str) -> None:
     """Add a final timestamp to the daily notes file and calculate total time spent."""
@@ -126,9 +167,9 @@ def finalize_daily_notes(file_path: str) -> None:
 
     # Find the creation date line
     for i, line in enumerate(lines):
-        if line.startswith("Created:"):
+        if line.startswith("Start time:"):
             created_line_index = i
-            created_time = datetime.strptime(line.split("Created:")[1].strip(), "%Y-%m-%d %H:%M:%S")
+            created_time = datetime.strptime(line.split("Start time:")[1].strip(), "%Y-%m-%d %H:%M:%S")
             break
     else:
         raise ValueError("Creation date not found in the file.")
