@@ -13,5 +13,6 @@ BASE_PROJECT = os.getenv("BASE_PROJECT", "/Users/eballo/work/eballo/taskjournal/
 
 # Template paths
 DAILY_NOTES_TEMPLATE = os.path.join(BASE_PROJECT, "templates/dailyNotes.txt")
+DAILY_NOTES_END_TEMPLATE = os.path.join(BASE_PROJECT, "templates/dailyNotes-end.txt")
 WEEK_SUMMARY_TEMPLATE = os.path.join(BASE_PROJECT, "templates/weekSummary.txt")
 RETRO_TEMPLATE = os.path.join(BASE_PROJECT, "templates/retro.txt")

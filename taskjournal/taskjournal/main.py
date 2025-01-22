@@ -4,7 +4,7 @@ import os
 import argparse
 from datetime import datetime
 
-from constants import BASE_DIR, DAILY_NOTES_TEMPLATE, WEEK_SUMMARY_TEMPLATE, RETRO_TEMPLATE
+from constants import BASE_DIR, DAILY_NOTES_TEMPLATE, WEEK_SUMMARY_TEMPLATE, RETRO_TEMPLATE, DAILY_NOTES_END_TEMPLATE
 from utils import get_week_folder, create_daily_notes_file, finalize_daily_notes, \
     create_retro_file, create_week_summary, calculate_working_hours
 
@@ -31,6 +31,7 @@ def main():
         print("")
         print("[Templates]")
         print(f"DAILY_NOTES_TEMPLATE: {DAILY_NOTES_TEMPLATE}")
+        print(f"DAILY_NOTES_END_TEMPLATE: {DAILY_NOTES_END_TEMPLATE}")
         print(f"WEEK_SUMMARY_TEMPLATE: {WEEK_SUMMARY_TEMPLATE}")
         print(f"RETRO_TEMPLATE: {RETRO_TEMPLATE}")
         print("----")
@@ -49,7 +50,6 @@ def main():
     elif args.command == "daily-finish":
         if os.path.exists(daily_notes_file):
             finalize_daily_notes(daily_notes_file)
-            print(f"Daily notes finalized with timestamp: {daily_notes_file}")
         else:
             print(f"Daily notes file does not exist: {daily_notes_file}")
 

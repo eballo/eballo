@@ -1,6 +1,8 @@
 import os
 from datetime import datetime, timedelta
 
+from constants import DAILY_NOTES_END_TEMPLATE
+
 
 def get_week_folder(base_dir:str, date:datetime)-> str:
     """Calculate the folder path for the given date."""
@@ -132,6 +134,26 @@ def estimated_finish_time(created_time):
     return finish_time
 
 
+def append_template_to_file(template_content: str, file_path: str) -> None:
+    with open(file_path, 'a') as target_file:
+        target_file.write(template_content)
+
+
+def check_finalized_in_file(file_path: str) -> bool:
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                if 'Finalized:' in line:
+                    return True
+        return False
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found.")
+        return False
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+
+
 def create_daily_notes_file(file_path: str, template_path: str) -> None:
     """Create a daily file using a template and adding a creation timestamp.
 
@@ -163,6 +185,11 @@ def create_daily_notes_file(file_path: str, template_path: str) -> None:
 
 def finalize_daily_notes(file_path: str) -> None:
     """Add a final timestamp to the daily notes file and calculate total time spent."""
+
+    if check_finalized_in_file(file_path):
+        print(f"File '{file_path}' is already finalized.")
+        return
+
     with open(file_path, "r") as file:
         lines = file.readlines()
 
@@ -188,6 +215,10 @@ def finalize_daily_notes(file_path: str) -> None:
     # Write back the updated file
     with open(file_path, "w") as file:
         file.writelines(lines)
+
+    template_content = load_template(DAILY_NOTES_END_TEMPLATE)
+    append_template_to_file(template_content, file_path)
+    print(f"Daily notes finalized with timestamp: {file_path}")
 
 
 def create_week_summary(week_folder: str, template_path: str) -> None:

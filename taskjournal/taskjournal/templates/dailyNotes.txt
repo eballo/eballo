@@ -5,10 +5,5 @@ Start time: {{creation_time}}
 Sprint XX
 
 Tasks:
-
 {{tasks}}
 
-Daily Notes:
-
-
-Summary:
