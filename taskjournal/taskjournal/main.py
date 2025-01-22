@@ -1,4 +1,4 @@
-#!/Users/eballo/Documents/work/eballo/eballo/taskjournal/.venv/bin/python
+#!/Users/eballo/Documents/work/personal/eballo/taskjournal/.venv/bin/python
 
 import os
 import argparse
@@ -28,19 +28,21 @@ def main():
         print("")
         print("-------")
         print(f"BASE_DIR: {BASE_DIR}")
+        print("")
+        print("[Templates]")
         print(f"DAILY_NOTES_TEMPLATE: {DAILY_NOTES_TEMPLATE}")
         print(f"WEEK_SUMMARY_TEMPLATE: {WEEK_SUMMARY_TEMPLATE}")
         print(f"RETRO_TEMPLATE: {RETRO_TEMPLATE}")
         print("----")
         print("")
 
-    # File paths
     daily_notes_file = os.path.join(week_folder, f"{today.strftime('%Y-%m-%d')}-DailyNotes.txt")
 
     if args.command == "daily-start":
         if not os.path.exists(daily_notes_file):
-            create_daily_notes_file(daily_notes_file, DAILY_NOTES_TEMPLATE)
+            estimated_time = create_daily_notes_file(daily_notes_file, DAILY_NOTES_TEMPLATE)
             print(f"Daily notes file created: {daily_notes_file}")
+            print(f"Estimated finish time: {estimated_time.strftime('%Y-%m-%d %H:%M:%S')}")
         else:
             print(f"Daily notes file already exists: {daily_notes_file}")
 
@@ -64,7 +66,7 @@ def main():
             started_time, elapsed_hours, finish_time = calculate_working_hours(daily_notes_file)
             if elapsed_hours is not None:
                 print(f"Started time: {started_time}")
-                print(f"Elapsed working hours: {elapsed_hours:.2f}")
+                print(f"Elapsed working time: {elapsed_hours:.2f}")
                 print(f"Estimated finish time: {finish_time.strftime('%Y-%m-%d %H:%M:%S')}")
             else:
                 print("Could not calculate working hours.")

@@ -9,7 +9,7 @@ pyenv local taskjournal
 poetry install
 ```
 Create a symbolic link
-sudo ln -s /Users/eballo/work/eballo/taskjournal/taskjournal/main.py /usr/local/bin/wk
+sudo ln -s /Users/eballo/Documents/work/personal/eballo/taskjournal/taskjournal/main.py /usr/local/bin/wk
 
 ## Configure .env
 ```bash

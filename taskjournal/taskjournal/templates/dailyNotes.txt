@@ -8,4 +8,7 @@ Tasks:
 
 {{tasks}}
 
+Daily Notes:
+
+
 Summary:

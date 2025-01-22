@@ -145,8 +145,9 @@ def create_daily_notes_file(file_path: str, template_path: str) -> None:
 
     # Load template and add timestamp
     template_content = load_template(template_path)
-    creation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    daily_notes_content = template_content.replace("{{creation_time}}", creation_time)
+    create_datetime = datetime.now()
+    creation_time_str = create_datetime.strftime("%Y-%m-%d %H:%M:%S")
+    daily_notes_content = template_content.replace("{{creation_time}}", creation_time_str)
 
     # Get tasks: unfinished tasks + default tasks
     previous_tasks = get_previous_tasks(folder_path, os.path.basename(file_path))
@@ -157,7 +158,7 @@ def create_daily_notes_file(file_path: str, template_path: str) -> None:
     # Write the daily notes file
     write_file(file_path, daily_notes_content)
 
-    return estimated_finish_time(creation_time)
+    return estimated_finish_time(create_datetime)
 
 
 def finalize_daily_notes(file_path: str) -> None:
