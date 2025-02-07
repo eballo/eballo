@@ -2,6 +2,7 @@
 
 import os
 import argparse
+from rich.logging import RichHandler
 import logging
 from datetime import datetime
 
@@ -11,7 +12,9 @@ from utils import get_week_folder, create_daily_notes_file, finalize_daily_notes
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s - %(name)s - %(message)s",
+    datefmt="[%X]",
+    handlers=[RichHandler()]
 )
 logger = logging.getLogger("TaskTracker")
 
