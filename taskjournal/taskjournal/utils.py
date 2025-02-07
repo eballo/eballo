@@ -1,8 +1,10 @@
 import os
+import logging
 from datetime import datetime, timedelta
 
 from constants import DAILY_NOTES_END_TEMPLATE
 
+logger = logging.getLogger("TaskTracker")
 
 def get_week_folder(base_dir:str, date:datetime)-> str:
     """Calculate the folder path for the given date."""
@@ -39,7 +41,7 @@ def get_previous_tasks(folder_path: str, current_file: str) -> list:
         with open(latest_file, "r") as file:
             return [line.strip() for line in file if line.strip().startswith("[ ]")]
     except Exception as e:
-        print(f"Warning: Could not read previous file {latest_file}: {e}")
+        logger.warning(f"Warning: Could not read previous file {latest_file}: {e}")
         return []
 
 def normalize_task(task: str) -> str:
@@ -61,7 +63,7 @@ def get_tasks_from_daily_notes(file_path: str) -> tuple:
                 elif line.startswith("[ ]"):
                     pending_tasks.append(normalize_task(line))
     except Exception as e:
-        print(f"Warning: Could not read daily file {file_path}: {e}")
+        logger.error(f"Warning: Could not read daily file {file_path}: {e}")
     return done_tasks, pending_tasks
 
 def get_default_tasks() -> list:
@@ -109,7 +111,7 @@ def calculate_working_hours(daily_notes_file:str) -> (str, str, str):
                     created_time = datetime.strptime(created_time_str, "%Y-%m-%d %H:%M:%S")
                     break
             else:
-                print("No 'Created' timestamp found in the file.")
+                logger.warning("No 'Created' timestamp found in the file.")
                 return None, None, None
 
         current_time = datetime.now()
@@ -123,7 +125,7 @@ def calculate_working_hours(daily_notes_file:str) -> (str, str, str):
         return created_time_str, elapsed_hours, finish_time
 
     except Exception as e:
-        print(f"Error calculating working hours: {e}")
+        logger.error(f"Error calculating working hours: {e}")
         return None, None
 
 
@@ -147,10 +149,10 @@ def check_finalized_in_file(file_path: str) -> bool:
                     return True
         return False
     except FileNotFoundError:
-        print(f"Error: The file '{file_path}' was not found.")
+        logger.error(f"Error: The file '{file_path}' was not found.")
         return False
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
         return False
 
 
@@ -187,7 +189,7 @@ def finalize_daily_notes(file_path: str) -> None:
     """Add a final timestamp to the daily notes file and calculate total time spent."""
 
     if check_finalized_in_file(file_path):
-        print(f"File '{file_path}' is already finalized.")
+        logger.info(f"File '{file_path}' is already finalized.")
         return
 
     with open(file_path, "r") as file:
@@ -218,7 +220,7 @@ def finalize_daily_notes(file_path: str) -> None:
 
     template_content = load_template(DAILY_NOTES_END_TEMPLATE)
     append_template_to_file(template_content, file_path)
-    print(f"Daily notes finalized with timestamp: {file_path}")
+    logger.info(f"Daily notes finalized with timestamp: {file_path}")
 
 
 def create_week_summary(week_folder: str, template_path: str) -> None:
