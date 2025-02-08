@@ -2,21 +2,15 @@
 
 import os
 import argparse
-from rich.logging import RichHandler
 import logging
 from datetime import datetime
 
-from constants import BASE_DIR, DAILY_NOTES_TEMPLATE, WEEK_SUMMARY_TEMPLATE, RETRO_TEMPLATE, DAILY_NOTES_END_TEMPLATE
-from utils import get_week_folder, create_daily_notes_file, finalize_daily_notes, \
-    create_retro_file, create_week_summary, calculate_working_hours
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(message)s",
-    datefmt="[%X]",
-    handlers=[RichHandler()]
-)
-logger = logging.getLogger("TaskTracker")
+from config import BASE_DIR, DAILY_NOTES_TEMPLATE, WEEK_SUMMARY_TEMPLATE, RETRO_TEMPLATE, DAILY_NOTES_END_TEMPLATE
+from service.file import get_week_folder
+from service.time import calculate_working_hours
+from utils import create_daily_notes_file, finalize_daily_notes, \
+    create_retro_file, create_week_summary
+from service.logger import logger
 
 def main():
 
@@ -37,14 +31,12 @@ def main():
     if args.debug:
         logger.debug("Debug mode enabled.")
         logger.debug(f"Command: {args.command}")
-        logger.debug("\n-------")
         logger.debug(f"BASE_DIR: {BASE_DIR}")
-        logger.debug("\n[Templates]")
+        logger.debug("[Templates]")
         logger.debug(f"DAILY_NOTES_TEMPLATE: {DAILY_NOTES_TEMPLATE}")
         logger.debug(f"DAILY_NOTES_END_TEMPLATE: {DAILY_NOTES_END_TEMPLATE}")
         logger.debug(f"WEEK_SUMMARY_TEMPLATE: {WEEK_SUMMARY_TEMPLATE}")
         logger.debug(f"RETRO_TEMPLATE: {RETRO_TEMPLATE}")
-        logger.debug("----\n")
 
     daily_notes_file = os.path.join(week_folder, f"{today.strftime('%Y-%m-%d')}-DailyNotes.txt")
 
