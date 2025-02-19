@@ -25,6 +25,8 @@ def normalize_task(task: str) -> str:
 def get_default_tasks() -> list:
     """Return the default tasks based on the day of the week."""
     default_tasks = ["[ ] Check emails"]
+    default_tasks.extend(["[ ] Check Calendar"])
+    default_tasks.extend(["[ ] PR reviews"])
     day_of_week = datetime.now().strftime("%A")
 
     if day_of_week == "Wednesday":
