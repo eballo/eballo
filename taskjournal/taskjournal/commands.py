@@ -2,7 +2,8 @@ import os
 from datetime import datetime
 
 from config import DAILY_NOTES_END_TEMPLATE
-from service.file import write_file, load_template, check_finalized_in_file, append_template_to_file
+from service.file import load_template, check_finalized_in_file, _append_template_to_file, write_to_file, \
+    _write_lines_to_file
 from service.logger import logger
 from service.task_manager import get_default_tasks, get_tasks_from_daily_notes, get_previous_tasks
 from service.time import get_total_time_from_daily_notes, estimated_finish_time
@@ -32,7 +33,7 @@ def create_daily_notes_file(file_path: str, template_path: str) -> None:
     daily_notes_content = daily_notes_content.replace("{{tasks}}", "\n".join(unique_tasks))
 
     # Write the daily notes file
-    write_file(file_path, daily_notes_content)
+    write_to_file(file_path, daily_notes_content)
 
     return estimated_finish_time(create_datetime)
 
@@ -67,11 +68,10 @@ def finalize_daily_notes(file_path: str) -> None:
     lines.insert(created_line_index + 2, total_time_line)
 
     # Write back the updated file
-    with open(file_path, "w") as file:
-        file.writelines(lines)
+    _write_lines_to_file(file_path, lines)
 
     template_content = load_template(DAILY_NOTES_END_TEMPLATE)
-    append_template_to_file(template_content, file_path)
+    _append_template_to_file(template_content, file_path)
     logger.info(f"Daily notes finalized with timestamp: {file_path}")
 
 
@@ -105,7 +105,7 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
     week_summary_content = week_summary_content.replace("{{pending_tasks}}", "\n".join(f"[ ] {task}" for task in pending_tasks))
     week_summary_content = week_summary_content.replace("{{summary}}", "\nWrite your weekly summary here...\n")
 
-    write_file(summary_file, week_summary_content)
+    write_to_file(summary_file, week_summary_content)
 
 
 def create_retro_file(week_folder: str, template_path: str) -> str:
@@ -114,7 +114,6 @@ def create_retro_file(week_folder: str, template_path: str) -> str:
 
     if not os.path.exists(retro_file):
         template_content = load_template(template_path)
-        with open(retro_file, "w") as file:
-            file.write(template_content)
+        write_to_file(retro_file, template_content)
 
     return retro_file

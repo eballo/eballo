@@ -4,9 +4,13 @@ from datetime import datetime
 from service.logger import logger
 
 
-def write_file(file_path: str, content: str, mode: str = "w") -> None:
+def write_to_file(file_path: str, content: str, mode: str = "w") -> None:
     with open(file_path, mode) as file:
         file.write(content)
+
+def _write_lines_to_file(file_path: str, lines: list[str]) -> None:
+    with open(file_path, "w") as file:
+        file.writelines(lines)
 
 def load_template(template_path: str) -> str:
     if not os.path.exists(template_path):
@@ -14,7 +18,7 @@ def load_template(template_path: str) -> str:
     with open(template_path, "r") as template_file:
         return template_file.read()
 
-def append_template_to_file(template_content: str, file_path: str) -> None:
+def _append_template_to_file(template_content: str, file_path: str) -> None:
     with open(file_path, 'a') as target_file:
         target_file.write(template_content)
 

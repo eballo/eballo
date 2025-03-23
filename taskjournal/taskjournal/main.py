@@ -8,7 +8,7 @@ from datetime import datetime
 from config import BASE_DIR, DAILY_NOTES_TEMPLATE, WEEK_SUMMARY_TEMPLATE, RETRO_TEMPLATE, DAILY_NOTES_END_TEMPLATE
 from service.file import get_week_folder
 from service.time import calculate_working_hours
-from utils import create_daily_notes_file, finalize_daily_notes, \
+from commands import create_daily_notes_file, finalize_daily_notes, \
     create_retro_file, create_week_summary
 from service.logger import logger
 
@@ -16,7 +16,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Daily Task Tracker Command Line Tool")
     parser.add_argument("command", choices=["daily-start", "daily-finish", "retro", "week-summary", "time"], help="Command to execute.")
-    parser.add_argument("--debug", action="store_true", help="Enable debug mode for additional logging.")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode for additional logging.", default=False)
     args = parser.parse_args()
 
     if args.debug:
