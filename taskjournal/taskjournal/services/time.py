@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from service.logger import logger
+from services.logger import logger
 
 
 def calculate_working_hours(daily_notes_file: str):
@@ -37,7 +37,7 @@ def get_total_time_from_daily_notes(daily_file_path: str) -> int:
 
     return total_time
 
-def estimated_finish_time(created_time):
+def estimated_finish_time(created_time: datetime) -> datetime:
     # Estimate finish time (assuming an 8-hour workday)
     workday_hours = 9
     finish_time = created_time + timedelta(hours=workday_hours)

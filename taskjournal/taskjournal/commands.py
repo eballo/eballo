@@ -2,23 +2,21 @@ import os
 from datetime import datetime
 
 from config import DAILY_NOTES_END_TEMPLATE
-from service.file import load_template, check_finalized_in_file, _append_template_to_file, write_to_file, \
-    _write_lines_to_file
-from service.logger import logger
-from service.task_manager import get_default_tasks, get_tasks_from_daily_notes, get_previous_tasks
-from service.time import get_total_time_from_daily_notes, estimated_finish_time
+from services.file import load_template, check_finalized_in_file, write_to_file, \
+    write_lines_to_file
+from services.logger import logger
+from services.task_manager import get_default_tasks, get_tasks_from_daily_notes, get_previous_tasks
+from services.time import get_total_time_from_daily_notes, estimated_finish_time
 
 
-def create_daily_notes_file(file_path: str, template_path: str) -> None:
-    """Create a daily file using a template and adding a creation timestamp.
+def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
+    """
+    Create a daily file using a template and adding a creation timestamp.
 
     Args:
         file_path (str): The path for the new daily notes file.
         template_path (str): The path to the template file.
     """
-
-    # Extract folder path
-    folder_path = os.path.dirname(file_path)
 
     # Load template and add timestamp
     template_content = load_template(template_path)
@@ -27,6 +25,7 @@ def create_daily_notes_file(file_path: str, template_path: str) -> None:
     daily_notes_content = template_content.replace("{{creation_time}}", creation_time_str)
 
     # Get tasks: unfinished tasks + default tasks
+    folder_path = os.path.dirname(file_path)
     previous_tasks = get_previous_tasks(folder_path, os.path.basename(file_path))
     default_tasks = get_default_tasks()
     unique_tasks = list(dict.fromkeys(default_tasks + previous_tasks))
@@ -68,10 +67,10 @@ def finalize_daily_notes(file_path: str) -> None:
     lines.insert(created_line_index + 2, total_time_line)
 
     # Write back the updated file
-    _write_lines_to_file(file_path, lines)
+    write_lines_to_file(file_path, lines)
 
     template_content = load_template(DAILY_NOTES_END_TEMPLATE)
-    _append_template_to_file(template_content, file_path)
+    write_to_file(template_content, file_path, "a")
     logger.info(f"Daily notes finalized with timestamp: {file_path}")
 
 

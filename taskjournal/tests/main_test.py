@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 import argparse
 
-from service.file import get_week_folder
+from services.file import get_week_folder
 from taskjournal.main import main
 
 

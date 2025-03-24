@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pytest import fixture
 
-from service.file import get_week_folder
+from services.file import get_week_folder
 
 
 @fixture

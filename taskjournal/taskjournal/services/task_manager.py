@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from service.logger import logger
+from services.logger import logger
 
 
 def get_tasks_from_daily_notes(file_path: str):

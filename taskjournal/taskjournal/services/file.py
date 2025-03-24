@@ -1,15 +1,15 @@
 import os
 from datetime import datetime
 
-from service.logger import logger
+from services.logger import logger
 
 
 def write_to_file(file_path: str, content: str, mode: str = "w") -> None:
     with open(file_path, mode) as file:
         file.write(content)
 
-def _write_lines_to_file(file_path: str, lines: list[str]) -> None:
-    with open(file_path, "w") as file:
+def write_lines_to_file(file_path: str, lines: list[str], mode: str ="w") -> None:
+    with open(file_path, mode) as file:
         file.writelines(lines)
 
 def load_template(template_path: str) -> str:
@@ -17,11 +17,6 @@ def load_template(template_path: str) -> str:
         raise FileNotFoundError(f"Template file not found at {template_path}")
     with open(template_path, "r") as template_file:
         return template_file.read()
-
-def _append_template_to_file(template_content: str, file_path: str) -> None:
-    with open(file_path, 'a') as target_file:
-        target_file.write(template_content)
-
 
 def check_finalized_in_file(file_path: str) -> bool:
     try:

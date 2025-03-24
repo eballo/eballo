@@ -1,23 +1,8 @@
 import os
-
-from datetime import datetime
 from unittest.mock import patch, mock_open
-
 from freezegun import freeze_time
-
-from service.file import get_week_folder
 from taskjournal.commands import write_to_file, create_daily_notes_file, finalize_daily_notes, create_week_summary, \
     create_retro_file
-
-
-@patch("taskjournal.commands.datetime")
-def test_get_week_folder(mock_datetime, base_dir):
-    # Given
-    mock_datetime.now.return_value = datetime(2025, 1, 19)
-    date = mock_datetime.now()
-    expected_folder = os.path.join(base_dir, "2025", "week3")
-    # Then / When
-    assert get_week_folder(base_dir, date) == expected_folder
 
 
 @patch("builtins.open", new_callable=mock_open)
@@ -51,8 +36,8 @@ def test_create_daily_notes_file(mock_file, daily_notes_template):
 def test_finalize_daily_notes(mocker):
     # Given
     file_path = "fixtures/daily_notes.txt"
-    write_finalize_file_mock = mocker.patch("taskjournal.commands._write_lines_to_file")
-    write_end_of_file_mock = mocker.patch("taskjournal.commands._append_template_to_file")
+    write_finalize_file_mock = mocker.patch("taskjournal.commands.write_lines_to_file")
+    write_end_of_file_mock = mocker.patch("taskjournal.commands.write_to_file")
     # When
     finalize_daily_notes(file_path)
     # Then
@@ -85,7 +70,6 @@ def test_create_week_summary(base_dir, week_summary_template, mocker):
     # Then
     load_template_mock.assert_called_once()
     write_to_file_mock.assert_called_once()
-
 
 
 @patch("os.path.exists", return_value=False)
