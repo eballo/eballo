@@ -14,4 +14,3 @@ Tasks:
 [x] Write down the summary of the week
 
 Summary:
-

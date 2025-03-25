@@ -6,4 +6,3 @@ Sprint XX
 
 Tasks:
 {{tasks}}
-

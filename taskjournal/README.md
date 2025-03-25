@@ -3,7 +3,7 @@
 TaskJournal CLI is a lightweight command-line tool that helps you manage your daily work notes, track working hours, and generate weekly retrospectives and summaries. It's built to support a structured journaling workflow to improve personal productivity and accountability.
 
 ## Install
-we are using virtualenv inside the project. When we install the dependencies it will install the dependencies 
+we are using virtualenv inside the project. When we install the dependencies it will install the dependencies
 inside the virtualenv.
 ```bash
 poetry install

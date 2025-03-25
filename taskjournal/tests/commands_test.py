@@ -63,8 +63,6 @@ def test_finalize_daily_notes(fixture_path, mocker):
         "Tasks:\n",
         "[x] Check emails\n",
         "[x] [BE-111] migration database\n",
-        "\n",
-        "\n",
     ]
     write_finalize_file_mock.assert_called_once_with(file_path, lines)
     write_end_of_file_mock.assert_called_once()

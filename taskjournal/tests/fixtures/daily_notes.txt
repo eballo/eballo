@@ -7,5 +7,3 @@ Sprint 27
 Tasks:
 [x] Check emails
 [x] [BE-111] migration database
-
-
