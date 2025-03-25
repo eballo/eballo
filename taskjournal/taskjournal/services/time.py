@@ -8,7 +8,9 @@ def calculate_working_hours(daily_notes_file: str):
         with open(daily_notes_file, "r") as file:
             for line in file:
                 if line.startswith("Start time:"):
-                    created_time = datetime.strptime(line.split("Start time:")[1].strip(), "%Y-%m-%d %H:%M:%S")
+                    created_time = datetime.strptime(
+                        line.split("Start time:")[1].strip(), "%Y-%m-%d %H:%M:%S"
+                    )
                     break
             else:
                 logger.warning("No 'Created' timestamp found in the file.")
@@ -20,22 +22,26 @@ def calculate_working_hours(daily_notes_file: str):
         logger.error(f"Error calculating working hours: {e}")
         return None, None, None
 
+
 def get_total_time_from_daily_notes(daily_file_path: str) -> int:
     """Extract total time spent from a daily notes file."""
     total_time = 0
 
-    with open(daily_file_path, 'r') as file:
+    with open(daily_file_path, "r") as file:
         for line in file:
             if line.startswith("Total Time Spent:"):
                 try:
                     # Assuming the time is logged as "Time Spent: X hours Y minutes"
-                    time_str = line.replace("Total Time Spent:", "").strip().split(".")[0]  # Ignore microseconds
+                    time_str = (
+                        line.replace("Total Time Spent:", "").strip().split(".")[0]
+                    )  # Ignore microseconds
                     h, m, s = map(int, time_str.split(":"))
                     total_time += h * 3600 + m * 60 + s
                 except (ValueError, IndexError):
                     continue
 
     return total_time
+
 
 def estimated_finish_time(created_time: datetime) -> datetime:
     # Estimate finish time (assuming an 8-hour workday)

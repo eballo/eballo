@@ -16,11 +16,13 @@ def get_tasks_from_daily_notes(file_path: str):
         logger.error(f"Error reading file {file_path}: {e}")
     return done_tasks, pending_tasks
 
+
 def normalize_task(task: str) -> str:
     """Normalize a task by removing its checkbox prefix."""
     if task.startswith("[x]") or task.startswith("[ ]"):
         return task[4:].strip()
     return task.strip()
+
 
 def get_default_tasks() -> list:
     """Return the default tasks based on the day of the week."""
@@ -38,13 +40,13 @@ def get_default_tasks() -> list:
 
     return default_tasks
 
+
 def get_previous_tasks(folder_path: str, current_file: str) -> list:
     """Retrieve unfinished tasks from the most recent daily notes file."""
     if not os.path.exists(folder_path):
         return []
     daily_files = [
-        f for f in os.listdir(folder_path)
-        if f.endswith(".txt") and f != current_file
+        f for f in os.listdir(folder_path) if f.endswith(".txt") and f != current_file
     ]
     if not daily_files:
         return []

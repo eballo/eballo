@@ -12,4 +12,3 @@ def test_get_week_folder(mock_datetime, base_dir):
     expected_folder = os.path.join(base_dir, "2025", "week3")
     # Then / When
     assert get_week_folder(base_dir, date) == expected_folder
-

@@ -2,10 +2,18 @@ import os
 from datetime import datetime
 
 from config import DAILY_NOTES_END_TEMPLATE
-from services.file import load_template, check_finalized_in_file, write_to_file, \
-    write_lines_to_file
+from services.file import (
+    load_template,
+    check_finalized_in_file,
+    write_to_file,
+    write_lines_to_file,
+)
 from services.logger import logger
-from services.task_manager import get_default_tasks, get_tasks_from_daily_notes, get_previous_tasks
+from services.task_manager import (
+    get_default_tasks,
+    get_tasks_from_daily_notes,
+    get_previous_tasks,
+)
 from services.time import get_total_time_from_daily_notes, estimated_finish_time
 
 
@@ -22,14 +30,18 @@ def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
     template_content = load_template(template_path)
     create_datetime = datetime.now()
     creation_time_str = create_datetime.strftime("%Y-%m-%d %H:%M:%S")
-    daily_notes_content = template_content.replace("{{creation_time}}", creation_time_str)
+    daily_notes_content = template_content.replace(
+        "{{creation_time}}", creation_time_str
+    )
 
     # Get tasks: unfinished tasks + default tasks
     folder_path = os.path.dirname(file_path)
     previous_tasks = get_previous_tasks(folder_path, os.path.basename(file_path))
     default_tasks = get_default_tasks()
     unique_tasks = list(dict.fromkeys(default_tasks + previous_tasks))
-    daily_notes_content = daily_notes_content.replace("{{tasks}}", "\n".join(unique_tasks))
+    daily_notes_content = daily_notes_content.replace(
+        "{{tasks}}", "\n".join(unique_tasks)
+    )
 
     # Write the daily notes file
     write_to_file(file_path, daily_notes_content)
@@ -51,7 +63,9 @@ def finalize_daily_notes(file_path: str) -> None:
     for i, line in enumerate(lines):
         if line.startswith("Start time:"):
             created_line_index = i
-            created_time = datetime.strptime(line.split("Start time:")[1].strip(), "%Y-%m-%d %H:%M:%S")
+            created_time = datetime.strptime(
+                line.split("Start time:")[1].strip(), "%Y-%m-%d %H:%M:%S"
+            )
             break
     else:
         raise ValueError("Creation date not found in the file.")
@@ -86,7 +100,9 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
         if file_name.endswith("-DailyNotes.txt"):
             daily_file_path = os.path.join(week_folder, file_name)
             daily_done, daily_pending = get_tasks_from_daily_notes(daily_file_path)
-            daily_time = get_total_time_from_daily_notes(daily_file_path)  # Extract total time from daily notes
+            daily_time = get_total_time_from_daily_notes(
+                daily_file_path
+            )  # Extract total time from daily notes
 
             done_tasks.extend(daily_done)
             pending_tasks.extend(daily_pending)
@@ -99,10 +115,18 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
     total_hours, remainder = divmod(total_time_seconds, 3600)
     total_minutes, total_seconds = divmod(remainder, 60)
 
-    week_summary_content = week_summary_content.replace("{{total_time}}", f" {total_hours} hours and {total_minutes} minutes")
-    week_summary_content = week_summary_content.replace("{{done_tasks}}", "\n".join(f"[x] {task}" for task in done_tasks))
-    week_summary_content = week_summary_content.replace("{{pending_tasks}}", "\n".join(f"[ ] {task}" for task in pending_tasks))
-    week_summary_content = week_summary_content.replace("{{summary}}", "\nWrite your weekly summary here...\n")
+    week_summary_content = week_summary_content.replace(
+        "{{total_time}}", f" {total_hours} hours and {total_minutes} minutes"
+    )
+    week_summary_content = week_summary_content.replace(
+        "{{done_tasks}}", "\n".join(f"[x] {task}" for task in done_tasks)
+    )
+    week_summary_content = week_summary_content.replace(
+        "{{pending_tasks}}", "\n".join(f"[ ] {task}" for task in pending_tasks)
+    )
+    week_summary_content = week_summary_content.replace(
+        "{{summary}}", "\nWrite your weekly summary here...\n"
+    )
 
     write_to_file(summary_file, week_summary_content)
 

@@ -9,7 +9,9 @@ load_dotenv(dotenv_path)
 
 # Constants loaded from .env
 BASE_DIR = os.getenv("BASE_DIR", "/Users/eballo/work/DailyNotes/")
-BASE_PROJECT = os.getenv("BASE_PROJECT", "/Users/eballo/work/eballo/taskjournal/taskjournal/")
+BASE_PROJECT = os.getenv(
+    "BASE_PROJECT", "/Users/eballo/work/eballo/taskjournal/taskjournal/"
+)
 
 # Template paths
 DAILY_NOTES_TEMPLATE = os.path.join(BASE_PROJECT, "templates/dailyNotes.txt")

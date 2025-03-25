@@ -8,9 +8,11 @@ def write_to_file(file_path: str, content: str, mode: str = "w") -> None:
     with open(file_path, mode) as file:
         file.write(content)
 
-def write_lines_to_file(file_path: str, lines: list[str], mode: str ="w") -> None:
+
+def write_lines_to_file(file_path: str, lines: list[str], mode: str = "w") -> None:
     with open(file_path, mode) as file:
         file.writelines(lines)
+
 
 def load_template(template_path: str) -> str:
     if not os.path.exists(template_path):
@@ -18,11 +20,12 @@ def load_template(template_path: str) -> str:
     with open(template_path, "r") as template_file:
         return template_file.read()
 
+
 def check_finalized_in_file(file_path: str) -> bool:
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             for line in file:
-                if 'Finalized:' in line:
+                if "Finalized:" in line:
                     return True
         return False
     except FileNotFoundError:
@@ -32,7 +35,8 @@ def check_finalized_in_file(file_path: str) -> bool:
         logger.error(f"An error occurred: {e}")
         return False
 
-def get_week_folder(base_dir:str, date:datetime)-> str:
+
+def get_week_folder(base_dir: str, date: datetime) -> str:
     """Calculate the folder path for the given date."""
     year = date.year
     week_num = date.isocalendar()[1]

@@ -17,13 +17,21 @@ sudo ln -s /Users/eballo/Documents/work/personal/eballo/taskjournal/taskjournal/
 cp sample.env .env
 ```
 
-### Run Tests
+## Development
+
+### Run the tests
 ```bash
 poetry run pytest
 ```
+
 ### Run the code coverage
 ```bash
 poetry run pytest --cov=taskjournal --cov-config=.coveragerc tests/
+```
+### Pre-commit
+```bash
+poetry run pre-commit install
+poetry run pre-commit run --all-files
 ```
 
 # How to use it
