@@ -1,6 +1,4 @@
 from freezegun import freeze_time
-from unittest.mock import patch
-from datetime import datetime
 import os
 import argparse
 
@@ -8,31 +6,28 @@ from services.file import get_week_folder
 from taskjournal.main import main
 
 
-@patch("os.makedirs")
-def test_main_daily_start(
-    mock_makedirs, mocker, base_dir, daily_notes_template, week_folder, today
-):
+def test_main_daily_start(base_dir, daily_notes_template, week_folder, today, mocker):
     # Given
+    mock_makedirs = mocker.patch("os.makedirs")
     mocker.patch("os.path.exists", return_value=False)
     mock_create_file = mocker.patch("taskjournal.main.create_daily_notes_file")
     mocker.patch(
         "argparse.ArgumentParser.parse_args",
         return_value=argparse.Namespace(command="daily-start", debug=False),
     )
-    mocker.patch("taskjournal.main.datetime", wraps=datetime)
 
-    with patch("taskjournal.main.datetime") as mock_datetime:
-        mock_datetime.now.return_value = today
+    mock_datetime = mocker.patch("taskjournal.main.datetime")
+    mock_datetime.now.return_value = today
 
-        # When
-        main()
+    # When
+    main()
 
-        # Then
-        mock_makedirs.assert_called_once_with(week_folder, exist_ok=True)
-        mock_create_file.assert_called_once_with(
-            os.path.join(week_folder, f"{today.strftime('%Y-%m-%d')}-DailyNotes.txt"),
-            daily_notes_template,
-        )
+    # Then
+    mock_makedirs.assert_called_once_with(week_folder, exist_ok=True)
+    mock_create_file.assert_called_once_with(
+        os.path.join(week_folder, f"{today.strftime('%Y-%m-%d')}-DailyNotes.txt"),
+        daily_notes_template,
+    )
 
 
 def test_main_daily_finish(mocker, week_folder, today):
@@ -47,14 +42,14 @@ def test_main_daily_finish(mocker, week_folder, today):
         return_value=argparse.Namespace(command="daily-finish", debug=False),
     )
 
-    with patch("taskjournal.main.datetime") as mock_datetime:
-        mock_datetime.now.return_value = today
+    mock_datetime = mocker.patch("taskjournal.main.datetime")
+    mock_datetime.now.return_value = today
 
-        # When
-        main()
+    # When
+    main()
 
-        # Then
-        mock_finalize_notes.assert_called_once_with(daily_notes_file)
+    # Then
+    mock_finalize_notes.assert_called_once_with(daily_notes_file)
 
 
 @freeze_time("2025-01-19 10:00:00")

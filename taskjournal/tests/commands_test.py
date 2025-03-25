@@ -1,8 +1,7 @@
 import os
-from unittest.mock import patch, mock_open
+from pytest import raises
 from freezegun import freeze_time
 from taskjournal.commands import (
-    write_to_file,
     create_daily_notes_file,
     finalize_daily_notes,
     create_week_summary,
@@ -10,25 +9,12 @@ from taskjournal.commands import (
 )
 
 
-@patch("builtins.open", new_callable=mock_open)
-def test_write_to_file(mock_file):
-    # Given
-    file_path = "test.txt"
-    content = "Hello, world!"
-    # When
-    write_to_file(file_path, content)
-    # Then
-    mock_file.assert_called_once_with(file_path, "w")
-    mock_file().write.assert_called_once_with(content)
-
-
 @freeze_time("2025-01-19 10:00:00")
-@patch(
-    "builtins.open",
-    new_callable=mock_open,
-    read_data="Template with {{creation_time}} and {{tasks}}.",
-)
-def test_create_daily_notes_file(mock_file, daily_notes_template):
+def test_create_daily_notes_file(daily_notes_template, mocker):
+    mock_file = mocker.mock_open(
+        read_data="Template with {{creation_time}} and {{tasks}}."
+    )
+    mocker.patch("builtins.open", mock_file)
     # Given
     file_path = "daily_notes.txt"
     # When
@@ -68,6 +54,16 @@ def test_finalize_daily_notes(fixture_path, mocker):
     write_end_of_file_mock.assert_called_once()
 
 
+def test_finalize_daily_notes_missing_start_time(mocker):
+    mock_file = mocker.mock_open(
+        read_data="No start time here",
+    )
+    mocker.patch("builtins.open", mock_file)
+    mocker.patch("taskjournal.commands.check_finalized_in_file", return_value=False)
+    with raises(ValueError, match="Creation date not found in the file."):
+        finalize_daily_notes("some_path.txt")
+
+
 def test_create_week_summary(base_dir, fixture_path, week_summary_template, mocker):
     # Given
     load_template_mock = mocker.patch("taskjournal.commands.load_template")
@@ -81,9 +77,9 @@ def test_create_week_summary(base_dir, fixture_path, week_summary_template, mock
     write_to_file_mock.assert_called_once()
 
 
-@patch("os.path.exists", return_value=False)
 def test_create_retro_file(week_folder, retro_template, mocker):
     # Given
+    mock_exists = mocker.patch("os.path.exists", return_value=False)
     load_template_mock = mocker.patch("taskjournal.commands.load_template")
     write_content_mock = mocker.patch("taskjournal.commands.write_to_file")
     # When
