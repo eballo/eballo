@@ -64,6 +64,15 @@ def test_finalize_daily_notes_missing_start_time(mocker):
         finalize_daily_notes("some_path.txt")
 
 
+def test_finalize_daily_notes_already_finalized(mocker):
+    mocker.patch("taskjournal.commands.check_finalized_in_file", return_value=True)
+    mock_logger = mocker.patch("taskjournal.commands.logger")
+    finalize_daily_notes("already_finalized.txt")
+    mock_logger.info.assert_called_once_with(
+        "File 'already_finalized.txt' is already finalized."
+    )
+
+
 def test_create_week_summary(base_dir, fixture_path, week_summary_template, mocker):
     # Given
     load_template_mock = mocker.patch("taskjournal.commands.load_template")
@@ -89,3 +98,11 @@ def test_create_retro_file(week_folder, retro_template, mocker):
     assert retro_file == expected_path
     load_template_mock.assert_called_once_with(retro_template)
     write_content_mock.assert_called_once()
+
+
+def test_create_retro_file_already_exists(week_folder, retro_template, mocker):
+    mocker.patch("os.path.exists", return_value=True)
+    write_mock = mocker.patch("taskjournal.commands.write_to_file")
+    retro_file = create_retro_file(week_folder, retro_template)
+    assert retro_file == os.path.join(week_folder, "retro.txt")
+    write_mock.assert_not_called()
