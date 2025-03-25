@@ -14,6 +14,9 @@ rich = "^13.9.4"
 pytest = "^8.3.4"
 freezegun = "^1.5.1"
 pytest-mock = "^3.14.0"
+pytest-cov = "^6.0.0"
+black = "^25.1.0"
+pre-commit = "^4.2.0"
 
 [tool.poetry.scripts]
 taskjournal = "taskjournal.main:main"
@@ -21,3 +24,16 @@ taskjournal = "taskjournal.main:main"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.mypy]
+python_version = 3.11
+ignore_missing_imports = true
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=taskjournal --cov-report=term-missing"

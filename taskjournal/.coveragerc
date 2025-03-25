@@ -1,0 +1,10 @@
+[run]
+branch = True
+omit =
+    */__init__.py
+    */tests/*
+    */migrations/*
+
+[report]
+show_missing = True
+skip_covered = True
