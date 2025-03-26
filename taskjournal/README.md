@@ -37,17 +37,19 @@ poetry run pre-commit run --all-files
 # How to use it
 ```bash
 > wk --help
-usage: wk [-h] [--debug] {daily-start,daily-finish,retro,week-summary,time}
 
-Daily Task Tracker Command Line Tool
+ Usage: wk [OPTIONS] COMMAND [ARGS]...
 
-positional arguments:
-  {daily-start,daily-finish,retro,week-summary,time}
-                        Command to execute.
-
-options:
-  -h, --help            show this help message and exit
-  --debug               Enable debug mode for additional logging.
+╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --help          Show this message and exit.                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ daily-start                                                                                                                                      │
+│ daily-finish                                                                                                                                     │
+│ retro                                                                                                                                            │
+│ week-summary                                                                                                                                     │
+│ time                                                                                                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 ## Daily Start
