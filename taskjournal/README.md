@@ -71,3 +71,16 @@ poetry run pre-commit run --all-files
 ```bash
 > wk week-summary
 ```
+
+## Versions
+
+### 0.1.0
+- Initial release
+- Add daily start
+- Add daily finish
+- Add retro
+- Add week summary
+- Add time
+- tests + code coverage
+- pre-commit
+- shell completion
