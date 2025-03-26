@@ -23,6 +23,7 @@ from commands import (
 from services.logger import logger
 
 app = typer.Typer(add_completion=False)
+__version__ = "0.1.0"
 
 
 def setup(debug: bool):
@@ -43,12 +44,12 @@ def setup(debug: bool):
         week_folder, f"{today.strftime('%Y-%m-%d')}-DailyNotes.txt"
     )
 
-    return today, week_folder, daily_notes_file
+    return week_folder, daily_notes_file
 
 
 @app.command()
 def daily_start(debug: bool = typer.Option(False, help="Enable debug mode")):
-    today, week_folder, daily_notes_file = setup(debug)
+    _, daily_notes_file = setup(debug)
     if not os.path.exists(daily_notes_file):
         estimated_time = create_daily_notes_file(daily_notes_file, DAILY_NOTES_TEMPLATE)
         logger.info(f"Daily notes file created: {daily_notes_file}")
@@ -61,7 +62,7 @@ def daily_start(debug: bool = typer.Option(False, help="Enable debug mode")):
 
 @app.command()
 def daily_finish(debug: bool = typer.Option(False, help="Enable debug mode")):
-    today, week_folder, daily_notes_file = setup(debug)
+    _, daily_notes_file = setup(debug)
     if os.path.exists(daily_notes_file):
         finalize_daily_notes(daily_notes_file)
         logger.info(f"Daily notes finalized: {daily_notes_file}")
@@ -71,14 +72,14 @@ def daily_finish(debug: bool = typer.Option(False, help="Enable debug mode")):
 
 @app.command()
 def retro(debug: bool = typer.Option(False, help="Enable debug mode")):
-    _, week_folder, _ = setup(debug)
+    week_folder, _ = setup(debug)
     retro_file = create_retro_file(week_folder, RETRO_TEMPLATE)
     logger.info(f"Retro file ensured: {retro_file}")
 
 
 @app.command()
 def week_summary(debug: bool = typer.Option(False, help="Enable debug mode")):
-    _, week_folder, _ = setup(debug)
+    week_folder, _ = setup(debug)
     create_week_summary(week_folder, WEEK_SUMMARY_TEMPLATE)
     logger.info(
         f"Week summary file ensured: {os.path.join(week_folder, 'week-summary.txt')}"
@@ -87,7 +88,7 @@ def week_summary(debug: bool = typer.Option(False, help="Enable debug mode")):
 
 @app.command()
 def time(debug: bool = typer.Option(False, help="Enable debug mode")):
-    _, week_folder, daily_notes_file = setup(debug)
+    _, daily_notes_file = setup(debug)
     if os.path.exists(daily_notes_file):
         started_time, elapsed_hours, finish_time = calculate_working_hours(
             daily_notes_file
@@ -102,6 +103,11 @@ def time(debug: bool = typer.Option(False, help="Enable debug mode")):
             logger.error("Could not calculate working hours.")
     else:
         logger.warning(f"Daily notes file does not exist: {daily_notes_file}")
+
+
+@app.command()
+def version():
+    logger.info(f"Task Journal Version: {__version__}")
 
 
 if __name__ == "__main__":
