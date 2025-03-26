@@ -22,7 +22,7 @@ from commands import (
 )
 from services.logger import logger
 
-app = typer.Typer(add_completion=False)
+app = typer.Typer()
 __version__ = "0.1.0"
 
 
