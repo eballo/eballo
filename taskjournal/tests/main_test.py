@@ -1,3 +1,7 @@
+import subprocess
+import sys
+from pathlib import Path
+
 from typer.testing import CliRunner
 from freezegun import freeze_time
 import os
@@ -148,3 +152,19 @@ def test_invalid_command():
 
     assert result.exit_code != 0
     assert "No such command" in result.stdout
+
+
+def test_main_entrypoint_as_script():
+    project_root = Path(__file__).resolve().parents[1]
+    main_py = project_root / "taskjournal" / "main.py"
+
+    result = subprocess.run(
+        [sys.executable, str(main_py), "--help"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Usage" in result.stdout
+    assert "daily-start" in result.stdout
