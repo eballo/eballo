@@ -3,6 +3,7 @@
 import logging
 import os
 from datetime import datetime
+from typing import Optional
 
 import typer
 
@@ -62,10 +63,23 @@ def daily_start(debug: bool = typer.Option(False, help="Enable debug mode")):
 
 
 @app.command()
-def daily_finish(debug: bool = typer.Option(False, help="Enable debug mode")):
+def daily_finish(
+    debug: bool = typer.Option(False, help="Enable debug mode"),
+    date: Optional[str] = typer.Option(
+        None, help="Override the date (format: YYYY-MM-DD)"
+    ),
+):
     _, daily_notes_file = setup(debug)
+    custom_date = None
+    if date:
+        try:
+            custom_date = datetime.strptime(date, "%Y-%m-%d %H:%M")
+        except ValueError:
+            typer.echo("❌ Invalid date format. Use YYYY-MM-DD.")
+            raise typer.Exit(code=1)
+
     if os.path.exists(daily_notes_file):
-        finalize_daily_notes(daily_notes_file)
+        finalize_daily_notes(daily_notes_file, custom_date)
         logger.info(f"Daily notes finalized: {daily_notes_file}")
     else:
         logger.warning(f"Daily notes file does not exist: {daily_notes_file}")

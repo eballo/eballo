@@ -51,7 +51,7 @@ def test_daily_finish(mocker, daily_notes_path):
     result = runner.invoke(app, ["daily-finish"])
 
     assert result.exit_code == 0
-    mock_finalize.assert_called_once_with(daily_notes_path)
+    mock_finalize.assert_called_once_with(daily_notes_path, None)
 
 
 @freeze_time("2025-01-19 10:00:00")

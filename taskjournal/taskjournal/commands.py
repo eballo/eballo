@@ -55,29 +55,46 @@ def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
     return estimated_finish_time(create_datetime)
 
 
-def finalize_daily_notes(file_path: str) -> None:
+def finalize_daily_notes(file_path: str, custom_date: datetime | None) -> None:
     """Add a final timestamp to the daily notes file and calculate total time spent."""
 
-    if check_finalized_in_file(file_path):
+    if check_finalized_in_file(file_path) and not custom_date:
         logger.info(f"File '{file_path}' is already finalized.")
         return
 
-    lines = get_lines(file_path)
-    created_line_index, created_time = get_start_time(lines)
+    content = get_lines(file_path)
+    created_line_index, created_time = get_start_time(content)
+
+    if not custom_date:
+        final_time = datetime.now()
+    else:
+        logger.info(f"Custom date provided: {custom_date}")
+        final_time = custom_date
 
     # Calculate finalized time and total time spent
-    final_time = datetime.now()
     total_time_spent = final_time - created_time
-    finalized_line = f"Finalized: {final_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+    finalized_line = f"Finalized: {final_time.strftime('%Y-%m-%d %H:%M')}\n"
     total_time_line = f"Total Time Spent: {total_time_spent}\n"
 
+    # Remove old Finalized and Total Time Spent lines if they exist
+    content = [
+        line
+        for line in content
+        if not line.startswith("Finalized:")
+        and not line.startswith("Total Time Spent:")
+    ]
+
     # Insert finalized time and total time spent below the creation date
-    lines.insert(created_line_index + 1, finalized_line)
-    lines.insert(created_line_index + 2, total_time_line)
-    write_lines_to_file(file_path, lines)
+    content.insert(created_line_index + 1, finalized_line)
+    content.insert(created_line_index + 2, total_time_line)
+    write_lines_to_file(file_path, content)
 
     template_content = load_template(DAILY_NOTES_END_TEMPLATE)
-    write_to_file(file_path, template_content, "a")
+    normalized_template_content = template_content.replace("\n", "")
+    normalized_content = "".join(content).replace("\n", " ")
+
+    if normalized_template_content not in normalized_content:
+        write_to_file(file_path, template_content, "a")
 
     logger.info(f"Daily notes finalized with timestamp: {file_path}")
 
