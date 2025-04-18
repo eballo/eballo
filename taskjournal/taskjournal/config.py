@@ -8,7 +8,7 @@ dotenv_path = os.path.join(current_dir, ".env")
 load_dotenv(dotenv_path)
 
 # Constants loaded from .env
-BASE_DIR = os.getenv("BASE_DIR", "/Users/eballo/work/DailyNotes/")
+BASE_DIR = os.getenv("BASE_DIR", "/Users/eballo/Documents/DailyNotes/")
 BASE_PROJECT = os.getenv(
     "BASE_PROJECT",
     "/Users/eballo/Documents/work/personal/eballo/taskjournal/taskjournal/",
