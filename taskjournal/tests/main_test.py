@@ -1,11 +1,11 @@
+import os
 import subprocess
 import sys
 from pathlib import Path
 
-from typer.testing import CliRunner
-from freezegun import freeze_time
-import os
 import pytest
+from freezegun import freeze_time
+from typer.testing import CliRunner
 
 from taskjournal.main import app
 
@@ -69,8 +69,8 @@ def test_daily_finish_file_not_exist(mocker, daily_notes_path):
 
 def test_time_valid(mocker, daily_notes_path, today):
     mocker.patch("os.path.exists", return_value=True)
-    mock_logger = mocker.patch("taskjournal.main.logger")
-    mock_calculate = mocker.patch("taskjournal.main.calculate_working_hours")
+    mock_logger = mocker.patch("taskjournal.commands.logger")
+    mock_calculate = mocker.patch("taskjournal.commands.calculate_working_hours")
     mock_calculate.return_value = ("09:00", 5.5, today.replace(hour=14, minute=30))
 
     result = runner.invoke(app, ["time"])
@@ -82,8 +82,8 @@ def test_time_valid(mocker, daily_notes_path, today):
 
 def test_time_invalid(mocker, daily_notes_path):
     mocker.patch("os.path.exists", return_value=True)
-    mock_logger = mocker.patch("taskjournal.main.logger")
-    mock_calculate = mocker.patch("taskjournal.main.calculate_working_hours")
+    mock_logger = mocker.patch("taskjournal.commands.logger")
+    mock_calculate = mocker.patch("taskjournal.commands.calculate_working_hours")
     mock_calculate.return_value = ("09:00", None, None)
 
     result = runner.invoke(app, ["time"])

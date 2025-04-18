@@ -4,6 +4,12 @@ from datetime import datetime
 from taskjournal.services.logger import logger
 
 
+def get_lines(file_path: str) -> list[str]:
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+    return lines
+
+
 def write_to_file(file_path: str, content: str, mode: str = "w") -> None:
     with open(file_path, mode) as file:
         file.write(content)

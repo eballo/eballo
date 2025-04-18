@@ -48,3 +48,17 @@ def estimated_finish_time(created_time: datetime) -> datetime:
     workday_hours = 9
     finish_time = created_time + timedelta(hours=workday_hours)
     return finish_time
+
+
+def get_start_time(lines: list[str]) -> tuple[int, datetime]:
+    # Find the creation date line
+    for i, line in enumerate(lines):
+        if line.startswith("Start time:"):
+            created_line_index = i
+            created_time = datetime.strptime(
+                line.split("Start time:")[1].strip(), "%Y-%m-%d %H:%M:%S"
+            )
+            break
+    else:
+        raise ValueError("Creation date not found in the file.")
+    return created_line_index, created_time

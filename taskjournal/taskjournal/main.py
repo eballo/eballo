@@ -1,10 +1,18 @@
 #!/Users/eballo/Documents/work/personal/eballo/taskjournal/.venv/bin/python
 
-import os
 import logging
+import os
 from datetime import datetime
 
 import typer
+
+from taskjournal.commands import (
+    create_daily_notes_file,
+    finalize_daily_notes,
+    create_retro_file,
+    create_week_summary,
+    calculate_time,
+)
 from taskjournal.config import (
     BASE_DIR,
     DAILY_NOTES_TEMPLATE,
@@ -13,17 +21,10 @@ from taskjournal.config import (
     DAILY_NOTES_END_TEMPLATE,
 )
 from taskjournal.services.file import get_week_folder
-from taskjournal.services.time import calculate_working_hours
-from taskjournal.commands import (
-    create_daily_notes_file,
-    finalize_daily_notes,
-    create_retro_file,
-    create_week_summary,
-)
 from taskjournal.services.logger import logger
 
 app = typer.Typer()
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 
 def setup(debug: bool):
@@ -90,17 +91,7 @@ def week_summary(debug: bool = typer.Option(False, help="Enable debug mode")):
 def time(debug: bool = typer.Option(False, help="Enable debug mode")):
     _, daily_notes_file = setup(debug)
     if os.path.exists(daily_notes_file):
-        started_time, elapsed_hours, finish_time = calculate_working_hours(
-            daily_notes_file
-        )
-        if elapsed_hours is not None:
-            logger.info(f"Started time: {started_time}")
-            logger.info(f"Elapsed working time: {elapsed_hours:.2f}")
-            logger.info(
-                f"Estimated finish time: {finish_time.strftime('%Y-%m-%d %H:%M:%S')}"
-            )
-        else:
-            logger.error("Could not calculate working hours.")
+        calculate_time(daily_notes_file)
     else:
         logger.warning(f"Daily notes file does not exist: {daily_notes_file}")
 

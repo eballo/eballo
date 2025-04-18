@@ -7,6 +7,7 @@ from taskjournal.services.file import (
     check_finalized_in_file,
     write_to_file,
     write_lines_to_file,
+    get_lines,
 )
 from taskjournal.services.logger import logger
 from taskjournal.services.task_manager import (
@@ -17,6 +18,8 @@ from taskjournal.services.task_manager import (
 from taskjournal.services.time import (
     get_total_time_from_daily_notes,
     estimated_finish_time,
+    get_start_time,
+    calculate_working_hours,
 )
 
 
@@ -59,19 +62,8 @@ def finalize_daily_notes(file_path: str) -> None:
         logger.info(f"File '{file_path}' is already finalized.")
         return
 
-    with open(file_path, "r") as file:
-        lines = file.readlines()
-
-    # Find the creation date line
-    for i, line in enumerate(lines):
-        if line.startswith("Start time:"):
-            created_line_index = i
-            created_time = datetime.strptime(
-                line.split("Start time:")[1].strip(), "%Y-%m-%d %H:%M:%S"
-            )
-            break
-    else:
-        raise ValueError("Creation date not found in the file.")
+    lines = get_lines(file_path)
+    created_line_index, created_time = get_start_time(lines)
 
     # Calculate finalized time and total time spent
     final_time = datetime.now()
@@ -82,12 +74,11 @@ def finalize_daily_notes(file_path: str) -> None:
     # Insert finalized time and total time spent below the creation date
     lines.insert(created_line_index + 1, finalized_line)
     lines.insert(created_line_index + 2, total_time_line)
-
-    # Write back the updated file
     write_lines_to_file(file_path, lines)
 
     template_content = load_template(DAILY_NOTES_END_TEMPLATE)
-    write_to_file(template_content, file_path, "a")
+    write_to_file(file_path, template_content, "a")
+
     logger.info(f"Daily notes finalized with timestamp: {file_path}")
 
 
@@ -143,3 +134,15 @@ def create_retro_file(week_folder: str, template_path: str) -> str:
         write_to_file(retro_file, template_content)
 
     return retro_file
+
+
+def calculate_time(daily_notes_file: str) -> None:
+    started_time, elapsed_hours, finish_time = calculate_working_hours(daily_notes_file)
+    if elapsed_hours is not None:
+        logger.info(f"Started time: {started_time}")
+        logger.info(f"Elapsed working time: {elapsed_hours:.2f}")
+        logger.info(
+            f"Estimated finish time: {finish_time.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+    else:
+        logger.error("Could not calculate working hours.")
