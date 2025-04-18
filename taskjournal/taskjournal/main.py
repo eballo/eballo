@@ -25,7 +25,7 @@ from taskjournal.services.file import get_week_folder
 from taskjournal.services.logger import logger
 
 app = typer.Typer()
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 def setup(debug: bool):

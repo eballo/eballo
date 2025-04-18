@@ -83,6 +83,9 @@ poetry run pre-commit run --all-files
 
 ## Versions
 
+### 0.3.0
+- add daily-finish custom date update
+
 ### 0.2.0
 - install package properly
 - added proper packages
