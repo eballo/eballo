@@ -1,20 +1,23 @@
 import os
 from datetime import datetime
 
-from config import DAILY_NOTES_END_TEMPLATE
-from services.file import (
+from taskjournal.config import DAILY_NOTES_END_TEMPLATE
+from taskjournal.services.file import (
     load_template,
     check_finalized_in_file,
     write_to_file,
     write_lines_to_file,
 )
-from services.logger import logger
-from services.task_manager import (
+from taskjournal.services.logger import logger
+from taskjournal.services.task_manager import (
     get_default_tasks,
     get_tasks_from_daily_notes,
     get_previous_tasks,
 )
-from services.time import get_total_time_from_daily_notes, estimated_finish_time
+from taskjournal.services.time import (
+    get_total_time_from_daily_notes,
+    estimated_finish_time,
+)
 
 
 def create_daily_notes_file(file_path: str, template_path: str) -> datetime:

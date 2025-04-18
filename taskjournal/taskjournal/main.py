@@ -5,22 +5,22 @@ import logging
 from datetime import datetime
 
 import typer
-from config import (
+from taskjournal.config import (
     BASE_DIR,
     DAILY_NOTES_TEMPLATE,
     WEEK_SUMMARY_TEMPLATE,
     RETRO_TEMPLATE,
     DAILY_NOTES_END_TEMPLATE,
 )
-from services.file import get_week_folder
-from services.time import calculate_working_hours
-from commands import (
+from taskjournal.services.file import get_week_folder
+from taskjournal.services.time import calculate_working_hours
+from taskjournal.commands import (
     create_daily_notes_file,
     finalize_daily_notes,
     create_retro_file,
     create_week_summary,
 )
-from services.logger import logger
+from taskjournal.services.logger import logger
 
 app = typer.Typer()
 __version__ = "0.1.0"

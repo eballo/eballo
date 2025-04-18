@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "taskjournal"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Python project for tracking daily work tasks."
 authors = ["Enric Ballo <enric.ballo@gmail.com>"]
 readme = "README.md"
@@ -21,7 +21,7 @@ black = "^25.1.0"
 pre-commit = "^4.2.0"
 
 [tool.poetry.scripts]
-taskjournal = "taskjournal.main:app"
+wk = "taskjournal.main:app"
 
 [build-system]
 requires = ["poetry-core"]

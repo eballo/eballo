@@ -3,21 +3,30 @@
 TaskJournal CLI is a lightweight command-line tool that helps you manage your daily work notes, track working hours, and generate weekly retrospectives and summaries. It's built to support a structured journaling workflow to improve personal productivity and accountability.
 
 ## Install
-we are using virtualenv inside the project. When we install the dependencies it will install the dependencies
-inside the virtualenv.
+
+```bash
+poetry install
+source .venv/bin/activate
+poetry build
+pip install .
+
+wk --help
+```
+
+After install it you can do wk --shell-completion to get the shell completion script.
+
+## Local Development
+
 ```bash
 poetry install
 source .venv/bin/activate
 ```
-Create a symbolic link
-sudo ln -s /Users/eballo/Documents/work/personal/eballo/taskjournal/taskjournal/main.py /usr/local/bin/wk
 
 ### Configure .env
 ```bash
 cp sample.env .env
 ```
 
-## Development
 
 ### Run the tests
 ```bash
@@ -73,6 +82,10 @@ poetry run pre-commit run --all-files
 ```
 
 ## Versions
+
+### 0.2.0
+- install package properly
+- added proper packages
 
 ### 0.1.0
 - Initial release

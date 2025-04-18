@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 
-from services.logger import logger
+from taskjournal.services.logger import logger
 
 
 def write_to_file(file_path: str, content: str, mode: str = "w") -> None:

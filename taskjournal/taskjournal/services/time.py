@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from services.logger import logger
+from taskjournal.services.logger import logger
 
 
 def calculate_working_hours(daily_notes_file: str):
