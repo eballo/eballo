@@ -1,5 +1,3 @@
-#!/Users/eballo/Documents/work/personal/eballo/taskjournal/.venv/bin/python
-
 import logging
 import os
 from datetime import datetime
@@ -20,8 +18,12 @@ from taskjournal.config import (
     WEEK_SUMMARY_TEMPLATE,
     RETRO_TEMPLATE,
     DAILY_NOTES_END_TEMPLATE,
+    JIRA_ORGANIZATION,
+    JIRA_API_TOKEN,
+    JIRA_EMAIL,
 )
 from taskjournal.services.file import get_week_folder
+from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
 
 app = typer.Typer()
@@ -38,6 +40,10 @@ def setup(debug: bool):
         logger.debug(f"DAILY_NOTES_END_TEMPLATE: {DAILY_NOTES_END_TEMPLATE}")
         logger.debug(f"WEEK_SUMMARY_TEMPLATE: {WEEK_SUMMARY_TEMPLATE}")
         logger.debug(f"RETRO_TEMPLATE: {RETRO_TEMPLATE}")
+        logger.debug("[JIRA]")
+        logger.debug(f"JIRA_ORGANIZATION: {JIRA_ORGANIZATION}")
+        logger.debug(f"JIRA_API_TOKEN: {JIRA_API_TOKEN}")
+        logger.debug(f"JIRA_EMAIL: {JIRA_EMAIL}")
 
     today = datetime.now()
     week_folder = get_week_folder(BASE_DIR, today)
@@ -113,6 +119,18 @@ def time(debug: bool = typer.Option(False, help="Enable debug mode")):
 @app.command()
 def version():
     logger.info(f"Task Journal Version: {__version__}")
+
+
+@app.command()
+def jira():
+    logger.info("JIRA integration")
+    service = JiraService()
+    issues = service.get_current_sprint_issues(77)
+    logger.info("\n📝 Current Sprint Tasks:\n")
+    for issue in issues:
+        logger.info(
+            f"- [{issue['key']}] {issue['summary']} ({issue['timespent_hours']}h, Status: {issue['status']})"
+        )
 
 
 if __name__ == "__main__":
