@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
+
 from freezegun import freeze_time
-from services.time import (
+
+from taskjournal.services.time import (
     calculate_working_hours,
     get_total_time_from_daily_notes,
     estimated_finish_time,
@@ -24,7 +26,7 @@ def test_calculate_working_hours_valid(mocker):
 def test_calculate_working_hours_no_start_line(mocker):
     mock_open = mocker.mock_open(read_data="Task: something\nAnother line\n")
     mocker.patch("builtins.open", mock_open)
-    mock_logger = mocker.patch("services.time.logger")
+    mock_logger = mocker.patch("taskjournal.services.time.logger")
 
     created, elapsed, finish = calculate_working_hours("notes.txt")
 
@@ -37,7 +39,7 @@ def test_calculate_working_hours_no_start_line(mocker):
 def test_calculate_working_hours_malformed_start(mocker):
     mock_open = mocker.mock_open(read_data="Start time: not-a-date\n")
     mocker.patch("builtins.open", mock_open)
-    mock_logger = mocker.patch("services.time.logger")
+    mock_logger = mocker.patch("taskjournal.services.time.logger")
 
     created, elapsed, finish = calculate_working_hours("notes.txt")
 
@@ -49,7 +51,7 @@ def test_calculate_working_hours_malformed_start(mocker):
 
 def test_calculate_working_hours_file_error(mocker):
     mocker.patch("builtins.open", side_effect=OSError("Read fail"))
-    mock_logger = mocker.patch("services.time.logger")
+    mock_logger = mocker.patch("taskjournal.services.time.logger")
 
     created, elapsed, finish = calculate_working_hours("notes.txt")
 

@@ -23,6 +23,8 @@ source .venv/bin/activate
 ```
 
 ### Configure .env
+Copy the sample environment file to `.env` and update the values as needed.
+Needs to be placed in ~/config/taskjournal/.env
 ```bash
 cp sample.env .env
 ```

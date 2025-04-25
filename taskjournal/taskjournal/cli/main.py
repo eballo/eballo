@@ -5,7 +5,7 @@ from typing import Optional
 
 import typer
 
-from taskjournal.commands import (
+from taskjournal.commands.commands import (
     create_daily_notes_file,
     finalize_daily_notes,
     create_retro_file,

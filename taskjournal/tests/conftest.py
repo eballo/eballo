@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pytest import fixture
 
-from services.file import get_week_folder
+from taskjournal.services.file import get_week_folder
 
 
 @fixture

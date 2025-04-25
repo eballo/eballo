@@ -1,9 +1,6 @@
-import os
 import pytest
-from datetime import datetime
-from unittest import mock
 
-from services.task_manager import (
+from taskjournal.services.task_manager import (
     get_tasks_from_daily_notes,
     normalize_task,
     get_default_tasks,
@@ -25,7 +22,7 @@ def test_get_tasks_from_daily_notes(mocker):
 
 def test_get_tasks_from_daily_notes_error(mocker):
     mocker.patch("builtins.open", side_effect=OSError("boom"))
-    mock_logger = mocker.patch("services.task_manager.logger")
+    mock_logger = mocker.patch("taskjournal.services.task_manager.logger")
 
     done, pending = get_tasks_from_daily_notes("badfile.txt")
 
@@ -58,7 +55,7 @@ def test_normalize_task(task, expected):
     ],
 )
 def test_get_default_tasks_varies_by_day(mocker, weekday, isoweek, expected_task):
-    mock_datetime = mocker.patch("services.task_manager.datetime")
+    mock_datetime = mocker.patch("taskjournal.services.task_manager.datetime")
     mock_datetime.now.return_value.strftime.return_value = weekday
     mock_datetime.now.return_value.isocalendar.return_value = (2025, isoweek, 1)
 
@@ -115,7 +112,7 @@ def test_get_previous_tasks_file_read_error(mocker):
         "os.listdir", return_value=["2025-01-18-DailyNotes.txt", "current.txt"]
     )
     mocker.patch("builtins.open", side_effect=OSError("read fail"))
-    mock_logger = mocker.patch("services.task_manager.logger")
+    mock_logger = mocker.patch("taskjournal.services.task_manager.logger")
 
     result = get_previous_tasks("folder", "current.txt")
 
