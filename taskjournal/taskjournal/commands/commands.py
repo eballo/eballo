@@ -2,6 +2,8 @@ import os
 from datetime import datetime
 
 from taskjournal.config import DAILY_NOTES_END_TEMPLATE
+from taskjournal.models.task import Status
+from taskjournal.repositories.file_writer import FileWriter
 from taskjournal.services.file import (
     load_template,
     check_finalized_in_file,
@@ -13,7 +15,7 @@ from taskjournal.services.logger import logger
 from taskjournal.services.task_manager import (
     get_default_tasks,
     get_tasks_from_daily_notes,
-    get_previous_tasks,
+    get_previous_pending_tasks,
 )
 from taskjournal.services.time import (
     get_total_time_from_daily_notes,
@@ -34,6 +36,7 @@ def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
 
     # Load template and add timestamp
     template_content = load_template(template_path)
+
     create_datetime = datetime.now()
     creation_time_str = create_datetime.strftime("%Y-%m-%d %H:%M:%S")
     daily_notes_content = template_content.replace(
@@ -41,16 +44,14 @@ def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
     )
 
     # Get tasks: unfinished tasks + default tasks
-    folder_path = os.path.dirname(file_path)
-    previous_tasks = get_previous_tasks(folder_path, os.path.basename(file_path))
     default_tasks = get_default_tasks()
-    unique_tasks = list(dict.fromkeys(default_tasks + previous_tasks))
-    daily_notes_content = daily_notes_content.replace(
-        "{{tasks}}", "\n".join(unique_tasks)
+    folder_path = os.path.dirname(file_path)
+    previous_pending_tasks = get_previous_pending_tasks(
+        folder_path, os.path.basename(file_path)
     )
 
-    # Write the daily notes file
-    write_to_file(file_path, daily_notes_content)
+    tasks = default_tasks + previous_pending_tasks
+    FileWriter.save_tasks(file_path, daily_notes_content, tasks)
 
     return estimated_finish_time(create_datetime)
 
@@ -110,7 +111,11 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
     for file_name in sorted(os.listdir(week_folder)):
         if file_name.endswith("-DailyNotes.txt"):
             daily_file_path = os.path.join(week_folder, file_name)
-            daily_done, daily_pending = get_tasks_from_daily_notes(daily_file_path)
+            tasks = get_tasks_from_daily_notes(daily_file_path)
+            daily_done = [task for task in tasks if task.status == Status.DONE]
+            daily_pending = [
+                task for task in tasks if task.status == Status.NOT_FINISHED
+            ]
             daily_time = get_total_time_from_daily_notes(
                 daily_file_path
             )  # Extract total time from daily notes

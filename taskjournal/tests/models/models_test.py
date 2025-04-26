@@ -5,14 +5,15 @@ from pydantic import ValidationError
 
 from taskjournal.models.task import (
     Task,
+    Status,
 )
 
 
 def test_task_creation_minimal():
-    task = Task(id="1", description="Write tests", status="pending")
+    task = Task(id="1", description="Write tests", status=Status.NOT_FINISHED)
     assert task.id == "1"
     assert task.description == "Write tests"
-    assert task.status == "pending"
+    assert task.status == Status.NOT_FINISHED
     assert task.start_time is None
     assert task.end_time is None
 
@@ -23,7 +24,7 @@ def test_task_creation_with_times():
     task = Task(
         id="2",
         description="Code review",
-        status="in_progress",
+        status=Status.NOT_FINISHED,
         start_time=now,
         end_time=later,
     )
@@ -37,17 +38,14 @@ def test_task_invalid_datetime():
         Task(
             id="3",
             description="Invalid datetime",
-            status="failed",
+            status=Status.NOT_FINISHED,
             start_time="not-a-datetime",
         )
 
 
 def test_task_missing_required_fields():
     with pytest.raises(ValidationError):
-        Task(description="Missing ID", status="todo")
+        Task(description="Missing ID", status=Status.NOT_FINISHED)
 
     with pytest.raises(ValidationError):
-        Task(id="4", status="todo")
-
-    with pytest.raises(ValidationError):
-        Task(id="5", description="No status")
+        Task(id="4", status=Status.DONE)
