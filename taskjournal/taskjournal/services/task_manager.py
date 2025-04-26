@@ -67,3 +67,13 @@ def get_previous_pending_tasks(folder_path: str, current_file: str) -> list[Task
 def get_pending_tasks(lines: list[str]) -> list[Task]:
     tasks = ParseFile.get_tasks(lines)
     return [task for task in tasks if task.status == Status.NOT_FINISHED]
+
+
+def unique_tasks(tasks: list[Task]) -> list[Task]:
+    seen = set()
+    unique_tasks = []
+    for task in tasks:
+        if task.description not in seen:
+            seen.add(task.description)
+            unique_tasks.append(task)
+    return unique_tasks

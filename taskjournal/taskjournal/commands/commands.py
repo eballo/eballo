@@ -10,11 +10,13 @@ from taskjournal.services.file import (
     write_lines_to_file,
     get_lines,
 )
+from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
 from taskjournal.services.task_manager import (
     get_default_tasks,
     get_tasks_from_daily_notes,
     get_previous_pending_tasks,
+    unique_tasks,
 )
 from taskjournal.services.time import (
     get_total_time_from_daily_notes,
@@ -39,9 +41,12 @@ def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
     create_datetime = datetime.now()
     creation_date_str = create_datetime.strftime("%Y-%m-%d")
     creation_time = create_datetime.strftime("%H:%M:%S")
+    sprint = JiraService().get_active_sprint()
 
     daily_notes_content = template_content.replace("{{date}}", creation_date_str)
     daily_notes_content = daily_notes_content.replace("{{time}}", creation_time)
+    sprint_name = sprint.name if sprint else "No active sprint"
+    daily_notes_content = daily_notes_content.replace("{{sprint_name}}", sprint_name)
 
     # Get tasks: unfinished tasks + default tasks
     default_tasks = get_default_tasks()
@@ -49,7 +54,7 @@ def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
     current_file = os.path.basename(file_path)
     previous_pending_tasks = get_previous_pending_tasks(folder_path, current_file)
 
-    tasks = default_tasks + previous_pending_tasks
+    tasks = unique_tasks(default_tasks + previous_pending_tasks)
     FileWriter.save_tasks(file_path, daily_notes_content, tasks)
 
     return estimated_finish_time(create_datetime)
@@ -74,7 +79,11 @@ def finalize_daily_notes(file_path: str, custom_date: datetime | None) -> None:
     # Calculate finalized time and total time spent
     total_time_spent = final_time - created_time
     finalized_line = f" End Time: {final_time.strftime('%H:%M')}\n"
-    total_time_line = f" Time Spent: {total_time_spent}\n"
+
+    # Properly format total_time_spent
+    hours, remainder = divmod(total_time_spent.total_seconds(), 3600)
+    minutes, _ = divmod(remainder, 60)
+    total_time_line = f" Time Spent: {int(hours):02}:{int(minutes):02}\n"
 
     # Remove old Finalized and Total Time Spent lines if they exist
     content = [

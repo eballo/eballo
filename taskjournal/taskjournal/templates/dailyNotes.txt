@@ -1,6 +1,6 @@
 📅 Daily Tasks Log
 
- Sprint: {{sprint_number}}
+ Sprint: {{sprint_name}}
  Date: {{date}}
  Start Time: {{time}}
  End Time:
@@ -12,7 +12,7 @@
 {{tasks}}
 
 
-✍️ Notes:
+✍️ Notes
 
 
 📋 Summary

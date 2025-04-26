@@ -1,11 +1,12 @@
-==== Retrospective ===
+🌀 Sprint {{sprint}} Retrospective
 
-Sprint XX
-
-Good:
+✅ What Went Well
 
 
-Bad:
+⚠️ What Didn't Go Well
 
 
-To Improve:
+🔧 Areas for Improvement
+
+
+🎯 Action Items

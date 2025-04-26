@@ -81,7 +81,7 @@ def daily_start(
 def daily_finish(
     debug: bool = typer.Option(False, help="Enable debug mode"),
     date: Optional[str] = typer.Option(
-        None, help="Override the date (format: YYYY-MM-DD)"
+        None, help="Override the date (format: 'YYYY-MM-DD HH:MM')"
     ),
 ):
     _, daily_notes_file = setup(debug)
@@ -90,7 +90,7 @@ def daily_finish(
         try:
             custom_date = datetime.strptime(date, "%Y-%m-%d %H:%M")
         except ValueError:
-            typer.echo("❌ Invalid date format. Use YYYY-MM-DD.")
+            typer.echo("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
             raise typer.Exit(code=1)
 
     if os.path.exists(daily_notes_file):
