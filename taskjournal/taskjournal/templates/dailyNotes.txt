@@ -1,8 +1,18 @@
-==== Daily Tasks Performed ===
+📅 Daily Tasks Log
 
-Start time: {{creation_time}}
+ Sprint: {{sprint_number}}
+ Date: {{date}}
+ Start Time: {{time}}
+ End Time:
+ Time Spent:
 
-Sprint XX
 
-Tasks:
+✅ Planned Tasks
+
 {{tasks}}
+
+
+✍️ Notes:
+
+
+📋 Summary

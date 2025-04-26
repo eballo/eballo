@@ -56,9 +56,18 @@ def setup(debug: bool):
 
 
 @app.command()
-def daily_start(debug: bool = typer.Option(False, help="Enable debug mode")):
+def daily_start(
+    debug: bool = typer.Option(False, help="Enable debug mode"),
+    force: bool = typer.Option(
+        False, help="Force recreate the daily notes file if it exists"
+    ),
+):
     _, daily_notes_file = setup(debug)
-    if not os.path.exists(daily_notes_file):
+    if force:
+        logger.warning(
+            "Force option is enabled. Existing daily notes file will be overwritten."
+        )
+    if not os.path.exists(daily_notes_file) or force:
         estimated_time = create_daily_notes_file(daily_notes_file, DAILY_NOTES_TEMPLATE)
         logger.info(f"Daily notes file created: {daily_notes_file}")
         logger.info(

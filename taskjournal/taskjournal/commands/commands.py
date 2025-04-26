@@ -1,7 +1,6 @@
 import os
 from datetime import datetime
 
-from taskjournal.config import DAILY_NOTES_END_TEMPLATE
 from taskjournal.models.task import Status
 from taskjournal.repositories.file_writer import FileWriter
 from taskjournal.services.file import (
@@ -38,17 +37,17 @@ def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
     template_content = load_template(template_path)
 
     create_datetime = datetime.now()
-    creation_time_str = create_datetime.strftime("%Y-%m-%d %H:%M:%S")
-    daily_notes_content = template_content.replace(
-        "{{creation_time}}", creation_time_str
-    )
+    creation_date_str = create_datetime.strftime("%Y-%m-%d")
+    creation_time = create_datetime.strftime("%H:%M:%S")
+
+    daily_notes_content = template_content.replace("{{date}}", creation_date_str)
+    daily_notes_content = daily_notes_content.replace("{{time}}", creation_time)
 
     # Get tasks: unfinished tasks + default tasks
     default_tasks = get_default_tasks()
     folder_path = os.path.dirname(file_path)
-    previous_pending_tasks = get_previous_pending_tasks(
-        folder_path, os.path.basename(file_path)
-    )
+    current_file = os.path.basename(file_path)
+    previous_pending_tasks = get_previous_pending_tasks(folder_path, current_file)
 
     tasks = default_tasks + previous_pending_tasks
     FileWriter.save_tasks(file_path, daily_notes_content, tasks)
@@ -74,28 +73,20 @@ def finalize_daily_notes(file_path: str, custom_date: datetime | None) -> None:
 
     # Calculate finalized time and total time spent
     total_time_spent = final_time - created_time
-    finalized_line = f"Finalized: {final_time.strftime('%Y-%m-%d %H:%M')}\n"
-    total_time_line = f"Total Time Spent: {total_time_spent}\n"
+    finalized_line = f" End Time: {final_time.strftime('%H:%M')}\n"
+    total_time_line = f" Time Spent: {total_time_spent}\n"
 
     # Remove old Finalized and Total Time Spent lines if they exist
     content = [
         line
         for line in content
-        if not line.startswith("Finalized:")
-        and not line.startswith("Total Time Spent:")
+        if not line.startswith(" End Time:") and not line.startswith(" Time Spent:")
     ]
 
     # Insert finalized time and total time spent below the creation date
     content.insert(created_line_index + 1, finalized_line)
     content.insert(created_line_index + 2, total_time_line)
     write_lines_to_file(file_path, content)
-
-    template_content = load_template(DAILY_NOTES_END_TEMPLATE)
-    normalized_template_content = template_content.replace("\n", "")
-    normalized_content = "".join(content).replace("\n", " ")
-
-    if normalized_template_content not in normalized_content:
-        write_to_file(file_path, template_content, "a")
 
     logger.info(f"Daily notes finalized with timestamp: {file_path}")
 
