@@ -26,7 +26,9 @@ from taskjournal.services.time import (
 )
 
 
-def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
+def create_daily_notes_file(
+    file_path: str, template_path: str, create_datetime: datetime
+) -> datetime:
     """
     Create a daily file using a template and adding a creation timestamp.
 
@@ -38,7 +40,6 @@ def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
     # Load template and add timestamp
     template_content = load_template(template_path)
 
-    create_datetime = datetime.now()
     creation_date_str = create_datetime.strftime("%Y-%m-%d")
     creation_time = create_datetime.strftime("%H:%M:%S")
     sprint = JiraService().get_active_sprint()
@@ -67,14 +68,14 @@ def finalize_daily_notes(file_path: str, custom_date: datetime | None) -> None:
         logger.info(f"File '{file_path}' is already finalized.")
         return
 
-    content = get_lines(file_path)
-    created_line_index, created_time = get_start_time(content)
-
     if not custom_date:
         final_time = datetime.now()
     else:
         logger.info(f"Custom date provided: {custom_date}")
         final_time = custom_date
+
+    content = get_lines(file_path)
+    created_line_index, created_time = get_start_time(content)
 
     # Calculate finalized time and total time spent
     total_time_spent = final_time - created_time
@@ -98,6 +99,7 @@ def finalize_daily_notes(file_path: str, custom_date: datetime | None) -> None:
     write_lines_to_file(file_path, content)
 
     logger.info(f"Daily notes finalized with timestamp: {file_path}")
+    logger.info(f"Time Spent: {int(hours):02}:{int(minutes):02}")
 
 
 def create_week_summary(week_folder: str, template_path: str) -> None:

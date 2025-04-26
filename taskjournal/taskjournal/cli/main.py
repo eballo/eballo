@@ -22,9 +22,9 @@ from taskjournal.config import (
     JIRA_API_TOKEN,
     JIRA_EMAIL,
 )
-from taskjournal.services.file import get_week_folder
 from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
+from taskjournal.services.time import get_wee_folder_and_daily_notes_file
 
 app = typer.Typer()
 __version__ = "0.3.0"
@@ -46,11 +46,7 @@ def setup(debug: bool):
         logger.debug(f"JIRA_EMAIL: {JIRA_EMAIL}")
 
     today = datetime.now()
-    week_folder = get_week_folder(BASE_DIR, today)
-    os.makedirs(week_folder, exist_ok=True)
-    daily_notes_file = os.path.join(
-        week_folder, f"{today.strftime('%Y-%m-%d')}-DailyNotes.txt"
-    )
+    daily_notes_file, week_folder = get_wee_folder_and_daily_notes_file(today)
 
     return week_folder, daily_notes_file
 
@@ -61,14 +57,30 @@ def daily_start(
     force: bool = typer.Option(
         False, help="Force recreate the daily notes file if it exists"
     ),
+    date: Optional[str] = typer.Option(
+        None, help="Override the date (format: 'YYYY-MM-DD HH:MM')"
+    ),
 ):
     _, daily_notes_file = setup(debug)
     if force:
         logger.warning(
             "Force option is enabled. Existing daily notes file will be overwritten."
         )
+
+    if date:
+        try:
+            create_datetime = datetime.strptime(date, "%Y-%m-%d %H:%M")
+            daily_notes_file, _ = get_wee_folder_and_daily_notes_file(create_datetime)
+        except ValueError:
+            typer.echo("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
+            raise typer.Exit(code=1)
+    else:
+        create_datetime = datetime.now()
+
     if not os.path.exists(daily_notes_file) or force:
-        estimated_time = create_daily_notes_file(daily_notes_file, DAILY_NOTES_TEMPLATE)
+        estimated_time = create_daily_notes_file(
+            daily_notes_file, DAILY_NOTES_TEMPLATE, create_datetime
+        )
         logger.info(f"Daily notes file created: {daily_notes_file}")
         logger.info(
             f"Estimated finish time: {estimated_time.strftime('%Y-%m-%d %H:%M:%S')}"
@@ -89,6 +101,7 @@ def daily_finish(
     if date:
         try:
             custom_date = datetime.strptime(date, "%Y-%m-%d %H:%M")
+            daily_notes_file, _ = get_wee_folder_and_daily_notes_file(custom_date)
         except ValueError:
             typer.echo("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
             raise typer.Exit(code=1)

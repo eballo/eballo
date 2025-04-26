@@ -15,6 +15,10 @@ def test_calculate_working_hours_valid(mocker):
     created_time = "2025-01-19 09:00:00"
     mock_open = mocker.mock_open(read_data=f"Start time: {created_time}\n")
     mocker.patch("builtins.open", mock_open)
+    mocker.patch(
+        "taskjournal.services.time.get_start_time",
+        return_value=(0, datetime.strptime(created_time, "%Y-%m-%d %H:%M:%S")),
+    )
 
     created, elapsed, finish = calculate_working_hours("notes.txt")
 
@@ -27,13 +31,17 @@ def test_calculate_working_hours_no_start_line(mocker):
     mock_open = mocker.mock_open(read_data="Task: something\nAnother line\n")
     mocker.patch("builtins.open", mock_open)
     mock_logger = mocker.patch("taskjournal.services.time.logger")
+    mocker.patch(
+        "taskjournal.services.time.get_start_time",
+        side_effect=ValueError("Start time not found"),
+    )
 
     created, elapsed, finish = calculate_working_hours("notes.txt")
 
     assert created is None
     assert elapsed is None
     assert finish is None
-    mock_logger.warning.assert_called_once()
+    mock_logger.error.assert_called_once()
 
 
 def test_calculate_working_hours_malformed_start(mocker):

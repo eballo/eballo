@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -26,7 +27,9 @@ def test_daily_start_creates_file(mocker, daily_notes_path, daily_notes_template
     result = runner.invoke(app, ["daily-start"])
 
     assert result.exit_code == 0
-    mock_create.assert_called_once_with(daily_notes_path, daily_notes_template)
+    mock_create.assert_called_once_with(
+        daily_notes_path, daily_notes_template, datetime.now()
+    )
 
 
 @freeze_time("2025-01-19 10:00:00")

@@ -21,7 +21,7 @@ def test_create_daily_notes_file(daily_notes_template, mocker):
     # Given
     file_path = "daily_notes.txt"
     # When
-    create_daily_notes_file(file_path, daily_notes_template)
+    create_daily_notes_file(file_path, daily_notes_template, datetime.now())
     # Then
     mock_file.assert_any_call(file_path, "w")
     # Verify the written content
