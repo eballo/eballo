@@ -51,12 +51,25 @@ def create_daily_notes_file(
 
     # Get tasks: unfinished tasks + default tasks
     default_tasks = get_default_tasks()
+    pending_jira_tasks = (
+        JiraService().get_current_sprint_tasks_not_done_assigned_to_me()
+    )
+
+    code_review_tasks = JiraService().get_current_sprint_tasks_in_code_review()
+
     folder_path = os.path.dirname(file_path)
     current_file = os.path.basename(file_path)
     previous_pending_tasks = get_previous_pending_tasks(folder_path, current_file)
 
-    tasks = unique_tasks(default_tasks + previous_pending_tasks)
-    FileWriter.save_tasks(file_path, daily_notes_content, tasks)
+    tasks = unique_tasks(default_tasks + previous_pending_tasks + pending_jira_tasks)
+    daily_notes_content = FileWriter.format_content(
+        "{{tasks}}", daily_notes_content, tasks
+    )
+    daily_notes_content = FileWriter.format_content(
+        "{{code_review_tasks}}", daily_notes_content, code_review_tasks
+    )
+
+    write_to_file(file_path, daily_notes_content)
 
     return estimated_finish_time(create_datetime)
 
@@ -115,9 +128,7 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
             daily_file_path = os.path.join(week_folder, file_name)
             tasks = get_tasks_from_daily_notes(daily_file_path)
             daily_done = [task for task in tasks if task.status == Status.DONE]
-            daily_pending = [
-                task for task in tasks if task.status == Status.NOT_FINISHED
-            ]
+            daily_pending = [task for task in tasks if task.status == Status.TODO]
             daily_time = get_total_time_from_daily_notes(
                 daily_file_path
             )  # Extract total time from daily notes

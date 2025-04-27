@@ -144,15 +144,28 @@ def version():
 
 
 @app.command()
-def jira():
+def jira(
+    all: bool = typer.Option(False, help="Get ALL tasks of the sprint"),
+    mine: bool = typer.Option(False, help="Get ALL tasks assigned to me"),
+    code: bool = typer.Option(False, help="Get ALL tasks in status 'Code Review'"),
+):
     logger.info("JIRA integration")
     service = JiraService()
-    issues = service.get_current_sprint_issues(77)
-    logger.info("\n📝 Current Sprint Tasks:\n")
-    for issue in issues:
-        logger.info(
-            f"- [{issue['key']}] {issue['summary']} ({issue['timespent_hours']}h, Status: {issue['status']})"
-        )
+    if all:
+        logger.info("📝 All Tasks:")
+        tasks = service.get_current_sprint_tasks()
+    elif mine:
+        logger.info("📝 Current Sprint Tasks ALL assigned to me:")
+        tasks = service.get_current_sprint_tasks_all_assigned_to_me()
+    elif code:
+        logger.info("📝 Current Sprint Tasks in Code Review:")
+        tasks = service.get_current_sprint_tasks_in_code_review()
+    else:
+        logger.info("📝 Current Sprint Tasks assigned to me (not finished):")
+        tasks = service.get_current_sprint_tasks_not_done_assigned_to_me()
+
+    for task in tasks:
+        logger.info(task)
 
 
 if __name__ == "__main__":

@@ -20,9 +20,7 @@ def get_tasks_from_daily_notes(file_path: str) -> list[Task]:
 
 
 def create_task(description: str) -> Task:
-    return Task(
-        id=str(uuid.uuid4()), description=description, status=Status.NOT_FINISHED
-    )
+    return Task(id=str(uuid.uuid4()), description=description, status=Status.TODO)
 
 
 def get_default_tasks() -> list[Task]:
@@ -65,7 +63,7 @@ def get_previous_pending_tasks(folder_path: str, current_file: str) -> list[Task
 
 def get_pending_tasks(lines: list[str]) -> list[Task]:
     tasks = ParseFile.get_tasks(lines)
-    return [task for task in tasks if task.status == Status.NOT_FINISHED]
+    return [task for task in tasks if task.status == Status.TODO]
 
 
 def unique_tasks(tasks: list[Task]) -> list[Task]:

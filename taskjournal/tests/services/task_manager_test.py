@@ -20,9 +20,9 @@ def test_get_tasks_from_daily_notes(mocker):
     assert tasks[0].description == "Done Task"
     assert tasks[0].status == Status.DONE
     assert tasks[1].description == "Pending Task"
-    assert tasks[1].status == Status.NOT_FINISHED
+    assert tasks[1].status == Status.TODO
     assert tasks[2].description == "Another Pending"
-    assert tasks[2].status == Status.NOT_FINISHED
+    assert tasks[2].status == Status.TODO
 
 
 def test_get_tasks_from_daily_notes_error(mocker):
@@ -39,11 +39,11 @@ def test_get_tasks_from_daily_notes_error(mocker):
 @pytest.mark.parametrize(
     "weekday,isoweek,expected_task, expected_len",
     [
-        ("Wednesday", 3, "Check refinement tasks", 4),
-        ("Thursday", 4, "Get ready for the retro points", 4),  # even week
-        ("Thursday", 3, None, 3),  # odd week
-        ("Friday", 3, "Write down the summary of the week", 4),
-        ("Monday", 3, None, 3),
+        ("Wednesday", 3, "Check refinement tasks", 6),
+        ("Thursday", 4, "Get ready for the retro points", 6),  # even week
+        ("Thursday", 3, None, 5),  # odd week
+        ("Friday", 3, "Write down the summary of the week", 6),
+        ("Monday", 3, None, 5),
     ],
 )
 def test_get_default_tasks_varies_by_day(
@@ -59,10 +59,12 @@ def test_get_default_tasks_varies_by_day(
     assert len(tasks) == expected_len
     assert "Check emails" in tasks[0].description
     assert "Check Calendar" in tasks[1].description
-    assert "PR reviews" in tasks[2].description
+    assert "Check Jira" in tasks[2].description
+    assert "Check Slack" in tasks[3].description
+    assert "Check the sprint tasks in code review" in tasks[4].description
 
     if expected_task:
-        assert expected_task in tasks[3].description
+        assert expected_task in tasks[5].description
     else:
         assert all(
             exp not in tasks

@@ -1,4 +1,5 @@
-from typing import List, Dict
+import uuid
+from typing import List
 
 from jira import JIRA
 from jira.resources import Sprint
@@ -9,6 +10,7 @@ from taskjournal.config import (
     JIRA_API_TOKEN,
     JIRA_BOARD_ID,
 )
+from taskjournal.models.task import Task, Status
 from taskjournal.services.logger import logger
 
 
@@ -30,23 +32,58 @@ class JiraService:
 
         return active_sprint
 
-    def get_current_sprint_issues(self) -> List[Dict]:
+    def get_current_sprint_tasks_not_done_assigned_to_me(self) -> List[Task]:
         active_sprint = self.get_active_sprint()
+        if not active_sprint:
+            return []
 
+        jql = f"sprint = {active_sprint.id} AND assignee = currentUser() AND status != Done"
+        return self._get_issues(jql)
+
+    def get_current_sprint_tasks_all_assigned_to_me(self) -> List[Task]:
+        active_sprint = self.get_active_sprint()
         if not active_sprint:
             return []
 
         jql = f"sprint = {active_sprint.id} AND assignee = currentUser()"
+        return self._get_issues(jql)
+
+    def get_current_sprint_tasks(self) -> List[Task]:
+        active_sprint = self.get_active_sprint()
+        if not active_sprint:
+            return []
+
+        jql = f"sprint = {active_sprint.id}"
+        return self._get_issues(jql)
+
+    def get_current_sprint_tasks_in_code_review(self) -> List[Task]:
+        active_sprint = self.get_active_sprint()
+        if not active_sprint:
+            return []
+
+        jql = f"sprint = {active_sprint.id} AND status = 'CODE REVIEW' and assignee != currentUser()"
+        return self._get_issues(jql)
+
+    def _get_issues(self, jql):
         issues = self.jira.search_issues(jql, maxResults=100)
-
-        logger.info(f"Found {len(issues)} issues in the current sprint.")
-
         return [
-            {
-                "key": issue.key,
-                "summary": issue.fields.summary,
-                "timespent_hours": (issue.fields.timespent or 0) / 3600,
-                "status": issue.fields.status.name,
-            }
+            Task(
+                id=str(uuid.uuid4()),
+                key=issue.key,
+                description=issue.fields.summary,
+                link=f"https://{JIRA_ORGANIZATION}.atlassian.net/browse/{issue.key}",
+                status=self.get_task_status(issue),
+            )
             for issue in issues
         ]
+
+    def get_task_status(self, issue):
+        status_mapping = {
+            "TO DO": Status.TODO,
+            "IN PROGRESS": Status.IN_PROGRESS,
+            "DONE": Status.DONE,
+            "BLOCKED": Status.BLOCKED,
+            "CODE REVIEW": Status.CODE_REVIEW,
+        }
+        jira_status = issue.fields.status.name
+        return status_mapping.get(jira_status, Status.IN_PROGRESS)

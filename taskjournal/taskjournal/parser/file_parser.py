@@ -7,13 +7,13 @@ from taskjournal.models.task import Task, Status
 
 def get_task_status(
     line: str,
-) -> Literal[Status.DONE, Status.NOT_FINISHED, Status.BLOCKED]:
+) -> Literal[Status.DONE, Status.TODO, Status.BLOCKED]:
     if line.startswith("[x]"):
         return Status.DONE
     elif line.startswith("[-]"):
         return Status.BLOCKED
     else:
-        return Status.NOT_FINISHED
+        return Status.TODO
 
 
 class ParseFile:

@@ -15,6 +15,6 @@ def test_get_tasks():
     assert tasks[0].description == "Task 1"
     assert tasks[0].status == Status.DONE
     assert tasks[1].description == "Task 2"
-    assert tasks[1].status == Status.NOT_FINISHED
+    assert tasks[1].status == Status.TODO
     assert tasks[2].description == "Task 3"
     assert tasks[2].status == Status.BLOCKED
