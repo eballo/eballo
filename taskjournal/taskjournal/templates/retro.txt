@@ -1,4 +1,4 @@
-🌀 Sprint {{sprint}} Retrospective
+🌀 Sprint {{sprint_name}} Retrospective
 
 ✅ What Went Well
 

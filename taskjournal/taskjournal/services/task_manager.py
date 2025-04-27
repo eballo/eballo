@@ -2,6 +2,7 @@ import os
 import uuid
 from datetime import datetime
 
+from taskjournal.constants import BASE_TASKS, EXTENDED_TASKS
 from taskjournal.models.task import Task, Status
 from taskjournal.parser.file_parser import ParseFile
 from taskjournal.services.file import get_lines
@@ -26,19 +27,17 @@ def create_task(description: str) -> Task:
 
 def get_default_tasks() -> list[Task]:
     """Return the default tasks based on the day of the week."""
-    base_tasks = ["Check emails", "Check Calendar", "PR reviews"]
-
-    tasks = [create_task(desc) for desc in base_tasks]
+    tasks = [create_task(desc) for desc in BASE_TASKS]
 
     day_of_week = datetime.now().strftime("%A")
     week_number = datetime.now().isocalendar()[1]
 
     if day_of_week == "Wednesday":
-        tasks.append(create_task("Check refinement tasks"))
+        tasks.append(create_task(EXTENDED_TASKS[0]))
     elif day_of_week == "Thursday" and week_number % 2 == 0:
-        tasks.append(create_task("Get ready for the retro points"))
+        tasks.append(create_task(EXTENDED_TASKS[1]))
     elif day_of_week == "Friday":
-        tasks.append(create_task("Write down the summary of the week"))
+        tasks.append(create_task(EXTENDED_TASKS[2]))
 
     return tasks
 

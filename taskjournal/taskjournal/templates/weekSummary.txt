@@ -1,15 +1,12 @@
-==== Week Summary ===
+📅 Weekly Summary
 
-Total time: {{total_time}}
+ 🕒 Total Time Spent: {{total_time}}
 
-Tasks completed:
-
+✅ Tasks Completed
 {{done_tasks}}
 
-Tasks not completed:
-
+🔄 Tasks Pending
 {{pending_tasks}}
 
-Summary:
-
+📝 General Summary
 {{summary}}

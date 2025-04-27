@@ -19,3 +19,6 @@ class Task(BaseModel):
     status: Status = Status.NOT_FINISHED
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+
+    def __str__(self):
+        return f" - {self.description}"

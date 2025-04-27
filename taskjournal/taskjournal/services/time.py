@@ -19,22 +19,16 @@ def calculate_working_hours(daily_notes_file: str):
 
 
 def get_total_time_from_daily_notes(daily_file_path: str) -> int:
-    """Extract total time spent from a daily notes file."""
     total_time = 0
-
     with open(daily_file_path, "r") as file:
         for line in file:
-            if line.startswith("Total Time Spent:"):
+            if line.startswith(" Time Spent:"):
                 try:
-                    # Assuming the time is logged as "Time Spent: X hours Y minutes"
-                    time_str = (
-                        line.replace("Total Time Spent:", "").strip().split(".")[0]
-                    )  # Ignore microseconds
-                    h, m, s = map(int, time_str.split(":"))
-                    total_time += h * 3600 + m * 60 + s
+                    time_str = line.replace(" Time Spent:", "").strip().split(".")[0]
+                    h, m = map(int, time_str.split(":"))
+                    total_time += h * 3600 + m * 60
                 except (ValueError, IndexError):
                     continue
-
     return total_time
 
 

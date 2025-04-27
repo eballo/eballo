@@ -70,17 +70,17 @@ def test_calculate_working_hours_file_error(mocker):
 
 
 def test_get_total_time_from_daily_notes_single_entry(mocker):
-    mock_open = mocker.mock_open(read_data="Total Time Spent: 01:15:30\n")
+    mock_open = mocker.mock_open(read_data=" Time Spent: 01:15\n")
     mocker.patch("builtins.open", mock_open)
 
     total_seconds = get_total_time_from_daily_notes("file.txt")
-    assert total_seconds == 1 * 3600 + 15 * 60 + 30
+    assert total_seconds == 1 * 3600 + 15 * 60
 
 
 def test_get_total_time_from_daily_notes_multiple_entries(mocker):
-    data = """Total Time Spent: 00:30:00
+    data = """ Time Spent: 00:30
 Task: something
-Total Time Spent: 01:00:00
+ Time Spent: 01:00
 """
     mock_open = mocker.mock_open(read_data=data)
     mocker.patch("builtins.open", mock_open)
@@ -90,8 +90,8 @@ Total Time Spent: 01:00:00
 
 
 def test_get_total_time_from_daily_notes_malformed_ignored(mocker):
-    data = """Total Time Spent: abc
-Total Time Spent: 01:00:00"""
+    data = """ Time Spent: abc
+ Time Spent: 01:00"""
     mock_open = mocker.mock_open(read_data=data)
     mocker.patch("builtins.open", mock_open)
 

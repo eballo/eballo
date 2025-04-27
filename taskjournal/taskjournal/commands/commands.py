@@ -137,10 +137,10 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
         "{{total_time}}", f" {total_hours} hours and {total_minutes} minutes"
     )
     week_summary_content = week_summary_content.replace(
-        "{{done_tasks}}", "\n".join(f"[x] {task}" for task in done_tasks)
+        "{{done_tasks}}", "\n".join(f"{task}" for task in done_tasks)
     )
     week_summary_content = week_summary_content.replace(
-        "{{pending_tasks}}", "\n".join(f"[ ] {task}" for task in pending_tasks)
+        "{{pending_tasks}}", "\n".join(f"{task}" for task in pending_tasks)
     )
     week_summary_content = week_summary_content.replace(
         "{{summary}}", "\nWrite your weekly summary here...\n"
@@ -155,6 +155,11 @@ def create_retro_file(week_folder: str, template_path: str) -> str:
 
     if not os.path.exists(retro_file):
         template_content = load_template(template_path)
+
+        sprint = JiraService().get_active_sprint()
+        sprint_name = sprint.name if sprint else "No active sprint"
+        template_content = template_content.replace("{{sprint_name}}", sprint_name)
+
         write_to_file(retro_file, template_content)
 
     return retro_file

@@ -1,6 +1,7 @@
 import uuid
 from typing import Literal
 
+from taskjournal.constants import NORMAL_TASKS
 from taskjournal.models.task import Task, Status
 
 
@@ -22,9 +23,13 @@ class ParseFile:
         tasks = []
         for line in lines:
             if line.startswith("["):
+                description = line[4:].strip()
+                if description in NORMAL_TASKS:
+                    # Skip tasks that are not in the normal task list
+                    continue
                 task = Task(
                     id=str(uuid.uuid4()),
-                    description=line[4:].strip(),
+                    description=description,
                     status=get_task_status(line),
                 )
                 tasks.append(task)
