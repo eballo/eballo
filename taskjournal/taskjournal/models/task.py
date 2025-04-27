@@ -23,5 +23,5 @@ class Task(BaseModel):
     end_time: Optional[datetime] = None
 
     def __str__(self):
-        indent = " " * 27
-        return f"[{self.key}] {self.description} ({self.status.value}) \n{indent}{self.link if self.link else ''}"
+        key = f"[{self.key}]" if self.key else ""
+        return f"{key}{self.description} ({self.status.value})"
