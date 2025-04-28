@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "taskjournal"
-version = "0.3.0"
+version = "0.4.0"
 description = "A Python project for tracking daily work tasks."
 authors = ["Enric Ballo <enric.ballo@gmail.com>"]
 readme = "README.md"
@@ -11,6 +11,8 @@ pytest-dotenv = "^0.5.2"
 rich = "^13.9.4"
 typer = "^0.15.2"
 shellingham = "^1.5.4"
+jira = "^3.8.0"
+pydantic = "^2.11.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
@@ -21,7 +23,7 @@ black = "^25.1.0"
 pre-commit = "^4.2.0"
 
 [tool.poetry.scripts]
-wk = "taskjournal.main:app"
+wk = "taskjournal.cli.main:app"
 
 [build-system]
 requires = ["poetry-core"]

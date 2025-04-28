@@ -1,5 +1,3 @@
-#!/Users/eballo/Documents/work/personal/eballo/taskjournal/.venv/bin/python
-
 import logging
 import os
 from datetime import datetime
@@ -7,7 +5,7 @@ from typing import Optional
 
 import typer
 
-from taskjournal.commands import (
+from taskjournal.commands.commands import (
     create_daily_notes_file,
     finalize_daily_notes,
     create_retro_file,
@@ -20,12 +18,16 @@ from taskjournal.config import (
     WEEK_SUMMARY_TEMPLATE,
     RETRO_TEMPLATE,
     DAILY_NOTES_END_TEMPLATE,
+    JIRA_ORGANIZATION,
+    JIRA_API_TOKEN,
+    JIRA_EMAIL,
 )
-from taskjournal.services.file import get_week_folder
+from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
+from taskjournal.services.time import get_wee_folder_and_daily_notes_file
 
 app = typer.Typer()
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 
 def setup(debug: bool):
@@ -38,22 +40,47 @@ def setup(debug: bool):
         logger.debug(f"DAILY_NOTES_END_TEMPLATE: {DAILY_NOTES_END_TEMPLATE}")
         logger.debug(f"WEEK_SUMMARY_TEMPLATE: {WEEK_SUMMARY_TEMPLATE}")
         logger.debug(f"RETRO_TEMPLATE: {RETRO_TEMPLATE}")
+        logger.debug("[JIRA]")
+        logger.debug(f"JIRA_ORGANIZATION: {JIRA_ORGANIZATION}")
+        logger.debug(f"JIRA_API_TOKEN: {JIRA_API_TOKEN}")
+        logger.debug(f"JIRA_EMAIL: {JIRA_EMAIL}")
 
     today = datetime.now()
-    week_folder = get_week_folder(BASE_DIR, today)
-    os.makedirs(week_folder, exist_ok=True)
-    daily_notes_file = os.path.join(
-        week_folder, f"{today.strftime('%Y-%m-%d')}-DailyNotes.txt"
-    )
+    daily_notes_file, week_folder = get_wee_folder_and_daily_notes_file(today)
 
     return week_folder, daily_notes_file
 
 
 @app.command()
-def daily_start(debug: bool = typer.Option(False, help="Enable debug mode")):
+def daily_start(
+    debug: bool = typer.Option(False, help="Enable debug mode"),
+    force: bool = typer.Option(
+        False, help="Force recreate the daily notes file if it exists"
+    ),
+    date: Optional[str] = typer.Option(
+        None, help="Override the date (format: 'YYYY-MM-DD HH:MM')"
+    ),
+):
     _, daily_notes_file = setup(debug)
-    if not os.path.exists(daily_notes_file):
-        estimated_time = create_daily_notes_file(daily_notes_file, DAILY_NOTES_TEMPLATE)
+    if force:
+        logger.warning(
+            "Force option is enabled. Existing daily notes file will be overwritten."
+        )
+
+    if date:
+        try:
+            create_datetime = datetime.strptime(date, "%Y-%m-%d %H:%M")
+            daily_notes_file, _ = get_wee_folder_and_daily_notes_file(create_datetime)
+        except ValueError:
+            typer.echo("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
+            raise typer.Exit(code=1)
+    else:
+        create_datetime = datetime.now()
+
+    if not os.path.exists(daily_notes_file) or force:
+        estimated_time = create_daily_notes_file(
+            daily_notes_file, DAILY_NOTES_TEMPLATE, create_datetime
+        )
         logger.info(f"Daily notes file created: {daily_notes_file}")
         logger.info(
             f"Estimated finish time: {estimated_time.strftime('%Y-%m-%d %H:%M:%S')}"
@@ -66,7 +93,7 @@ def daily_start(debug: bool = typer.Option(False, help="Enable debug mode")):
 def daily_finish(
     debug: bool = typer.Option(False, help="Enable debug mode"),
     date: Optional[str] = typer.Option(
-        None, help="Override the date (format: YYYY-MM-DD)"
+        None, help="Override the date (format: 'YYYY-MM-DD HH:MM')"
     ),
 ):
     _, daily_notes_file = setup(debug)
@@ -74,8 +101,9 @@ def daily_finish(
     if date:
         try:
             custom_date = datetime.strptime(date, "%Y-%m-%d %H:%M")
+            daily_notes_file, _ = get_wee_folder_and_daily_notes_file(custom_date)
         except ValueError:
-            typer.echo("❌ Invalid date format. Use YYYY-MM-DD.")
+            typer.echo("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
             raise typer.Exit(code=1)
 
     if os.path.exists(daily_notes_file):
@@ -113,6 +141,31 @@ def time(debug: bool = typer.Option(False, help="Enable debug mode")):
 @app.command()
 def version():
     logger.info(f"Task Journal Version: {__version__}")
+
+
+@app.command()
+def jira(
+    all: bool = typer.Option(False, help="Get ALL tasks of the sprint"),
+    mine: bool = typer.Option(False, help="Get ALL tasks assigned to me"),
+    code: bool = typer.Option(False, help="Get ALL tasks in status 'Code Review'"),
+):
+    logger.info("JIRA integration")
+    service = JiraService()
+    if all:
+        logger.info("📝 All Tasks:")
+        tasks = service.get_current_sprint_tasks()
+    elif mine:
+        logger.info("📝 Current Sprint Tasks ALL assigned to me:")
+        tasks = service.get_current_sprint_tasks_all_assigned_to_me()
+    elif code:
+        logger.info("📝 Current Sprint Tasks in Code Review:")
+        tasks = service.get_current_sprint_tasks_in_code_review()
+    else:
+        logger.info("📝 Current Sprint Tasks assigned to me (not finished):")
+        tasks = service.get_current_sprint_tasks_not_done_assigned_to_me()
+
+    for task in tasks:
+        logger.info(task)
 
 
 if __name__ == "__main__":

@@ -4,12 +4,12 @@ from datetime import datetime
 
 from pytest import fixture
 
-from services.file import get_week_folder
+from taskjournal.services.file import get_week_folder
 
 
 @fixture
 def fixture_path():
-    return pathlib.Path(__file__).parent / "fixtures"
+    return pathlib.Path(__file__).parent / "commands/fixtures"
 
 
 @fixture

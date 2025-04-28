@@ -1,17 +1,19 @@
 import os
 from datetime import datetime
-from services.file import (
+
+from pytest import raises
+
+from taskjournal.services.file import (
     get_week_folder,
     write_to_file,
     load_template,
     check_finalized_in_file,
 )
-from pytest import raises
 
 
 def test_get_week_folder(base_dir, mocker):
     # Given
-    mock_datetime = mocker.patch("taskjournal.commands.datetime")
+    mock_datetime = mocker.patch("taskjournal.commands.commands.datetime")
     mock_datetime.now.return_value = datetime(2025, 1, 19)
     date = mock_datetime.now()
     expected_folder = os.path.join(base_dir, "2025", "week3")
@@ -95,7 +97,7 @@ def test_check_finalized_in_file_false(mocker):
 
 def test_check_finalized_in_file_file_not_found(mocker):
     mocker.patch("builtins.open", side_effect=FileNotFoundError())
-    mock_logger = mocker.patch("services.file.logger")
+    mock_logger = mocker.patch("taskjournal.services.file.logger")
 
     result = check_finalized_in_file("missing.txt")
     assert result is False
@@ -106,7 +108,7 @@ def test_check_finalized_in_file_file_not_found(mocker):
 
 def test_check_finalized_in_file_generic_exception(mocker):
     mocker.patch("builtins.open", side_effect=OSError("disk error"))
-    mock_logger = mocker.patch("services.file.logger")
+    mock_logger = mocker.patch("taskjournal.services.file.logger")
 
     result = check_finalized_in_file("test.txt")
     assert result is False

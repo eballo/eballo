@@ -1,7 +1,8 @@
 import os
 from datetime import datetime
 
-from taskjournal.config import DAILY_NOTES_END_TEMPLATE
+from taskjournal.models.task import Status
+from taskjournal.repositories.file_writer import FileWriter
 from taskjournal.services.file import (
     load_template,
     check_finalized_in_file,
@@ -9,11 +10,13 @@ from taskjournal.services.file import (
     write_lines_to_file,
     get_lines,
 )
+from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
 from taskjournal.services.task_manager import (
     get_default_tasks,
     get_tasks_from_daily_notes,
-    get_previous_tasks,
+    get_previous_pending_tasks,
+    unique_tasks,
 )
 from taskjournal.services.time import (
     get_total_time_from_daily_notes,
@@ -23,7 +26,9 @@ from taskjournal.services.time import (
 )
 
 
-def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
+def create_daily_notes_file(
+    file_path: str, template_path: str, create_datetime: datetime
+) -> datetime:
     """
     Create a daily file using a template and adding a creation timestamp.
 
@@ -34,22 +39,36 @@ def create_daily_notes_file(file_path: str, template_path: str) -> datetime:
 
     # Load template and add timestamp
     template_content = load_template(template_path)
-    create_datetime = datetime.now()
-    creation_time_str = create_datetime.strftime("%Y-%m-%d %H:%M:%S")
-    daily_notes_content = template_content.replace(
-        "{{creation_time}}", creation_time_str
-    )
+
+    creation_date_str = create_datetime.strftime("%Y-%m-%d")
+    creation_time = create_datetime.strftime("%H:%M:%S")
+    sprint = JiraService().get_active_sprint()
+
+    daily_notes_content = template_content.replace("{{date}}", creation_date_str)
+    daily_notes_content = daily_notes_content.replace("{{time}}", creation_time)
+    sprint_name = sprint.name if sprint else "No active sprint"
+    daily_notes_content = daily_notes_content.replace("{{sprint_name}}", sprint_name)
 
     # Get tasks: unfinished tasks + default tasks
-    folder_path = os.path.dirname(file_path)
-    previous_tasks = get_previous_tasks(folder_path, os.path.basename(file_path))
     default_tasks = get_default_tasks()
-    unique_tasks = list(dict.fromkeys(default_tasks + previous_tasks))
-    daily_notes_content = daily_notes_content.replace(
-        "{{tasks}}", "\n".join(unique_tasks)
+    pending_jira_tasks = (
+        JiraService().get_current_sprint_tasks_not_done_assigned_to_me()
     )
 
-    # Write the daily notes file
+    code_review_tasks = JiraService().get_current_sprint_tasks_in_code_review()
+
+    folder_path = os.path.dirname(file_path)
+    current_file = os.path.basename(file_path)
+    previous_pending_tasks = get_previous_pending_tasks(folder_path, current_file)
+
+    tasks = unique_tasks(default_tasks + previous_pending_tasks + pending_jira_tasks)
+    daily_notes_content = FileWriter.format_content(
+        "{{tasks}}", daily_notes_content, tasks
+    )
+    daily_notes_content = FileWriter.format_content(
+        "{{code_review_tasks}}", daily_notes_content, code_review_tasks
+    )
+
     write_to_file(file_path, daily_notes_content)
 
     return estimated_finish_time(create_datetime)
@@ -62,26 +81,29 @@ def finalize_daily_notes(file_path: str, custom_date: datetime | None) -> None:
         logger.info(f"File '{file_path}' is already finalized.")
         return
 
-    content = get_lines(file_path)
-    created_line_index, created_time = get_start_time(content)
-
     if not custom_date:
         final_time = datetime.now()
     else:
         logger.info(f"Custom date provided: {custom_date}")
         final_time = custom_date
 
+    content = get_lines(file_path)
+    created_line_index, created_time = get_start_time(content)
+
     # Calculate finalized time and total time spent
     total_time_spent = final_time - created_time
-    finalized_line = f"Finalized: {final_time.strftime('%Y-%m-%d %H:%M')}\n"
-    total_time_line = f"Total Time Spent: {total_time_spent}\n"
+    finalized_line = f" End Time: {final_time.strftime('%H:%M')}\n"
+
+    # Properly format total_time_spent
+    hours, remainder = divmod(total_time_spent.total_seconds(), 3600)
+    minutes, _ = divmod(remainder, 60)
+    total_time_line = f" Time Spent: {int(hours):02}:{int(minutes):02}\n"
 
     # Remove old Finalized and Total Time Spent lines if they exist
     content = [
         line
         for line in content
-        if not line.startswith("Finalized:")
-        and not line.startswith("Total Time Spent:")
+        if not line.startswith(" End Time:") and not line.startswith(" Time Spent:")
     ]
 
     # Insert finalized time and total time spent below the creation date
@@ -89,14 +111,8 @@ def finalize_daily_notes(file_path: str, custom_date: datetime | None) -> None:
     content.insert(created_line_index + 2, total_time_line)
     write_lines_to_file(file_path, content)
 
-    template_content = load_template(DAILY_NOTES_END_TEMPLATE)
-    normalized_template_content = template_content.replace("\n", "")
-    normalized_content = "".join(content).replace("\n", " ")
-
-    if normalized_template_content not in normalized_content:
-        write_to_file(file_path, template_content, "a")
-
     logger.info(f"Daily notes finalized with timestamp: {file_path}")
+    logger.info(f"Time Spent: {int(hours):02}:{int(minutes):02}")
 
 
 def create_week_summary(week_folder: str, template_path: str) -> None:
@@ -110,7 +126,9 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
     for file_name in sorted(os.listdir(week_folder)):
         if file_name.endswith("-DailyNotes.txt"):
             daily_file_path = os.path.join(week_folder, file_name)
-            daily_done, daily_pending = get_tasks_from_daily_notes(daily_file_path)
+            tasks = get_tasks_from_daily_notes(daily_file_path)
+            daily_done = [task for task in tasks if task.status == Status.DONE]
+            daily_pending = [task for task in tasks if task.status == Status.TODO]
             daily_time = get_total_time_from_daily_notes(
                 daily_file_path
             )  # Extract total time from daily notes
@@ -130,10 +148,10 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
         "{{total_time}}", f" {total_hours} hours and {total_minutes} minutes"
     )
     week_summary_content = week_summary_content.replace(
-        "{{done_tasks}}", "\n".join(f"[x] {task}" for task in done_tasks)
+        "{{done_tasks}}", "\n".join(f"{task}" for task in done_tasks)
     )
     week_summary_content = week_summary_content.replace(
-        "{{pending_tasks}}", "\n".join(f"[ ] {task}" for task in pending_tasks)
+        "{{pending_tasks}}", "\n".join(f"{task}" for task in pending_tasks)
     )
     week_summary_content = week_summary_content.replace(
         "{{summary}}", "\nWrite your weekly summary here...\n"
@@ -148,6 +166,11 @@ def create_retro_file(week_folder: str, template_path: str) -> str:
 
     if not os.path.exists(retro_file):
         template_content = load_template(template_path)
+
+        sprint = JiraService().get_active_sprint()
+        sprint_name = sprint.name if sprint else "No active sprint"
+        template_content = template_content.replace("{{sprint_name}}", sprint_name)
+
         write_to_file(retro_file, template_content)
 
     return retro_file

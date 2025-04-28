@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from pathlib import Path
 
 from taskjournal.services.logger import logger
 
@@ -42,7 +43,7 @@ def check_finalized_in_file(file_path: str) -> bool:
         return False
 
 
-def get_week_folder(base_dir: str, date: datetime) -> str:
+def get_week_folder(base_dir: str | Path, date: datetime) -> str:
     """Calculate the folder path for the given date."""
     year = date.year
     week_num = date.isocalendar()[1]

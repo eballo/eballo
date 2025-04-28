@@ -1,59 +1,76 @@
 import os
+import uuid
 from datetime import datetime
+
+from taskjournal.constants import BASE_TASKS, EXTENDED_TASKS
+from taskjournal.models.task import Task, Status
+from taskjournal.parser.file_parser import ParseFile
+from taskjournal.services.file import get_lines
 from taskjournal.services.logger import logger
 
 
-def get_tasks_from_daily_notes(file_path: str):
-    done_tasks, pending_tasks = [], []
+def get_tasks_from_daily_notes(file_path: str) -> list[Task]:
     try:
-        with open(file_path, "r") as daily_file:
-            for line in daily_file:
-                if line.startswith("[x]"):
-                    done_tasks.append(line[4:].strip())
-                elif line.startswith("[ ]"):
-                    pending_tasks.append(line[4:].strip())
+        lines = get_lines(file_path)
+        tasks = ParseFile.get_tasks(lines)
+        return tasks
     except Exception as e:
         logger.error(f"Error reading file {file_path}: {e}")
-    return done_tasks, pending_tasks
+        return []
 
 
-def normalize_task(task: str) -> str:
-    """Normalize a task by removing its checkbox prefix."""
-    if task.startswith("[x]") or task.startswith("[ ]"):
-        return task[4:].strip()
-    return task.strip()
+def create_task(description: str) -> Task:
+    return Task(id=str(uuid.uuid4()), description=description, status=Status.TODO)
 
 
-def get_default_tasks() -> list:
+def get_default_tasks() -> list[Task]:
     """Return the default tasks based on the day of the week."""
-    default_tasks = ["[ ] Check emails"]
-    default_tasks.extend(["[ ] Check Calendar"])
-    default_tasks.extend(["[ ] PR reviews"])
+    tasks = [create_task(desc) for desc in BASE_TASKS]
+
     day_of_week = datetime.now().strftime("%A")
+    week_number = datetime.now().isocalendar()[1]
 
     if day_of_week == "Wednesday":
-        default_tasks.extend(["[ ] Check refinement tasks"])
-    elif day_of_week == "Thursday" and (datetime.now().isocalendar()[1] % 2 == 0):
-        default_tasks.append("[ ] Get ready for the retro points")
+        tasks.append(create_task(EXTENDED_TASKS[0]))
+    elif day_of_week == "Thursday" and week_number % 2 == 0:
+        tasks.append(create_task(EXTENDED_TASKS[1]))
     elif day_of_week == "Friday":
-        default_tasks.append("[ ] Write down the summary of the week")
+        tasks.append(create_task(EXTENDED_TASKS[2]))
 
-    return default_tasks
+    return tasks
 
 
-def get_previous_tasks(folder_path: str, current_file: str) -> list:
+def get_previous_pending_tasks(folder_path: str, current_file: str) -> list[Task]:
     """Retrieve unfinished tasks from the most recent daily notes file."""
     if not os.path.exists(folder_path):
         return []
     daily_files = [
-        f for f in os.listdir(folder_path) if f.endswith(".txt") and f != current_file
+        f
+        for f in os.listdir(folder_path)
+        if f.endswith("DailyNotes.txt") and f != current_file
     ]
     if not daily_files:
         return []
     latest_file = os.path.join(folder_path, sorted(daily_files, reverse=True)[0])
     try:
-        with open(latest_file, "r") as file:
-            return [line.strip() for line in file if line.strip().startswith("[ ]")]
+        lines = get_lines(latest_file)
+        pending_tasks = get_pending_tasks(lines)
+        return pending_tasks
     except Exception as e:
         logger.warning(f"Warning: Could not read previous file {latest_file}: {e}")
         return []
+
+
+def get_pending_tasks(lines: list[str]) -> list[Task]:
+    tasks = ParseFile.get_tasks(lines)
+    return [task for task in tasks if task.status == Status.TODO]
+
+
+def unique_tasks(tasks: list[Task]) -> list[Task]:
+    seen = set()
+    unique_tasks = []
+    for task in tasks:
+        if task.description not in seen:
+            seen.add(task.description)
+            unique_tasks.append(task)
+    return unique_tasks
