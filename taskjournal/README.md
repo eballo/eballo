@@ -60,6 +60,7 @@ poetry run pre-commit run --all-files
 │ retro                                                                                                                                            │
 │ week-summary                                                                                                                                     │
 │ time                                                                                                                                             │
+│ jira                                                                                                                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
@@ -84,6 +85,15 @@ poetry run pre-commit run --all-files
 ```
 
 ## Versions
+
+### 0.4.0
+- Jira integration
+- Improve Templates (dailyNotes, retro, weeklysummary)
+- daily-start with force option
+- daily-finish with force option
+- daily-start for a given date
+- daily-finish for a given date
+- Created Task model (pydantic) + refactor
 
 ### 0.3.0
 - add daily-finish custom date update

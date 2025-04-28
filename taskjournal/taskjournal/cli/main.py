@@ -27,7 +27,7 @@ from taskjournal.services.logger import logger
 from taskjournal.services.time import get_wee_folder_and_daily_notes_file
 
 app = typer.Typer()
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 
 def setup(debug: bool):
