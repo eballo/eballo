@@ -11,6 +11,7 @@ from taskjournal.commands.commands import (
     create_retro_file,
     create_week_summary,
     calculate_time,
+    create_half_year_review,
 )
 from taskjournal.config import (
     BASE_DIR,
@@ -21,10 +22,11 @@ from taskjournal.config import (
     JIRA_ORGANIZATION,
     JIRA_API_TOKEN,
     JIRA_EMAIL,
+    HALF_YEAR_REVIEW_TEMPLATE,
 )
 from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
-from taskjournal.services.time import get_wee_folder_and_daily_notes_file
+from taskjournal.services.time import get_week_folder_and_daily_notes_file
 
 app = typer.Typer()
 __version__ = "0.4.0"
@@ -46,7 +48,7 @@ def setup(debug: bool):
         logger.debug(f"JIRA_EMAIL: {JIRA_EMAIL}")
 
     today = datetime.now()
-    daily_notes_file, week_folder = get_wee_folder_and_daily_notes_file(today)
+    daily_notes_file, week_folder = get_week_folder_and_daily_notes_file(today)
 
     return week_folder, daily_notes_file
 
@@ -70,7 +72,7 @@ def daily_start(
     if date:
         try:
             create_datetime = datetime.strptime(date, "%Y-%m-%d %H:%M")
-            daily_notes_file, _ = get_wee_folder_and_daily_notes_file(create_datetime)
+            daily_notes_file, _ = get_week_folder_and_daily_notes_file(create_datetime)
         except ValueError:
             typer.echo("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
             raise typer.Exit(code=1)
@@ -101,7 +103,7 @@ def daily_finish(
     if date:
         try:
             custom_date = datetime.strptime(date, "%Y-%m-%d %H:%M")
-            daily_notes_file, _ = get_wee_folder_and_daily_notes_file(custom_date)
+            daily_notes_file, _ = get_week_folder_and_daily_notes_file(custom_date)
         except ValueError:
             typer.echo("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
             raise typer.Exit(code=1)
@@ -130,6 +132,15 @@ def week_summary(debug: bool = typer.Option(False, help="Enable debug mode")):
 
 
 @app.command()
+def half_year_review(debug: bool = typer.Option(False, help="Enable debug mode")):
+    week_folder, _ = setup(debug)
+    create_half_year_review(week_folder, HALF_YEAR_REVIEW_TEMPLATE)
+    logger.info(
+        f"Half year review file ensured: {os.path.join(week_folder, 'half-year.txt')}"
+    )
+
+
+@app.command()
 def time(debug: bool = typer.Option(False, help="Enable debug mode")):
     _, daily_notes_file = setup(debug)
     if os.path.exists(daily_notes_file):
@@ -145,12 +156,21 @@ def version():
 
 @app.command()
 def jira(
+    debug: bool = typer.Option(False, help="Enable debug mode"),
     all: bool = typer.Option(False, help="Get ALL tasks of the sprint"),
     mine: bool = typer.Option(False, help="Get ALL tasks assigned to me"),
     code: bool = typer.Option(False, help="Get ALL tasks in status 'Code Review'"),
+    midreview: bool = typer.Option(
+        False, help="Get ALL tasks performed by me in the last 6 months"
+    ),
 ):
+    if debug:
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Debug mode enabled for JIRA integration.")
+        logger.debug(f"JIRA_ORGANIZATION: {JIRA_ORGANIZATION}")
+
     logger.info("JIRA integration")
-    service = JiraService()
+    service = JiraService(debug)
     if all:
         logger.info("📝 All Tasks:")
         tasks = service.get_current_sprint_tasks()
@@ -160,6 +180,9 @@ def jira(
     elif code:
         logger.info("📝 Current Sprint Tasks in Code Review:")
         tasks = service.get_current_sprint_tasks_in_code_review()
+    elif midreview:
+        logger.info("📝 Current Tasks assigned to me in the last 6 months:")
+        tasks = service.get_current_tasks_assigned_to_me_last_6_months()
     else:
         logger.info("📝 Current Sprint Tasks assigned to me (not finished):")
         tasks = service.get_current_sprint_tasks_not_done_assigned_to_me()

@@ -59,7 +59,7 @@ def get_daily_notes_name(date: datetime) -> str:
     return date.strftime("%Y-%m-%d") + "-DailyNotes.txt"
 
 
-def get_wee_folder_and_daily_notes_file(today: datetime) -> tuple[str, str]:
+def get_week_folder_and_daily_notes_file(today: datetime) -> tuple[str, str]:
     week_folder = get_week_folder(BASE_DIR, today)
     os.makedirs(week_folder, exist_ok=True)
     daily_notes_name = get_daily_notes_name(today)

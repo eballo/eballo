@@ -17,6 +17,7 @@ from taskjournal.services.task_manager import (
     get_tasks_from_daily_notes,
     get_previous_pending_tasks,
     unique_tasks,
+    get_unique_epics,
 )
 from taskjournal.services.time import (
     get_total_time_from_daily_notes,
@@ -63,10 +64,10 @@ def create_daily_notes_file(
 
     tasks = unique_tasks(default_tasks + previous_pending_tasks + pending_jira_tasks)
     daily_notes_content = FileWriter.format_content(
-        "{{tasks}}", daily_notes_content, tasks
+        "{{tasks}}", daily_notes_content, tasks, with_status=False
     )
     daily_notes_content = FileWriter.format_content(
-        "{{code_review_tasks}}", daily_notes_content, code_review_tasks
+        "{{code_review_tasks}}", daily_notes_content, code_review_tasks, with_name=True
     )
 
     write_to_file(file_path, daily_notes_content)
@@ -158,6 +159,29 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
     )
 
     write_to_file(summary_file, week_summary_content)
+
+
+def create_half_year_review(week_folder: str, template_path: str) -> None:
+    half_year_review_file = os.path.join(week_folder, "half-year.txt")
+    half_year_content = load_template(template_path)
+
+    tasks = JiraService().get_current_tasks_assigned_to_me_last_6_months()
+    epics = get_unique_epics(tasks)
+    total_tasks = len(tasks)
+    total_epics = len(epics)
+
+    half_year_content = half_year_content.replace("{{total_tasks}}", f"{total_tasks}")
+    half_year_content = half_year_content.replace("{{total_epics}}", f"{total_epics}")
+
+    half_year_content = half_year_content.replace(
+        "{{tasks}}", "\n".join(f"{task}" for task in tasks)
+    )
+
+    half_year_content = half_year_content.replace(
+        "{{epics}}", "\n".join(f"{epic}" for epic in epics)
+    )
+
+    write_to_file(half_year_review_file, half_year_content)
 
 
 def create_retro_file(week_folder: str, template_path: str) -> str:
