@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta
 from typing import List
 
 from jira import JIRA
@@ -10,12 +11,13 @@ from taskjournal.config import (
     JIRA_API_TOKEN,
     JIRA_BOARD_ID,
 )
-from taskjournal.models.task import Task, Status
+from taskjournal.models.task import Task, Status, Epic, User
 from taskjournal.services.logger import logger
 
 
 class JiraService:
-    def __init__(self):
+    def __init__(self, debug: bool = False):
+        self.debug = debug
         self.board_id = JIRA_BOARD_ID
         self.jira = JIRA(
             server=f"https://{JIRA_ORGANIZATION}.atlassian.net",
@@ -64,18 +66,41 @@ class JiraService:
         jql = f"sprint = {active_sprint.id} AND status = 'CODE REVIEW' and assignee != currentUser()"
         return self._get_issues(jql)
 
+    def get_current_tasks_assigned_to_me_last_6_months(self) -> List[Task]:
+        six_months_ago = datetime.now() - timedelta(days=180)
+        six_months_ago_str = six_months_ago.strftime("%Y-%m-%d")
+        jql = f"assignee = currentUser() AND updated >= {six_months_ago_str}"
+        return self._get_issues(jql)
+
     def _get_issues(self, jql):
         issues = self.jira.search_issues(jql, maxResults=100)
-        return [
-            Task(
+        if self.debug:
+            logger.debug(f"JQL Query: {jql}")
+            logger.debug(f" total issues found: {len(issues)}")
+
+        tasks = []
+        for issue in issues:
+
+            epic = None
+            parent = getattr(issue.fields, "parent", None)
+            if parent:
+                epic_issue = self.jira.issue(parent.key)
+                epic = Epic(key=epic_issue.key, summary=epic_issue.fields.summary)
+
+            assignee = issue.fields.assignee
+            user = User(name=assignee.displayName) if assignee else None
+
+            task = Task(
                 id=str(uuid.uuid4()),
                 key=issue.key,
                 description=issue.fields.summary,
                 link=f"https://{JIRA_ORGANIZATION}.atlassian.net/browse/{issue.key}",
                 status=self.get_task_status(issue),
+                epic=epic,
+                assignee=user,
             )
-            for issue in issues
-        ]
+            tasks.append(task)
+        return tasks
 
     def get_task_status(self, issue):
         status_mapping = {

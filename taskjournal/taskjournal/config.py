@@ -22,6 +22,7 @@ BASE_PROJECT = os.getenv(
 DAILY_NOTES_TEMPLATE = os.path.join(BASE_PROJECT, "templates/dailyNotes.txt")
 DAILY_NOTES_END_TEMPLATE = os.path.join(BASE_PROJECT, "templates/dailyNotes-end.txt")
 WEEK_SUMMARY_TEMPLATE = os.path.join(BASE_PROJECT, "templates/weekSummary.txt")
+HALF_YEAR_REVIEW_TEMPLATE = os.path.join(BASE_PROJECT, "templates/half-year.txt")
 RETRO_TEMPLATE = os.path.join(BASE_PROJECT, "templates/retro.txt")
 
 # Jira

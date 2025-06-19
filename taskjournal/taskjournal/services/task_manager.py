@@ -1,9 +1,10 @@
 import os
 import uuid
 from datetime import datetime
+from typing import List, Dict
 
 from taskjournal.constants import BASE_TASKS, EXTENDED_TASKS
-from taskjournal.models.task import Task, Status
+from taskjournal.models.task import Task, Status, Epic
 from taskjournal.parser.file_parser import ParseFile
 from taskjournal.services.file import get_lines
 from taskjournal.services.logger import logger
@@ -74,3 +75,11 @@ def unique_tasks(tasks: list[Task]) -> list[Task]:
             seen.add(task.description)
             unique_tasks.append(task)
     return unique_tasks
+
+
+def get_unique_epics(tasks: List[Task]) -> List[Epic]:
+    seen: Dict[str, Epic] = {}
+    for task in tasks:
+        if task.epic and task.epic.key not in seen:
+            seen[task.epic.key] = task.epic
+    return list(seen.values())
