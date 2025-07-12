@@ -1,9 +1,15 @@
-name: Build
+name: Taskjournal CI Build
 
 on:
   push:
+    paths:
+      - "taskjournal/**"
+      - ".github/workflows/taskjournal.yml"
     branches: [ "main" ]
   pull_request:
+    paths:
+      - "taskjournal/**"
+      - ".github/workflows/taskjournal.yml"
     branches: [ "main" ]
 
 permissions:
@@ -28,16 +34,17 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
+        working-directory: taskjournal
         run: poetry install
 
       - name: Run checks with poe
-        run: poetry run poe check
+        working-directory: taskjournal
+        run: poetry run poe coverage
 
-      - name: Upload coverage to SonarCloud
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v2
+        with:
+          projectBaseDir: taskjournal
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
-          unzip sonar-scanner.zip
-          mv sonar-scanner-* sonar-scanner
-          ./sonar-scanner/bin/sonar-scanner
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}

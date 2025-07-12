@@ -19,7 +19,9 @@ def daily_notes_path(today, week_folder):
 
 
 @freeze_time("2025-01-19 10:00:00")
-def test_daily_start_creates_file(mocker, daily_notes_path, daily_notes_template):
+def test_daily_start_creates_file(
+    mocker, daily_notes_path, daily_notes_template, mock_config_envs
+):
     mocker.patch("os.makedirs")
     mocker.patch("os.path.exists", return_value=False)
     mock_create = mocker.patch("taskjournal.cli.main.create_daily_notes_file")
@@ -33,7 +35,7 @@ def test_daily_start_creates_file(mocker, daily_notes_path, daily_notes_template
 
 
 @freeze_time("2025-01-19 10:00:00")
-def test_daily_start_file_exists(mocker, daily_notes_path):
+def test_daily_start_file_exists(mocker, daily_notes_path, mock_config_envs):
     mocker.patch("os.makedirs")
     mocker.patch("os.path.exists", return_value=True)
     mock_warn = mocker.patch("taskjournal.cli.main.logger.warning")
@@ -47,8 +49,9 @@ def test_daily_start_file_exists(mocker, daily_notes_path):
 
 
 @freeze_time("2025-01-19 10:00:00")
-def test_daily_finish(mocker, daily_notes_path):
+def test_daily_finish(mocker, daily_notes_path, mock_config_envs):
     mocker.patch("os.path.exists", return_value=True)
+    mocker.patch("os.makedirs")
     mock_finalize = mocker.patch("taskjournal.cli.main.finalize_daily_notes")
 
     result = runner.invoke(app, ["daily-finish"])
@@ -58,7 +61,9 @@ def test_daily_finish(mocker, daily_notes_path):
 
 
 @freeze_time("2025-01-19 10:00:00")
-def test_daily_finish_file_not_exist(mocker, daily_notes_path):
+def test_daily_finish_file_not_exist(mocker, daily_notes_path, mock_config_envs):
+    mocker.patch("os.path.exists", return_value=True)
+    mocker.patch("os.makedirs")
     mocker.patch("os.path.exists", return_value=False)
     mock_warn = mocker.patch("taskjournal.cli.main.logger.warning")
 
@@ -72,6 +77,13 @@ def test_daily_finish_file_not_exist(mocker, daily_notes_path):
 
 def test_time_valid(mocker, daily_notes_path, today):
     mocker.patch("os.path.exists", return_value=True)
+    mocker.patch("os.makedirs")
+    mock_get_lines = mocker.patch("taskjournal.commands.commands.get_lines")
+    mock_get_lines.return_value = [
+        f"Created: {today.strftime('%Y-%m-%d %H:%M')}\n",
+        "Task 1\n",
+        "Task 2\n",
+    ]
     mock_logger = mocker.patch("taskjournal.commands.commands.logger")
     mock_calculate = mocker.patch(
         "taskjournal.commands.commands.calculate_working_hours"
@@ -87,6 +99,7 @@ def test_time_valid(mocker, daily_notes_path, today):
 
 def test_time_invalid(mocker, daily_notes_path):
     mocker.patch("os.path.exists", return_value=True)
+    mocker.patch("os.makedirs")
     mock_logger = mocker.patch("taskjournal.commands.commands.logger")
     mock_calculate = mocker.patch(
         "taskjournal.commands.commands.calculate_working_hours"
@@ -100,8 +113,9 @@ def test_time_invalid(mocker, daily_notes_path):
 
 
 @freeze_time("2025-01-19 10:00:00")
-def test_time_file_not_exists(mocker, daily_notes_path):
+def test_time_file_not_exists(mocker, daily_notes_path, mock_config_envs):
     mocker.patch("os.path.exists", return_value=False)
+    mocker.patch("os.makedirs")
     mock_logger = mocker.patch("taskjournal.cli.main.logger")
 
     result = runner.invoke(app, ["time"])
@@ -113,10 +127,11 @@ def test_time_file_not_exists(mocker, daily_notes_path):
 
 
 @freeze_time("2025-01-19 10:00:00")
-def test_retro_command(mocker, week_folder, retro_template):
+def test_retro_command(mocker, week_folder, retro_template, mock_config_envs):
     mock_create = mocker.patch(
         "taskjournal.cli.main.create_retro_file", return_value="retro.txt"
     )
+    mocker.patch("os.makedirs")
     result = runner.invoke(app, ["retro"])
 
     assert result.exit_code == 0
@@ -124,8 +139,11 @@ def test_retro_command(mocker, week_folder, retro_template):
 
 
 @freeze_time("2025-01-19 10:00:00")
-def test_week_summary_command(mocker, week_folder, week_summary_template):
+def test_week_summary_command(
+    mocker, week_folder, week_summary_template, mock_config_envs
+):
     mock_create = mocker.patch("taskjournal.cli.main.create_week_summary")
+    mocker.patch("os.makedirs")
 
     result = runner.invoke(app, ["week-summary"])
 

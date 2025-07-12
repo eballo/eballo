@@ -13,13 +13,40 @@ def fixture_path():
 
 
 @fixture
+def mock_config_envs(mocker):
+    mocker.patch(
+        "taskjournal.services.time.BASE_DIR", "/mocked/path/Documents/DailyNotes/"
+    )
+    mocker.patch(
+        "taskjournal.cli.main.DAILY_NOTES_TEMPLATE",
+        "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/templates/dailyNotes.txt",
+    )
+    mocker.patch(
+        "taskjournal.cli.main.DAILY_NOTES_END_TEMPLATE",
+        "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/templates/dailyNotes-end.txt",
+    )
+    mocker.patch(
+        "taskjournal.cli.main.WEEK_SUMMARY_TEMPLATE",
+        "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/templates/weekSummary.txt",
+    )
+    mocker.patch(
+        "taskjournal.cli.main.HALF_YEAR_REVIEW_TEMPLATE",
+        "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/templates/half-year.txt",
+    )
+    mocker.patch(
+        "taskjournal.cli.main.RETRO_TEMPLATE",
+        "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/templates/retro.txt",
+    )
+
+
+@fixture
 def base_dir():
-    return "/Users/eballo/Documents/DailyNotes/"
+    return "/mocked/path/Documents/DailyNotes/"
 
 
 @fixture
 def base_project():
-    return "/Users/eballo/Documents/work/personal/eballo/taskjournal/taskjournal/"
+    return "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/"
 
 
 @fixture
