@@ -1,6 +1,8 @@
 # Task Journal
 
-TaskJournal CLI is a lightweight command-line tool that helps you manage your daily work notes, track working hours, and generate weekly retrospectives and summaries. It's built to support a structured journaling workflow to improve personal productivity and accountability.
+TaskJournal CLI is a lightweight command-line tool that helps you manage your daily work notes, track working hours, and
+generate weekly retrospectives and summaries. It's built to support a structured journaling workflow to improve personal
+productivity and accountability.
 
 ## Install
 
@@ -23,29 +25,44 @@ source .venv/bin/activate
 ```
 
 ### Configure .env
+
 Copy the sample environment file to `.env` and update the values as needed.
 Needs to be placed in ~/config/taskjournal/.env
+
 ```bash
 cp sample.env .env
 ```
 
-
 ### Run the tests
+
 ```bash
 poetry run pytest
 ```
 
 ### Run the code coverage
+
 ```bash
 poetry run pytest --cov=taskjournal --cov-config=.coveragerc tests/
 ```
+
 ### Pre-commit
+
 ```bash
 poetry run pre-commit install
 poetry run pre-commit run --all-files
 ```
 
+### with poe
+
+```bash
+poe format       # runs black
+poe test         # runs pytest
+poe coverage     # runs coverage with HTML report
+poe check        # runs everything
+```
+
 # How to use it
+
 ```bash
 > wk --help
 
@@ -65,21 +82,25 @@ poetry run pre-commit run --all-files
 ```
 
 ## Daily Start
+
 ```bash
 > wk daily-start
 ```
 
 ## Daily Finish
+
 ```bash
 > wk daily-finish
 ```
 
 ## Retro
+
 ```bash
 > wk retro
 ```
 
 ## Week Summary
+
 ```bash
 > wk week-summary
 ```
@@ -87,6 +108,7 @@ poetry run pre-commit run --all-files
 ## Versions
 
 ### 0.4.0
+
 - Jira integration
 - Improve Templates (dailyNotes, retro, weeklysummary)
 - daily-start with force option
@@ -96,13 +118,16 @@ poetry run pre-commit run --all-files
 - Created Task model (pydantic) + refactor
 
 ### 0.3.0
+
 - add daily-finish custom date update
 
 ### 0.2.0
+
 - install package properly
 - added proper packages
 
 ### 0.1.0
+
 - Initial release
 - Add daily start
 - Add daily finish

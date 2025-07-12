@@ -21,6 +21,7 @@ pytest-mock = "^3.14.0"
 pytest-cov = "^6.0.0"
 black = "^25.1.0"
 pre-commit = "^4.2.0"
+poethepoet = "^0.36.0"
 
 [tool.poetry.scripts]
 wk = "taskjournal.cli.main:app"
@@ -41,3 +42,16 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=taskjournal --cov-report=term-missing"
+
+[tool.poe.tasks]
+# Format code with black
+format = "black ."
+
+# Run tests
+test = "pytest tests"
+
+# Coverage
+coverage = "poetry run pytest --cov=taskjournal --cov-config=.coveragerc tests/"
+
+# Run all
+check = { sequence = ["format", "test", "coverage"] }
