@@ -143,7 +143,7 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
 
     # Calculate total hours and minutes for the week
     total_hours, remainder = divmod(total_time_seconds, 3600)
-    total_minutes, total_seconds = divmod(remainder, 60)
+    total_minutes, _ = divmod(remainder, 60)
 
     week_summary_content = week_summary_content.replace(
         "{{total_time}}", f" {total_hours} hours and {total_minutes} minutes"

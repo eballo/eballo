@@ -13,21 +13,45 @@ from taskjournal.commands.commands import (
 
 
 @freeze_time("2025-03-21 10:00:00")
-def test_create_daily_notes_file(daily_notes_template, mocker):
-    mock_file = mocker.mock_open(
-        read_data="Template with {{date}} {{time}} and {{tasks}}."
+def test_create_daily_notes_file(daily_notes_template, mocker, mock_config_envs):
+    mock_writte = mocker.patch("taskjournal.commands.commands.write_to_file")
+    mock_estimated_finish_time = mocker.patch(
+        "taskjournal.commands.commands.estimated_finish_time"
     )
-    mocker.patch("builtins.open", mock_file)
+
+    # Mock JiraService
+    mock_jira = mocker.patch("taskjournal.commands.commands.JiraService")
+    instance = mock_jira.return_value
+    instance.get_active_sprint.return_value = None
+    instance.get_current_sprint_tasks_not_done_assigned_to_me.return_value = []
+    instance.get_current_sprint_tasks_in_code_review.return_value = []
+
     # Given
     file_path = "daily_notes.txt"
+    mock_load_template = mocker.patch("taskjournal.commands.commands.load_template")
+    mock_load_template.return_value = (
+        "📅 Daily Tasks Log\n\n"
+        " Sprint: {{sprint_name}}\n"
+        " Date: {{date}}\n"
+        " Start Time: {{time}}\n"
+        " End Time:\n"
+        " Time Spent:\n\n"
+        "✅ Planned Tasks\n\n"
+        "{{tasks}}\n\n"
+        "🔍 Code Review Tasks\n\n"
+        "{{code_review_tasks}}\n\n"
+        "✍️ Notes\n\n"
+        "\n"
+        "📋 Summary"
+    )
     # When
     create_daily_notes_file(file_path, daily_notes_template, datetime.now())
+
     # Then
-    mock_file.assert_any_call(file_path, "w")
-    # Verify the written content
-    written_content = mock_file().write.call_args[0][0]
-    assert "10:00:00" in written_content
-    assert "[ ] Check emails" in written_content
+    expected_daily_notes_content = "📅 Daily Tasks Log\n\n Sprint: No active sprint\n Date: 2025-03-21\n Start Time: 10:00:00\n End Time:\n Time Spent:\n\n✅ Planned Tasks\n\n[ ] Check emails  \n[ ] Check Calendar  \n[ ] Check Jira  \n[ ] Check Slack  \n[ ] Check the sprint tasks in code review  \n[ ] Write down the summary of the week  \n\n🔍 Code Review Tasks\n\n\n\n✍️ Notes\n\n\n📋 Summary"
+
+    mock_writte.assert_called_once_with("daily_notes.txt", expected_daily_notes_content)
+    assert mock_estimated_finish_time.call_count == 1
 
 
 @freeze_time("2025-03-21 18:00:00")
@@ -177,7 +201,10 @@ def test_create_week_summary(base_dir, fixture_path, week_summary_template, mock
 
 def test_create_retro_file(week_folder, retro_template, mocker):
     # Given
-    mock_exists = mocker.patch("os.path.exists", return_value=False)
+    mocker.patch("os.path.exists", return_value=False)
+    mock_jira = mocker.patch("taskjournal.commands.commands.JiraService")
+    instance = mock_jira.return_value
+    instance.get_active_sprint.return_value = None
     load_template_mock = mocker.patch("taskjournal.commands.commands.load_template")
     write_content_mock = mocker.patch("taskjournal.commands.commands.write_to_file")
     # When

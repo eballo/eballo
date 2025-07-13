@@ -51,7 +51,7 @@ format = "black ."
 test = "pytest tests"
 
 # Coverage
-coverage = "poetry run pytest --cov=taskjournal --cov-config=.coveragerc tests/"
+coverage = "poetry run pytest --cov=taskjournal --cov-config=.coveragerc --cov-report=xml tests/"
 
 # Run all
 check = { sequence = ["format", "test", "coverage"] }
