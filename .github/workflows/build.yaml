@@ -22,6 +22,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Important for SonarCloud SCM data
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v3
@@ -40,10 +42,6 @@ jobs:
       - name: Run checks with poe
         working-directory: taskjournal
         run: poetry run poe coverage
-
-      - name: Debug coverage file
-        working-directory: taskjournal
-        run: ls -la
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
