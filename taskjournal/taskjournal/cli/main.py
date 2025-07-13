@@ -28,6 +28,8 @@ from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
 from taskjournal.services.time import get_week_folder_and_daily_notes_file
 
+DEBUG_MODE_HELP_MESSAGE = "Enable debug mode"
+
 app = typer.Typer()
 __version__ = "0.4.0"
 
@@ -55,7 +57,7 @@ def setup(debug: bool):
 
 @app.command()
 def daily_start(
-    debug: bool = typer.Option(False, help="Enable debug mode"),
+    debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE),
     force: bool = typer.Option(
         False, help="Force recreate the daily notes file if it exists"
     ),
@@ -74,7 +76,7 @@ def daily_start(
             create_datetime = datetime.strptime(date, "%Y-%m-%d %H:%M")
             daily_notes_file, _ = get_week_folder_and_daily_notes_file(create_datetime)
         except ValueError:
-            typer.echo("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
+            logger.error("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
             raise typer.Exit(code=1)
     else:
         create_datetime = datetime.now()
@@ -93,7 +95,7 @@ def daily_start(
 
 @app.command()
 def daily_finish(
-    debug: bool = typer.Option(False, help="Enable debug mode"),
+    debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE),
     date: Optional[str] = typer.Option(
         None, help="Override the date (format: 'YYYY-MM-DD HH:MM')"
     ),
@@ -105,7 +107,7 @@ def daily_finish(
             custom_date = datetime.strptime(date, "%Y-%m-%d %H:%M")
             daily_notes_file, _ = get_week_folder_and_daily_notes_file(custom_date)
         except ValueError:
-            typer.echo("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
+            logger.error("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
             raise typer.Exit(code=1)
 
     if os.path.exists(daily_notes_file):
@@ -116,14 +118,14 @@ def daily_finish(
 
 
 @app.command()
-def retro(debug: bool = typer.Option(False, help="Enable debug mode")):
+def retro(debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE)):
     week_folder, _ = setup(debug)
     retro_file = create_retro_file(week_folder, RETRO_TEMPLATE)
     logger.info(f"Retro file ensured: {retro_file}")
 
 
 @app.command()
-def week_summary(debug: bool = typer.Option(False, help="Enable debug mode")):
+def week_summary(debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE)):
     week_folder, _ = setup(debug)
     create_week_summary(week_folder, WEEK_SUMMARY_TEMPLATE)
     logger.info(
@@ -132,7 +134,7 @@ def week_summary(debug: bool = typer.Option(False, help="Enable debug mode")):
 
 
 @app.command()
-def half_year_review(debug: bool = typer.Option(False, help="Enable debug mode")):
+def half_year_review(debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE)):
     week_folder, _ = setup(debug)
     create_half_year_review(week_folder, HALF_YEAR_REVIEW_TEMPLATE)
     logger.info(
@@ -141,7 +143,7 @@ def half_year_review(debug: bool = typer.Option(False, help="Enable debug mode")
 
 
 @app.command()
-def time(debug: bool = typer.Option(False, help="Enable debug mode")):
+def time(debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE)):
     _, daily_notes_file = setup(debug)
     if os.path.exists(daily_notes_file):
         calculate_time(daily_notes_file)
@@ -156,7 +158,7 @@ def version():
 
 @app.command()
 def jira(
-    debug: bool = typer.Option(False, help="Enable debug mode"),
+    debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE),
     all: bool = typer.Option(False, help="Get ALL tasks of the sprint"),
     mine: bool = typer.Option(False, help="Get ALL tasks assigned to me"),
     code: bool = typer.Option(False, help="Get ALL tasks in status 'Code Review'"),

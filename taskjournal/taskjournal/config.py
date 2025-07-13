@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 dotenv_path = Path.home() / ".config" / "taskjournal" / ".env"
 
 if not dotenv_path.exists():
-    logging.warn(f"⚠️  Warning: {dotenv_path} not found. Using default values.")
+    logging.warning(f"⚠️  Warning: {dotenv_path} not found. Using default values.")
 
 load_dotenv(dotenv_path)
 

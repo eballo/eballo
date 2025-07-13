@@ -41,10 +41,13 @@ jobs:
         working-directory: taskjournal
         run: poetry run poe coverage
 
+      - name: Debug coverage file
+        working-directory: taskjournal
+        run: ls -la
+
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v2
+        uses: SonarSource/sonarqube-scan-action@v5
         with:
           projectBaseDir: taskjournal
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
