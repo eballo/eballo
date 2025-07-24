@@ -15,7 +15,7 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   bump-version:
-    if: "!contains(github.event.head_commit.message, '[bump]')"
+    if: "!contains(github.event.head_commit.message, 'Bump version:')"
 
     needs: build
     runs-on: ubuntu-latest
@@ -44,6 +44,5 @@ jobs:
       - name: Bump version (minor)
         working-directory: taskjournal
         run: |
-          bump2version minor --new-version $(bump2version --dry-run --list minor | grep new_version | sed -r s,"^.*=",,)
-          git commit -am "[bump] Bump version"
+          bump2version minor
           git push --follow-tags origin main
