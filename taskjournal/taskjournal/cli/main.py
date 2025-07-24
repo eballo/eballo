@@ -32,7 +32,7 @@ from taskjournal.services.time import get_week_folder_and_daily_notes_file
 DEBUG_MODE_HELP_MESSAGE = "Enable debug mode"
 
 app = typer.Typer()
-__version__ = "0.4.0"
+__version__ = "0.4.3"
 
 
 def setup(debug: bool):
