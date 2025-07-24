@@ -6,7 +6,11 @@ on:
       - main
 
 jobs:
+  call-build:
+    uses: ./.github/workflows/build.yaml
+
   bump-version:
+    needs: call-build
     runs-on: ubuntu-latest
 
     steps:
