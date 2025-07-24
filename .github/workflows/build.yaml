@@ -11,6 +11,10 @@ on:
       - "taskjournal/**"
       - ".github/workflows/taskjournal.yml"
     branches: [ "main" ]
+  workflow_call:
+    secrets:
+      SONAR_TOKEN:
+        required: true
 
 permissions:
   contents: read
