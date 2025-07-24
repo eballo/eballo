@@ -15,6 +15,8 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   bump-version:
+    if: "!contains(github.event.head_commit.message, 'Bump version:')"
+
     needs: build
     runs-on: ubuntu-latest
 
@@ -39,8 +41,8 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-      - name: Bump version (patch)
+      - name: Bump version (minor)
         working-directory: taskjournal
         run: |
-          bump2version patch
+          bump2version minor
           git push --follow-tags origin main
