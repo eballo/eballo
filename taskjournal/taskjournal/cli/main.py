@@ -24,6 +24,7 @@ from taskjournal.config import (
     JIRA_EMAIL,
     HALF_YEAR_REVIEW_TEMPLATE,
 )
+from taskjournal.services.backup import create_backup
 from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
 from taskjournal.services.time import get_week_folder_and_daily_notes_file
@@ -149,6 +150,12 @@ def time(debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE)):
         calculate_time(daily_notes_file)
     else:
         logger.warning(f"Daily notes file does not exist: {daily_notes_file}")
+
+
+@app.command()
+def backup():
+    backup_file = create_backup()
+    logger.info(f"Backup created at: {backup_file}")
 
 
 @app.command()
