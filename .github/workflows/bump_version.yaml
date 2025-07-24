@@ -1,0 +1,37 @@
+name: Bump Version on Merge to Main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install bump2version
+        working-directory: taskjournal
+        run: pip install bump2version
+
+      - name: Configure Git
+        working-directory: taskjournal
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Bump version (patch)
+        working-directory: taskjournal
+        run: |
+          bump2version patch
+          git push --follow-tags origin main
