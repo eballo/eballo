@@ -11,6 +11,7 @@ on:
       - "taskjournal/**"
       - ".github/workflows/taskjournal.yml"
     branches: [ "main" ]
+  workflow_call:
 
 permissions:
   contents: read
