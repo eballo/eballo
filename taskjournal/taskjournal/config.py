@@ -17,6 +17,7 @@ BASE_PROJECT = os.getenv(
     "BASE_PROJECT",
     Path.home() / "Documents/work/personal/eballo/taskjournal/taskjournal/",
 )
+BACKUP_DIR = os.getenv("BACKUP_DIR", Path.home() / "Documents/Backup/")
 
 # Template paths
 DAILY_NOTES_TEMPLATE = os.path.join(BASE_PROJECT, "templates/dailyNotes.txt")
