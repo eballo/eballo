@@ -5,6 +5,7 @@ from typing import Optional
 
 import typer
 
+from taskjournal.cli import version as task_journal_version
 from taskjournal.commands.commands import (
     create_daily_notes_file,
     finalize_daily_notes,
@@ -32,7 +33,6 @@ from taskjournal.services.time import get_week_folder_and_daily_notes_file
 DEBUG_MODE_HELP_MESSAGE = "Enable debug mode"
 
 app = typer.Typer()
-__version__ = "0.4.3"
 
 
 def setup(debug: bool):
@@ -160,7 +160,7 @@ def backup():
 
 @app.command()
 def version():
-    logger.info(f"Task Journal Version: {__version__}")
+    logger.info(f"Task Journal Version: {task_journal_version}")
 
 
 @app.command()
