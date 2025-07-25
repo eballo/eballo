@@ -165,10 +165,21 @@ def version():
 
 
 @app.command()
-def git():
+def git(
+    debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE),
+    stats: bool = typer.Option(False, help="Get commit stats for the organization"),
+):
     git_service = GithubService()
-    logger.info("Git integration")
-    git_service.get_org_commit_stats(since_date=datetime(2025, 1, 1))
+
+    if debug:
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Debug mode enabled for Git integration.")
+
+    if stats:
+        commit_stats = git_service.get_org_commit_stats(
+            since_date=datetime(2025, 1, 1), only_contributed=True
+        )
+        git_service.print_commit_stats(commit_stats)
 
 
 @app.command()
