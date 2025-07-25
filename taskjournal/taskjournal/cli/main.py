@@ -26,6 +26,7 @@ from taskjournal.config import (
     HALF_YEAR_REVIEW_TEMPLATE,
 )
 from taskjournal.services.backup import create_backup
+from taskjournal.services.github import GithubService
 from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
 from taskjournal.services.time import get_week_folder_and_daily_notes_file
@@ -161,6 +162,13 @@ def backup():
 @app.command()
 def version():
     logger.info(f"Task Journal Version: {task_journal_version}")
+
+
+@app.command()
+def git():
+    git_service = GithubService()
+    logger.info("Git integration")
+    git_service.get_org_commit_stats(since_date=datetime(2025, 1, 1))
 
 
 @app.command()

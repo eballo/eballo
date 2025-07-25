@@ -140,6 +140,10 @@ poe check        # runs everything
 
 ## Versions
 
+### 0.6.0
+
+- Add github integration service
+
 ### 0.5.0
 
 - Add backup command
