@@ -24,6 +24,7 @@ from taskjournal.config import (
     JIRA_API_TOKEN,
     JIRA_EMAIL,
     HALF_YEAR_REVIEW_TEMPLATE,
+    GIT_HUB_ORGANIZATION_NAME,
 )
 from taskjournal.services.backup import create_backup
 from taskjournal.services.github import GithubService
@@ -168,17 +169,40 @@ def version():
 def git(
     debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE),
     stats: bool = typer.Option(False, help="Get commit stats for the organization"),
+    date: Optional[str] = typer.Option(
+        None, help="Override the date (format: 'YYYY-MM-DD')"
+    ),
+    contributed: bool = typer.Option(True, help="only show contributed commits"),
+    organization: str = typer.Option(help="GitHub organization name", default=None),
 ):
+    if (date or contributed is not None) and not stats:
+        typer.echo(
+            "❌ The '--date' and '--contributed' options can only be used with '--stats'."
+        )
+        raise typer.Exit(code=1)
+
     git_service = GithubService()
 
     if debug:
-        logger.setLevel(logging.DEBUG)
         logger.debug("Debug mode enabled for Git integration.")
+        logger.debug(f"GIT_HUB_ORGANIZATION_NAME: {GIT_HUB_ORGANIZATION_NAME}")
 
     if stats:
-        commit_stats = git_service.get_org_commit_stats(
-            since_date=datetime(2025, 1, 1), only_contributed=True
-        )
+        if date:
+            try:
+                custom_date = datetime.strptime(date, "%Y-%m-%d %H:%M")
+                commit_stats = git_service.get_org_commit_stats(
+                    since_date=custom_date,
+                    only_contributed=contributed,
+                    org_name=organization,
+                )
+            except ValueError:
+                logger.error("❌ Invalid date format. Use 'YYYY-MM-DD")
+                raise typer.Exit(code=1)
+        else:
+            commit_stats = git_service.get_org_commit_stats(
+                only_contributed=contributed, org_name=organization
+            )
         git_service.print_commit_stats(commit_stats)
 
 

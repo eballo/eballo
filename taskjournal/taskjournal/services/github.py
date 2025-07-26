@@ -2,7 +2,7 @@ from datetime import datetime
 
 from github import Github
 
-from taskjournal.config import GIT_HUB_TOKEN
+from taskjournal.config import GIT_HUB_TOKEN, GIT_HUB_ORGANIZATION_NAME
 from taskjournal.models.github import RepoCommitStat
 from taskjournal.services.logger import logger
 
@@ -20,7 +20,7 @@ class GithubService:
 
     def get_org_commit_stats(
         self,
-        org_name: str = "kidoodleDEV",
+        org_name: str = GIT_HUB_ORGANIZATION_NAME,
         since_date: datetime | None = None,
         only_contributed: bool = False,
     ) -> list[RepoCommitStat] | None:
@@ -46,7 +46,8 @@ class GithubService:
             )  # Default: Jan 1 of current year
 
         logger.info(
-            f"Gathering commit stats since {since_date.date()} for user '{username}' in org '{org_name}'..."
+            f"Gathering commit stats since {since_date.date()} for user '{username}' in org '{org_name}' "
+            f"with only_contributed {only_contributed}..."
         )
 
         commit_stats = []
@@ -87,7 +88,8 @@ class GithubService:
 
         return commit_stats
 
-    def print_commit_stats(self, commit_stats: list[RepoCommitStat] | None) -> None:
+    @staticmethod
+    def print_commit_stats(commit_stats: list[RepoCommitStat] | None) -> None:
         """
         Print commit statistics in a formatted table.
         """
@@ -97,12 +99,12 @@ class GithubService:
 
         for stat in commit_stats:
             logger.info(
-                f"{stat['repo']}: {stat['your_commits']}/{stat['total_commits']} commits "
-                f"({stat['percentage']}%)"
+                f"{stat.repo}: {stat.your_commits}/{stat.total_commits} commits "
+                f"({stat.percentage}%)"
             )
 
-        total_user_commits = sum(r["your_commits"] for r in commit_stats)
-        total_all_commits = sum(r["total_commits"] for r in commit_stats)
+        total_user_commits = sum(repository.your_commits for repository in commit_stats)
+        total_all_commits = sum(repository.total_commits for repository in commit_stats)
         overall_percentage = (
             round((total_user_commits / total_all_commits) * 100, 2)
             if total_all_commits
