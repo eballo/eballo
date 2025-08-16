@@ -10,6 +10,7 @@ from taskjournal.services.file import (
     write_lines_to_file,
     get_lines,
 )
+from taskjournal.services.github import GithubService
 from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
 from taskjournal.services.task_manager import (
@@ -165,13 +166,21 @@ def create_half_year_review(week_folder: str, template_path: str) -> None:
     half_year_review_file = os.path.join(week_folder, "half-year.txt")
     half_year_content = load_template(template_path)
 
+    # JIRA tasks and epics for the last 6 months
     tasks = JiraService().get_current_tasks_assigned_to_me_last_6_months()
     epics = get_unique_epics(tasks)
     total_tasks = len(tasks)
     total_epics = len(epics)
 
+    # GitHub contributions
+    git_service = GithubService()
+    github_contributions = git_service.get_contributions_last_6_months()
+
     half_year_content = half_year_content.replace("{{total_tasks}}", f"{total_tasks}")
     half_year_content = half_year_content.replace("{{total_epics}}", f"{total_epics}")
+    half_year_content = half_year_content.replace(
+        "{{github_contributions}}", f"{github_contributions}"
+    )
 
     half_year_content = half_year_content.replace(
         "{{tasks}}", "\n".join(f"{task}" for task in tasks)

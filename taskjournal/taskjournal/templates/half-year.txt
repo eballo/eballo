@@ -10,6 +10,10 @@ Tasks I completed:
 
 {{tasks}}
 
+🐙 GitHub Contributions:
+
+{{github_contributions}}
+
 🌟 Reflection Questions
 What are you most proud of accomplishing in the past month?
 

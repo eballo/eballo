@@ -173,8 +173,15 @@ def git(
         None, help="Override the date (format: 'YYYY-MM-DD')"
     ),
     contributed: bool = typer.Option(True, help="only show contributed commits"),
-    organization: str = typer.Option(help="GitHub organization name", default=None),
+    organization: str = typer.Option(
+        help="GitHub organization name", default=GIT_HUB_ORGANIZATION_NAME
+    ),
 ):
+    if debug:
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Debug mode enabled for Git integration.")
+        logger.debug(f"GIT_HUB_ORGANIZATION_NAME: {GIT_HUB_ORGANIZATION_NAME}")
+
     if (date or contributed is not None) and not stats:
         typer.echo(
             "❌ The '--date' and '--contributed' options can only be used with '--stats'."
@@ -182,10 +189,6 @@ def git(
         raise typer.Exit(code=1)
 
     git_service = GithubService()
-
-    if debug:
-        logger.debug("Debug mode enabled for Git integration.")
-        logger.debug(f"GIT_HUB_ORGANIZATION_NAME: {GIT_HUB_ORGANIZATION_NAME}")
 
     if stats:
         if date:

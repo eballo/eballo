@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from github import Github
 
@@ -115,3 +115,46 @@ class GithubService:
         logger.info(f"   Your commits: {total_user_commits}")
         logger.info(f"   Org total commits: {total_all_commits}")
         logger.info(f"   Your overall contribution: {overall_percentage}%")
+
+    @staticmethod
+    def get_commit_stats_summary(commit_stats: list[RepoCommitStat] | None) -> str:
+        """
+        Return commit statistics as a formatted string instead of logging.
+        """
+        if not commit_stats:
+            return "No commit stats to display."
+
+        lines = []
+        for stat in commit_stats:
+            lines.append(
+                f"{stat.repo}: {stat.your_commits}/{stat.total_commits} commits "
+                f"({stat.percentage}%)"
+            )
+
+        total_user_commits = sum(repository.your_commits for repository in commit_stats)
+        total_all_commits = sum(repository.total_commits for repository in commit_stats)
+        overall_percentage = (
+            round((total_user_commits / total_all_commits) * 100, 2)
+            if total_all_commits
+            else 0
+        )
+
+        lines.append("\n📊 Overall Contribution Summary:")
+        lines.append(f"   Your commits: {total_user_commits}")
+        lines.append(f"   Org total commits: {total_all_commits}")
+        lines.append(f"   Your overall contribution: {overall_percentage}%")
+
+        return "\n".join(lines)
+
+    def get_contributions_last_6_months(self) -> str:
+        last_six_months = datetime.now() - timedelta(days=180)
+        try:
+            commit_stats = self.get_org_commit_stats(
+                since_date=last_six_months,
+                only_contributed=True,
+                org_name=GIT_HUB_ORGANIZATION_NAME,
+            )
+        except ValueError:
+            logger.error("Some error occurred while fetching contributions.")
+
+        return self.get_commit_stats_summary(commit_stats)
