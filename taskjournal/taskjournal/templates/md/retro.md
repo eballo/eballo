@@ -1,0 +1,19 @@
+# 🌀 Sprint {{sprint_name}} Retrospective
+
+---
+
+## ✅ What Went Well
+
+---
+
+## ⚠️ What Didn't Go Well
+
+---
+
+## 🔧 Areas for Improvement
+
+---
+
+## 🎯 Action Items
+
+- [ ] Action Item 1

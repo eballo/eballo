@@ -1,4 +1,4 @@
-🗓️ Monthly Review Template
+🗓️ Half Year Review Template
 📌 Performed a total number of {{total_tasks}} Tasks and contributed to {{total_epics}} projects in the last 6 months.
 
 Projects I took part in:

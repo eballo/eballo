@@ -20,11 +20,21 @@ BASE_PROJECT = os.getenv(
 BACKUP_DIR = os.getenv("BACKUP_DIR", Path.home() / "Documents/Backup/")
 
 # Template paths
-DAILY_NOTES_TEMPLATE = os.path.join(BASE_PROJECT, "templates/dailyNotes.txt")
-DAILY_NOTES_END_TEMPLATE = os.path.join(BASE_PROJECT, "templates/dailyNotes-end.txt")
-WEEK_SUMMARY_TEMPLATE = os.path.join(BASE_PROJECT, "templates/weekSummary.txt")
-HALF_YEAR_REVIEW_TEMPLATE = os.path.join(BASE_PROJECT, "templates/half-year.txt")
-RETRO_TEMPLATE = os.path.join(BASE_PROJECT, "templates/retro.txt")
+TEMPLATE_FORMAT = os.getenv("TEMPLATE_FORMAT", "md")
+TEMPLATES_DIR = f"templates/{TEMPLATE_FORMAT}"
+DAILY_NOTES_TEMPLATE = os.path.join(
+    BASE_PROJECT, f"{TEMPLATES_DIR}/dailyNotes.{TEMPLATE_FORMAT}"
+)
+DAILY_NOTES_END_TEMPLATE = os.path.join(
+    BASE_PROJECT, f"{TEMPLATES_DIR}/dailyNotes-end.{TEMPLATE_FORMAT}"
+)
+WEEK_SUMMARY_TEMPLATE = os.path.join(
+    BASE_PROJECT, f"{TEMPLATES_DIR}/weekSummary.{TEMPLATE_FORMAT}"
+)
+HALF_YEAR_REVIEW_TEMPLATE = os.path.join(
+    BASE_PROJECT, f"{TEMPLATES_DIR}/halfYear.{TEMPLATE_FORMAT}"
+)
+RETRO_TEMPLATE = os.path.join(BASE_PROJECT, f"{TEMPLATES_DIR}//retro.{TEMPLATE_FORMAT}")
 
 # Jira
 JIRA_ORGANIZATION = os.getenv("JIRA_ORGANIZATION", "organization")
