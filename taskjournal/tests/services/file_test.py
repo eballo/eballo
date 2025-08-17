@@ -8,6 +8,7 @@ from taskjournal.services.file import (
     write_to_file,
     load_template,
     check_finalized_in_file,
+    write_lines_to_file,
 )
 
 
@@ -32,9 +33,6 @@ def test_write_to_file(mocker):
     # Then
     mock_file.assert_called_once_with(file_path, "w")
     mock_file().write.assert_called_once_with(content)
-
-
-from services.file import write_lines_to_file
 
 
 def test_write_lines_to_file(mocker):

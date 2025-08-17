@@ -31,3 +31,9 @@ JIRA_ORGANIZATION = os.getenv("JIRA_ORGANIZATION", "organization")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN", "your-jira-key")
 JIRA_EMAIL = os.getenv("JIRA_EMAIL", "<EMAIL>")
 JIRA_BOARD_ID = os.getenv("JIRA_BOARD_ID", "your-jira-board-id")
+
+# github
+GIT_HUB_ORGANIZATION_NAME = os.getenv(
+    "GIT_HUB_ORGANIZATION_NAME", "your-github-organization"
+)
+GIT_HUB_TOKEN = os.getenv("GIT_HUB_TOKEN", "your-github-token")

@@ -80,6 +80,7 @@ poe check        # runs everything
 │ time                                                                           │
 │ backup                                                                         │
 │ version                                                                        │
+│ git                                                                            │
 │ jira                                                                           │
 ╰────────────────────────────────────────────────────────────────────────────────╯
 ```
@@ -138,7 +139,17 @@ poe check        # runs everything
 > wk version
 ```
 
+## Wiki
+
+- [Jira Setup](wiki/jira-setup.md)
+- [Github Setup](wiki/github-setup.md)
+- [Shell Completion](wiki/shell-completion.md)
+
 ## Versions
+
+### 0.6.0
+
+- Add github integration service
 
 ### 0.5.0
 
