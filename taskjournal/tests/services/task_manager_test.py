@@ -9,13 +9,17 @@ from taskjournal.services.task_manager import (
 
 
 def test_get_tasks_from_daily_notes(mocker):
+    # given
+    mocker.patch("taskjournal.parser.file_parser.TEMPLATE_FORMAT", "txt")
     mock_file = mocker.mock_open(
         read_data="[x] Done Task\n[ ] Pending Task\n[ ] Another Pending\n"
     )
     mocker.patch("builtins.open", mock_file)
 
+    # when
     tasks = get_tasks_from_daily_notes("fake_path.txt")
 
+    # then
     assert len(tasks) == 3
     assert tasks[0].description == "Done Task"
     assert tasks[0].status == Status.DONE
@@ -90,29 +94,33 @@ def test_get_previous_tasks_no_txt_files(mocker):
 
 
 def test_get_previous_tasks_success(mocker):
+    # given
+    mocker.patch("taskjournal.services.task_manager.TEMPLATE_FORMAT", "txt")
+    mocker.patch("taskjournal.parser.file_parser.TEMPLATE_FORMAT", "txt")
     mocker.patch("os.path.exists", return_value=True)
     mocker.patch(
         "os.listdir", return_value=["2025-01-18-DailyNotes.txt", "current.txt"]
     )
-
     mock_file = mocker.mock_open(read_data="[ ] Task 1\n[x] Task 2\n[ ] Task 3\n")
     mocker.patch("builtins.open", mock_file)
-
+    # when
     result = get_previous_pending_tasks("folder", "current.txt")
-
+    # then
     assert len(result) == 2
 
 
 def test_get_previous_tasks_file_read_error(mocker):
+    # given
+    mocker.patch("taskjournal.services.task_manager.TEMPLATE_FORMAT", "txt")
     mocker.patch("os.path.exists", return_value=True)
     mocker.patch(
         "os.listdir", return_value=["2025-01-18-DailyNotes.txt", "current.txt"]
     )
     mocker.patch("builtins.open", side_effect=OSError("read fail"))
     mock_logger = mocker.patch("taskjournal.services.task_manager.logger")
-
+    # when
     result = get_previous_pending_tasks("folder", "current.txt")
-
+    # then
     assert result == []
     mock_logger.warning.assert_called_once()
     assert "read fail" in mock_logger.warning.call_args[0][0]

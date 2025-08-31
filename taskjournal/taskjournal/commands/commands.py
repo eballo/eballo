@@ -27,6 +27,7 @@ from taskjournal.services.time import (
     get_start_time,
     calculate_working_hours,
 )
+from taskjournal.services.utils import wrap_with_format
 
 
 def create_daily_notes_file(
@@ -95,26 +96,22 @@ def finalize_daily_notes(file_path: str, custom_date: datetime | None) -> None:
     content = get_lines(file_path)
     created_line_index, created_time = get_start_time(content)
 
-    opening = " " if TEMPLATE_FORMAT == "txt" else "**"
-    closing = "" if TEMPLATE_FORMAT == "txt" else "**"
-
     # Calculate finalized time and total time spent
     total_time_spent = final_time - created_time
-    finalized_line = f"{opening}End Time:{closing} {final_time.strftime('%H:%M')}\n"
+    end_time = wrap_with_format("End Time:")
+    finalized_line = f"{end_time} {final_time.strftime('%H:%M')}\n"
 
     # Properly format total_time_spent
     hours, remainder = divmod(total_time_spent.total_seconds(), 3600)
     minutes, _ = divmod(remainder, 60)
-    total_time_line = (
-        f"{opening}Time Spent:{closing} {int(hours):02}:{int(minutes):02}\n"
-    )
+    time_spent = wrap_with_format("Time Spent:")
+    total_time_line = f"{time_spent} {int(hours):02}:{int(minutes):02}\n"
 
     # Remove old Finalized and Total Time Spent lines if they exist
     content = [
         line
         for line in content
-        if not line.startswith(f"{opening}End Time:{closing}")
-        and not line.startswith(f"{opening}Time Spent:{closing}")
+        if not line.startswith(f"{end_time}") and not line.startswith(f"{time_spent}")
     ]
 
     # Insert finalized time and total time spent below the creation date
