@@ -1,0 +1,29 @@
+# 📅 Daily Tasks Log
+
+**Sprint:** {{sprint_name}}
+**Date:** {{date}}
+**Start Time:** {{time}}
+**End Time:**
+**Time Spent:**
+
+---
+
+## ✅ Planned Tasks
+
+{{tasks}}
+
+---
+
+## 🔍 Code Review Tasks
+
+{{code_review_tasks}}
+
+---
+
+## ✍️ Notes
+
+-
+
+---
+
+## 📋 Summary

@@ -1,0 +1,21 @@
+# 📅 Weekly Summary
+
+**🕒 Total Time Spent:** {{total_time}}
+
+---
+
+## ✅ Tasks Completed
+
+{{done_tasks}}
+
+---
+
+## 🔄 Tasks Pending
+
+{{pending_tasks}}
+
+---
+
+## 📝 General Summary
+
+{{summary}}

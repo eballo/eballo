@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from typing import List, Dict
 
+from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.constants import BASE_TASKS, EXTENDED_TASKS
 from taskjournal.models.task import Task, Status, Epic
 from taskjournal.parser.file_parser import ParseFile
@@ -13,7 +14,7 @@ from taskjournal.services.logger import logger
 def get_tasks_from_daily_notes(file_path: str) -> list[Task]:
     try:
         lines = get_lines(file_path)
-        tasks = ParseFile.get_tasks(lines)
+        tasks = ParseFile().get_tasks(lines)
         return tasks
     except Exception as e:
         logger.error(f"Error reading file {file_path}: {e}")
@@ -48,7 +49,7 @@ def get_previous_pending_tasks(folder_path: str, current_file: str) -> list[Task
     daily_files = [
         f
         for f in os.listdir(folder_path)
-        if f.endswith("DailyNotes.txt") and f != current_file
+        if f.endswith(f"DailyNotes.{TEMPLATE_FORMAT}") and f != current_file
     ]
     if not daily_files:
         return []
@@ -63,7 +64,7 @@ def get_previous_pending_tasks(folder_path: str, current_file: str) -> list[Task
 
 
 def get_pending_tasks(lines: list[str]) -> list[Task]:
-    tasks = ParseFile.get_tasks(lines)
+    tasks = ParseFile().get_tasks(lines)
     return [task for task in tasks if task.status == Status.TODO]
 
 

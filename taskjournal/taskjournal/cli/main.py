@@ -21,10 +21,10 @@ from taskjournal.config import (
     RETRO_TEMPLATE,
     DAILY_NOTES_END_TEMPLATE,
     JIRA_ORGANIZATION,
-    JIRA_API_TOKEN,
     JIRA_EMAIL,
     HALF_YEAR_REVIEW_TEMPLATE,
     GIT_HUB_ORGANIZATION_NAME,
+    TEMPLATE_FORMAT,
 )
 from taskjournal.services.backup import create_backup
 from taskjournal.services.github import GithubService
@@ -43,13 +43,13 @@ def setup(debug: bool):
         logger.debug("Debug mode enabled.")
         logger.debug(f"BASE_DIR: {BASE_DIR}")
         logger.debug("[Templates]")
+        logger.debug(f"DAILY_NOTES_TEMPLATE: {TEMPLATE_FORMAT}")
         logger.debug(f"DAILY_NOTES_TEMPLATE: {DAILY_NOTES_TEMPLATE}")
         logger.debug(f"DAILY_NOTES_END_TEMPLATE: {DAILY_NOTES_END_TEMPLATE}")
         logger.debug(f"WEEK_SUMMARY_TEMPLATE: {WEEK_SUMMARY_TEMPLATE}")
         logger.debug(f"RETRO_TEMPLATE: {RETRO_TEMPLATE}")
         logger.debug("[JIRA]")
         logger.debug(f"JIRA_ORGANIZATION: {JIRA_ORGANIZATION}")
-        logger.debug(f"JIRA_API_TOKEN: {JIRA_API_TOKEN}")
         logger.debug(f"JIRA_EMAIL: {JIRA_EMAIL}")
 
     today = datetime.now()
@@ -132,7 +132,7 @@ def week_summary(debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESSAGE)
     week_folder, _ = setup(debug)
     create_week_summary(week_folder, WEEK_SUMMARY_TEMPLATE)
     logger.info(
-        f"Week summary file ensured: {os.path.join(week_folder, 'week-summary.txt')}"
+        f"Week summary file created at: {week_folder}/weekSummary.{TEMPLATE_FORMAT}"
     )
 
 
@@ -141,7 +141,7 @@ def half_year_review(debug: bool = typer.Option(False, help=DEBUG_MODE_HELP_MESS
     week_folder, _ = setup(debug)
     create_half_year_review(week_folder, HALF_YEAR_REVIEW_TEMPLATE)
     logger.info(
-        f"Half year review file ensured: {os.path.join(week_folder, 'half-year.txt')}"
+        f"Half year review file created: {week_folder}/halfYear.{TEMPLATE_FORMAT}"
     )
 
 

@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 
+from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.models.task import Status
 from taskjournal.repositories.file_writer import FileWriter
 from taskjournal.services.file import (
@@ -26,6 +27,7 @@ from taskjournal.services.time import (
     get_start_time,
     calculate_working_hours,
 )
+from taskjournal.services.utils import wrap_with_format
 
 
 def create_daily_notes_file(
@@ -64,10 +66,12 @@ def create_daily_notes_file(
     previous_pending_tasks = get_previous_pending_tasks(folder_path, current_file)
 
     tasks = unique_tasks(default_tasks + previous_pending_tasks + pending_jira_tasks)
-    daily_notes_content = FileWriter.format_content(
+
+    file_writer = FileWriter()
+    daily_notes_content = file_writer.format_content(
         "{{tasks}}", daily_notes_content, tasks, with_status=False
     )
-    daily_notes_content = FileWriter.format_content(
+    daily_notes_content = file_writer.format_content(
         "{{code_review_tasks}}", daily_notes_content, code_review_tasks, with_name=True
     )
 
@@ -94,18 +98,20 @@ def finalize_daily_notes(file_path: str, custom_date: datetime | None) -> None:
 
     # Calculate finalized time and total time spent
     total_time_spent = final_time - created_time
-    finalized_line = f" End Time: {final_time.strftime('%H:%M')}\n"
+    end_time = wrap_with_format("End Time:")
+    finalized_line = f"{end_time} {final_time.strftime('%H:%M')}\n"
 
     # Properly format total_time_spent
     hours, remainder = divmod(total_time_spent.total_seconds(), 3600)
     minutes, _ = divmod(remainder, 60)
-    total_time_line = f" Time Spent: {int(hours):02}:{int(minutes):02}\n"
+    time_spent = wrap_with_format("Time Spent:")
+    total_time_line = f"{time_spent} {int(hours):02}:{int(minutes):02}\n"
 
     # Remove old Finalized and Total Time Spent lines if they exist
     content = [
         line
         for line in content
-        if not line.startswith(" End Time:") and not line.startswith(" Time Spent:")
+        if not line.startswith(f"{end_time}") and not line.startswith(f"{time_spent}")
     ]
 
     # Insert finalized time and total time spent below the creation date
@@ -119,14 +125,14 @@ def finalize_daily_notes(file_path: str, custom_date: datetime | None) -> None:
 
 def create_week_summary(week_folder: str, template_path: str) -> None:
     """Create a week summary file."""
-    summary_file = os.path.join(week_folder, "week-summary.txt")
+    summary_file = os.path.join(week_folder, f"week-summary.{TEMPLATE_FORMAT}")
     week_summary_content = load_template(template_path)
     done_tasks = []
     pending_tasks = []
     total_time_seconds = 0
 
     for file_name in sorted(os.listdir(week_folder)):
-        if file_name.endswith("-DailyNotes.txt"):
+        if file_name.endswith(f"-DailyNotes.{TEMPLATE_FORMAT}"):
             daily_file_path = os.path.join(week_folder, file_name)
             tasks = get_tasks_from_daily_notes(daily_file_path)
             daily_done = [task for task in tasks if task.status == Status.DONE]
@@ -163,7 +169,7 @@ def create_week_summary(week_folder: str, template_path: str) -> None:
 
 
 def create_half_year_review(week_folder: str, template_path: str) -> None:
-    half_year_review_file = os.path.join(week_folder, "half-year.txt")
+    half_year_review_file = os.path.join(week_folder, f"half-year.{TEMPLATE_FORMAT}")
     half_year_content = load_template(template_path)
 
     # JIRA tasks and epics for the last 6 months
@@ -195,7 +201,7 @@ def create_half_year_review(week_folder: str, template_path: str) -> None:
 
 def create_retro_file(week_folder: str, template_path: str) -> str:
     """Create a retro file using a template."""
-    retro_file = os.path.join(week_folder, "retro.txt")
+    retro_file = os.path.join(week_folder, f"retro.{TEMPLATE_FORMAT}")
 
     if not os.path.exists(retro_file):
         template_content = load_template(template_path)

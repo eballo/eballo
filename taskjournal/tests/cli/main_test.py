@@ -229,7 +229,7 @@ def test_week_summary_command(
     result = runner.invoke(app, ["week-summary"])
     # then
     assert result.exit_code == 0
-    assert "Week summary file ensured" in caplog.text
+    assert "Week summary file created at" in caplog.text
     mock_create.assert_called_once_with(week_folder, week_summary_template)
 
 
@@ -247,7 +247,7 @@ def test_half_year_review_command(
     result = runner.invoke(app, ["half-year-review"])
     # then
     assert result.exit_code == 0
-    assert "Half year review file ensured" in caplog.text
+    assert "Half year review file created" in caplog.text
     mock_create.assert_called_once_with(week_folder, half_year_template)
 
 

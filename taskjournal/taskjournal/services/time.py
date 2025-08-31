@@ -1,9 +1,10 @@
 import os
 from datetime import datetime, timedelta
 
-from taskjournal.config import BASE_DIR
+from taskjournal.config import BASE_DIR, TEMPLATE_FORMAT
 from taskjournal.services.file import get_week_folder, get_lines
 from taskjournal.services.logger import logger
+from taskjournal.services.utils import wrap_with_format
 
 
 def calculate_working_hours(daily_notes_file: str):
@@ -41,13 +42,14 @@ def estimated_finish_time(created_time: datetime) -> datetime:
 
 def get_start_time(lines: list[str]) -> tuple[int, datetime]:
     """Extract the start time from the daily notes file."""
+
     date = ""
     for i, line in enumerate(lines):
-        if line.startswith(" Date:"):
-            date = line.split(" Date:")[1].strip()
-        if line.startswith(" Start Time:"):
+        if line.startswith(wrap_with_format("Date:")):
+            date = line.split(wrap_with_format("Date:"))[1].strip()
+        if line.startswith(wrap_with_format("Start Time:")):
             created_line_index = i
-            time = line.split(" Start Time:")[1].strip()
+            time = line.split(wrap_with_format("Start Time:"))[1].strip()
             created_time = datetime.strptime(date + " " + time, "%Y-%m-%d %H:%M:%S")
             break
     else:
@@ -56,7 +58,7 @@ def get_start_time(lines: list[str]) -> tuple[int, datetime]:
 
 
 def get_daily_notes_name(date: datetime) -> str:
-    return date.strftime("%Y-%m-%d") + "-DailyNotes.txt"
+    return date.strftime("%Y-%m-%d") + f"-DailyNotes.{TEMPLATE_FORMAT}"
 
 
 def get_week_folder_and_daily_notes_file(today: datetime) -> tuple[str, str]:

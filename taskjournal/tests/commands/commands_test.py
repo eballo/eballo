@@ -14,6 +14,8 @@ from taskjournal.commands.commands import (
 
 @freeze_time("2025-03-21 10:00:00")
 def test_create_daily_notes_file(daily_notes_template, mocker, mock_config_envs):
+    # Given
+    mocker.patch("taskjournal.repositories.file_writer.TEMPLATE_FORMAT", "txt")
     mock_writte = mocker.patch("taskjournal.commands.commands.write_to_file")
     mock_estimated_finish_time = mocker.patch(
         "taskjournal.commands.commands.estimated_finish_time"
@@ -26,7 +28,6 @@ def test_create_daily_notes_file(daily_notes_template, mocker, mock_config_envs)
     instance.get_current_sprint_tasks_not_done_assigned_to_me.return_value = []
     instance.get_current_sprint_tasks_in_code_review.return_value = []
 
-    # Given
     file_path = "daily_notes.txt"
     mock_load_template = mocker.patch("taskjournal.commands.commands.load_template")
     mock_load_template.return_value = (
@@ -58,11 +59,12 @@ def test_create_daily_notes_file(daily_notes_template, mocker, mock_config_envs)
 def test_finalize_daily_notes(fixture_path, mocker):
     # Given
 
-    file_path = fixture_path / "daily_notes.txt"
+    mocker.patch("taskjournal.services.utils.TEMPLATE_FORMAT", "txt")
+    file_path = fixture_path / "txt" / "dailyNotes.txt"
     write_finalize_file_mock = mocker.patch(
         "taskjournal.commands.commands.write_lines_to_file"
     )
-    write_end_of_file_mock = mocker.patch("taskjournal.commands.commands.write_to_file")
+    mocker.patch("taskjournal.commands.commands.write_to_file")
     # When
     finalize_daily_notes(file_path, None)
     # Then
@@ -93,8 +95,8 @@ def test_finalize_daily_notes(fixture_path, mocker):
 @freeze_time("2025-03-21 18:00:00")
 def test_finalize_daily_notes_with_final_date(fixture_path, mocker):
     # Given
-
-    file_path = fixture_path / "daily_notes_with_final_date.txt"
+    mocker.patch("taskjournal.services.utils.TEMPLATE_FORMAT", "txt")
+    file_path = fixture_path / "txt" / "daily_notes_with_final_date.txt"
     write_finalize_file_mock = mocker.patch(
         "taskjournal.commands.commands.write_lines_to_file"
     )
@@ -129,8 +131,8 @@ def test_finalize_daily_notes_with_final_date(fixture_path, mocker):
 @freeze_time("2025-03-21 18:00:00")
 def test_finalize_daily_notes_with_final_date_custom_date(fixture_path, mocker):
     # Given
-
-    file_path = fixture_path / "daily_notes_with_final_date.txt"
+    mocker.patch("taskjournal.services.utils.TEMPLATE_FORMAT", "txt")
+    file_path = fixture_path / "txt" / "daily_notes_with_final_date.txt"
     write_finalize_file_mock = mocker.patch(
         "taskjournal.commands.commands.write_lines_to_file"
     )
@@ -201,6 +203,7 @@ def test_create_week_summary(base_dir, fixture_path, week_summary_template, mock
 
 def test_create_retro_file(week_folder, retro_template, mocker):
     # Given
+    mocker.patch("taskjournal.commands.commands.TEMPLATE_FORMAT", "txt")
     mocker.patch("os.path.exists", return_value=False)
     mock_jira = mocker.patch("taskjournal.commands.commands.JiraService")
     instance = mock_jira.return_value
@@ -217,6 +220,7 @@ def test_create_retro_file(week_folder, retro_template, mocker):
 
 
 def test_create_retro_file_already_exists(week_folder, retro_template, mocker):
+    mocker.patch("taskjournal.commands.commands.TEMPLATE_FORMAT", "txt")
     mocker.patch("os.path.exists", return_value=True)
     write_mock = mocker.patch("taskjournal.commands.commands.write_to_file")
     retro_file = create_retro_file(week_folder, retro_template)
