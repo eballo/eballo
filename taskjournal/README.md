@@ -149,14 +149,15 @@ poe check        # runs everything
 
 ### 0.6.0
 
-- Add github integration service
+- Add md template support
 
 ### 0.5.0
 
+- Add github integration service
+
+### 0.4.0 - mix of features
+
 - Add backup command
-
-### 0.4.0
-
 - Jira integration
 - Improve Templates (dailyNotes, retro, weeklysummary)
 - daily-start with force option
