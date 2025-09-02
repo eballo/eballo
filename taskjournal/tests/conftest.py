@@ -3,50 +3,26 @@ import pathlib
 from datetime import datetime
 
 from pytest import fixture
+from typer import Typer
+from typer.testing import CliRunner
 
+from taskjournal.cli.cli import create_app
 from taskjournal.services.file import get_week_folder
 
 
-@fixture
-def mock_setup_daily(daily_notes_path, mocker):
-    mocker.patch("taskjournal.cli.main.setup", return_value=(None, daily_notes_path))
+@fixture()
+def app() -> Typer:
+    return create_app()
 
 
-@fixture
-def mock_setup_week(week_folder, mocker):
-    mocker.patch("taskjournal.cli.main.setup", return_value=(week_folder, None))
+@fixture()
+def runner() -> CliRunner:
+    return CliRunner()
 
 
 @fixture
 def fixture_path():
     return pathlib.Path(__file__).parent / "commands/fixtures"
-
-
-@fixture(autouse=True)
-def mock_config_envs(mocker):
-    mocker.patch(
-        "taskjournal.services.time.BASE_DIR", "/mocked/path/Documents/DailyNotes/"
-    )
-    mocker.patch(
-        "taskjournal.cli.main.DAILY_NOTES_TEMPLATE",
-        "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/templates/dailyNotes.txt",
-    )
-    mocker.patch(
-        "taskjournal.cli.main.DAILY_NOTES_END_TEMPLATE",
-        "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/templates/dailyNotes-end.txt",
-    )
-    mocker.patch(
-        "taskjournal.cli.main.WEEK_SUMMARY_TEMPLATE",
-        "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/templates/weekSummary.txt",
-    )
-    mocker.patch(
-        "taskjournal.cli.main.HALF_YEAR_REVIEW_TEMPLATE",
-        "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/templates/half-year.txt",
-    )
-    mocker.patch(
-        "taskjournal.cli.main.RETRO_TEMPLATE",
-        "/mocked/path/Documents/work/personal/eballo/taskjournal/taskjournal/templates/retro.txt",
-    )
 
 
 @fixture

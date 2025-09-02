@@ -1,15 +1,18 @@
 import logging
+
 from rich.logging import RichHandler
 
-
-def get_logger(name="TaskTracker"):
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(message)s",
-        datefmt="[%X]",
-        handlers=[RichHandler()],
-    )
-    return logging.getLogger(name)
+logger = logging.getLogger("TaskTracker")
 
 
-logger = get_logger()
+def configure_logging(debug: bool = False):
+    level = logging.DEBUG if debug else logging.INFO
+    logger.setLevel(level)
+    if not any(isinstance(h, RichHandler) for h in logger.handlers):
+        handler = RichHandler()
+        handler.setLevel(level)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(message)s", datefmt="[%X]"
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
