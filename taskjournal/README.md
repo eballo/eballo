@@ -147,6 +147,13 @@ poe check        # runs everything
 
 ## Versions
 
+# 0.7.0
+
+- Big refactor for cli (better structure and better organization for the commands)
+- Introduce the CommandManager class + services
+
+**Note** the versions do not match the github releases versions they start to be aligned from 0.5.0
+
 ### 0.6.0
 
 - Add md template support
@@ -155,7 +162,7 @@ poe check        # runs everything
 
 - Add github integration service
 
-### 0.4.0 - mix of features
+### 0.4.0
 
 - Add backup command
 - Jira integration

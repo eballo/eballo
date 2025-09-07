@@ -66,6 +66,12 @@ class JiraService:
         jql = f"sprint = {active_sprint.id} AND status = 'CODE REVIEW' and assignee != currentUser()"
         return self._get_issues(jql)
 
+    def get_current_tasks_assigned_to_me_last_month(self) -> List[Task]:
+        last_month = datetime.now() - timedelta(days=30)
+        last_month_str = last_month.strftime("%Y-%m-%d")
+        jql = f"assignee = currentUser() AND updated >= {last_month_str}"
+        return self._get_issues(jql)
+
     def get_current_tasks_assigned_to_me_last_6_months(self) -> List[Task]:
         six_months_ago = datetime.now() - timedelta(days=180)
         six_months_ago_str = six_months_ago.strftime("%Y-%m-%d")

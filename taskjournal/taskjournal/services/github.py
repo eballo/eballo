@@ -158,3 +158,16 @@ class GithubService:
             logger.error("Some error occurred while fetching contributions.")
 
         return self.get_commit_stats_summary(commit_stats)
+
+    def get_contributions_last_month(self) -> str:
+        last_six_months = datetime.now() - timedelta(days=30)
+        try:
+            commit_stats = self.get_org_commit_stats(
+                since_date=last_six_months,
+                only_contributed=True,
+                org_name=GIT_HUB_ORGANIZATION_NAME,
+            )
+        except ValueError:
+            logger.error("Some error occurred while fetching contributions.")
+
+        return self.get_commit_stats_summary(commit_stats)
