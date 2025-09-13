@@ -458,10 +458,21 @@ async def test_create_half_year_review__writes_counts_and_lists(
         new_callable=AsyncMock,
         return_value=tasks,
     )
+
     mocker.patch(
         "taskjournal.commands.commands.get_unique_epics", return_value=["E-1", "E-2"]
     )
-    mocker.patch.object(cmd.github, "get_contributions_last_6_months", return_value=123)
+    mocker.patch.object(
+        cmd.github,
+        "get_contributions_last_6_months",
+        new_callable=AsyncMock,
+        return_value=123,
+    )
+    mocker.patch.object(
+        cmd.github,
+        "close",
+        new_callable=AsyncMock,
+    )
     write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
 
     # when
@@ -499,7 +510,17 @@ async def test_create_month_review__writes_counts_and_lists(
     mocker.patch(
         "taskjournal.commands.commands.get_unique_epics", return_value=["ME-1"]
     )
-    mocker.patch.object(cmd.github, "get_contributions_last_month", return_value=7)
+    mocker.patch.object(
+        cmd.github,
+        "get_contributions_last_month",
+        new_callable=AsyncMock,
+        return_value=7,
+    )
+    mocker.patch.object(
+        cmd.github,
+        "close",
+        new_callable=AsyncMock,
+    )
     write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
 
     # when

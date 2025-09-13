@@ -151,6 +151,13 @@ Usage: wk [OPTIONS] COMMAND [ARGS]...
 
 ## Versions
 
+# 0.9.0
+
+- Improve Github Service
+    - Improve logging if it doesn't exist
+    - migrate to async library
+- update services + tests to use async calls
+
 # 0.8.0
 
 - Improve Jira Service

@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from typing import Optional
 
@@ -50,22 +51,26 @@ def build_app() -> Typer:
 
         if all:
             logger.info("📝 All Tasks:")
-            tasks = service.get_current_sprint_tasks()
+            tasks = asyncio.run(service.get_current_sprint_tasks())
         elif mine:
             logger.info("📝 Current Sprint Tasks ALL assigned to me:")
-            tasks = service.get_current_sprint_tasks_all_assigned_to_me()
+            tasks = asyncio.run(service.get_current_sprint_tasks_all_assigned_to_me())
         elif code:
             logger.info("📝 Current Sprint Tasks in Code Review:")
-            tasks = service.get_current_sprint_tasks_in_code_review()
+            tasks = asyncio.run(service.get_current_sprint_tasks_in_code_review())
         elif midreview:
             logger.info("📝 Current Tasks assigned to me in the last 6 months:")
-            tasks = service.get_current_tasks_assigned_to_me_last_6_months()
+            tasks = asyncio.run(
+                service.get_current_tasks_assigned_to_me_last_6_months()
+            )
         elif month:
             logger.info("📝 Current Tasks assigned to me in the last month:")
-            tasks = service.get_current_tasks_assigned_to_me_last_month()
+            tasks = asyncio.run(service.get_current_tasks_assigned_to_me_last_month())
         else:
             logger.info("📝 Current Sprint Tasks assigned to me (not finished):")
-            tasks = service.get_current_sprint_tasks_not_done_assigned_to_me()
+            tasks = asyncio.run(
+                service.get_current_sprint_tasks_not_done_assigned_to_me()
+            )
 
         for task in tasks:
             logger.info(task)
@@ -108,10 +113,11 @@ def build_app() -> Typer:
             if date:
                 try:
                     custom_date = datetime.strptime(date, "%Y-%m-%d")
-                    commit_stats = service.get_org_commit_stats(
-                        since_date=custom_date,
-                        only_contributed=contributed,
-                        org_name=organization,
+                    commit_stats = asyncio.run(
+                        service.get_org_commit_stats(
+                            since_date=custom_date,
+                            only_contributed=contributed,
+                        )
                     )
 
                 except ValueError:
@@ -119,8 +125,8 @@ def build_app() -> Typer:
                     raise Exit(code=1)
 
             else:
-                commit_stats = service.get_org_commit_stats(
-                    only_contributed=contributed, org_name=organization
+                commit_stats = asyncio.run(
+                    service.get_org_commit_stats(only_contributed=contributed)
                 )
             service.print_commit_stats(commit_stats)
 
