@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 
 from click.exceptions import Exit
@@ -52,7 +53,7 @@ def build_app() -> Typer:
                 logger.error("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
                 raise Exit(code=1)
 
-        m.create_daily_notes(creation_date, force)
+        asyncio.run(m.create_daily_notes(creation_date, force))
 
     @app.command(
         "finish",

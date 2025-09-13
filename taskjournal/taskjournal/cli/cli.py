@@ -41,7 +41,6 @@ def create_app() -> Typer:
     app.add_typer(build_week(), name="week")
     app.add_typer(build_month(), name="month")
     app.add_typer(build_half_year(), name="half-year")
-    app.add_typer(build_half_year(), name="half-year")
     app.add_typer(build_retro(), name="retro")
     app.add_typer(build_services(), name="services", hidden=True)
     app.add_typer(build_backup(), name="backup", hidden=True)

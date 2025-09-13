@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 def test_half_year_report_happy_path(mocker, app: Typer, runner: CliRunner):
     # given
     manager_instance = mocker.MagicMock()
+    manager_instance.create_half_year_review = mocker.AsyncMock()
     mocker.patch("taskjournal.cli.cli.CommandManager", return_value=manager_instance)
 
     # when
@@ -21,6 +22,6 @@ def test_half_year_report_happy_path(mocker, app: Typer, runner: CliRunner):
 
     # then
     assert result.exit_code == 0
-    manager_instance.create_half_year_review.assert_called_once_with(
+    manager_instance.create_half_year_review.assert_awaited_once_with(
         datetime(2025, 1, 19, 10, 0, 0)
     )

@@ -3,8 +3,9 @@ from __future__ import annotations
 import os
 from datetime import datetime, timedelta
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
-from pytest import fixture
+from pytest import fixture, mark
 from pytest_mock import MockerFixture
 
 from taskjournal.commands.commands import CommandManager
@@ -102,7 +103,8 @@ def test__get_daily_notes_file_path__joins_week_folder_and_filename(
 # ----------------------------
 
 
-def test_create_daily_notes__skips_when_file_exists_and_not_forced(
+@mark.asyncio
+async def test_create_daily_notes__skips_when_file_exists_and_not_forced(
     cmd: CommandManager,
     mocker: MockerFixture,
     fixed_datetime: datetime,
@@ -122,14 +124,15 @@ def test_create_daily_notes__skips_when_file_exists_and_not_forced(
     warn = mocker.patch("taskjournal.commands.commands.logger.warning")
 
     # when
-    cmd.create_daily_notes(fixed_datetime, force=False)
+    await cmd.create_daily_notes(fixed_datetime, force=False)
 
     # then
     warn.assert_called_once()
     cmd.file_writer.format_content.assert_not_called()
 
 
-def test_create_daily_notes__creates_when_forced_even_if_exists(
+@mark.asyncio
+async def test_create_daily_notes__creates_when_forced_even_if_exists(
     cmd: CommandManager,
     mocker: MockerFixture,
     fixed_datetime: datetime,
@@ -149,11 +152,13 @@ def test_create_daily_notes__creates_when_forced_even_if_exists(
     mocker.patch.object(
         cmd.jira,
         "get_current_sprint_tasks_not_done_assigned_to_me",
+        new_callable=AsyncMock,
         return_value=["task-jira-pending"],
     )
     mocker.patch.object(
         cmd.jira,
         "get_current_sprint_tasks_in_code_review",
+        new_callable=AsyncMock,
         return_value=["task-code-review"],
     )
     mocker.patch(
@@ -167,12 +172,14 @@ def test_create_daily_notes__creates_when_forced_even_if_exists(
     write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
     # Use SimpleNamespace to provide a .name attribute without conflicting with MagicMock's 'name' kwarg
     mocker.patch.object(
-        cmd.jira, "get_active_sprint", return_value=SimpleNamespace(name="Sprint 42")
+        cmd.jira,
+        "get_active_sprint",
+        return_value=SimpleNamespace(name="Sprint 42"),
     )
     info = mocker.patch("taskjournal.commands.commands.logger.info")
 
     # when
-    cmd.create_daily_notes(fixed_datetime, force=True)
+    await cmd.create_daily_notes(fixed_datetime, force=True)
 
     # then
     write_to_file.assert_called_once()
@@ -183,7 +190,8 @@ def test_create_daily_notes__creates_when_forced_even_if_exists(
     )
 
 
-def test_create_daily_notes__uses_fallback_sprint_name_when_no_active_sprint(
+@mark.asyncio
+async def test_create_daily_notes__uses_fallback_sprint_name_when_no_active_sprint(
     cmd: CommandManager,
     mocker: MockerFixture,
     fixed_datetime: datetime,
@@ -203,10 +211,16 @@ def test_create_daily_notes__uses_fallback_sprint_name_when_no_active_sprint(
     mocker.patch.object(cmd.jira, "get_active_sprint", return_value=None)
     mocker.patch("taskjournal.commands.commands.get_default_tasks", return_value=[])
     mocker.patch.object(
-        cmd.jira, "get_current_sprint_tasks_not_done_assigned_to_me", return_value=[]
+        cmd.jira,
+        "get_current_sprint_tasks_not_done_assigned_to_me",
+        new_callable=AsyncMock,
+        return_value=[],
     )
     mocker.patch.object(
-        cmd.jira, "get_current_sprint_tasks_in_code_review", return_value=[]
+        cmd.jira,
+        "get_current_sprint_tasks_in_code_review",
+        new_callable=AsyncMock,
+        return_value=[],
     )
     mocker.patch(
         "taskjournal.commands.commands.get_previous_pending_tasks", return_value=[]
@@ -220,7 +234,7 @@ def test_create_daily_notes__uses_fallback_sprint_name_when_no_active_sprint(
     )
 
     # when
-    cmd.create_daily_notes(fixed_datetime)
+    await cmd.create_daily_notes(fixed_datetime)
 
     # then
     args, _ = write_to_file.call_args
@@ -424,7 +438,8 @@ def test_create_week_summary__aggregates_done_pending_and_total_time(
 # ----------------------------
 
 
-def test_create_half_year_review__writes_counts_and_lists(
+@mark.asyncio
+async def test_create_half_year_review__writes_counts_and_lists(
     cmd: CommandManager,
     mocker: MockerFixture,
     fixed_datetime: datetime,
@@ -438,7 +453,10 @@ def test_create_half_year_review__writes_counts_and_lists(
     )
     tasks = ["T-1", "T-2", "T-3"]
     mocker.patch.object(
-        cmd.jira, "get_current_tasks_assigned_to_me_last_6_months", return_value=tasks
+        cmd.jira,
+        "get_current_tasks_assigned_to_me_last_6_months",
+        new_callable=AsyncMock,
+        return_value=tasks,
     )
     mocker.patch(
         "taskjournal.commands.commands.get_unique_epics", return_value=["E-1", "E-2"]
@@ -447,7 +465,7 @@ def test_create_half_year_review__writes_counts_and_lists(
     write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
 
     # when
-    cmd.create_half_year_review(fixed_datetime)
+    await cmd.create_half_year_review(fixed_datetime)
 
     # then
     content: str = write_to_file.call_args[0][1]
@@ -459,7 +477,8 @@ def test_create_half_year_review__writes_counts_and_lists(
 # ----------------------------
 
 
-def test_create_month_review__writes_counts_and_lists(
+@mark.asyncio
+async def test_create_month_review__writes_counts_and_lists(
     cmd: CommandManager,
     mocker: MockerFixture,
     fixed_datetime: datetime,
@@ -472,7 +491,10 @@ def test_create_month_review__writes_counts_and_lists(
         return_value="tasks={{total_tasks}}, epics={{total_epics}}, gh={{github_contributions}}",
     )
     mocker.patch.object(
-        cmd.jira, "get_current_tasks_assigned_to_me_last_month", return_value=["M-1"]
+        cmd.jira,
+        "get_current_tasks_assigned_to_me_last_month",
+        new_callable=AsyncMock,
+        return_value=["M-1"],
     )
     mocker.patch(
         "taskjournal.commands.commands.get_unique_epics", return_value=["ME-1"]
@@ -481,7 +503,7 @@ def test_create_month_review__writes_counts_and_lists(
     write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
 
     # when
-    cmd.create_month_review(fixed_datetime)
+    await cmd.create_month_review(fixed_datetime)
 
     # then
     content: str = write_to_file.call_args[0][1]

@@ -15,6 +15,7 @@ from typer.testing import CliRunner
 def test_daily_start_happy_path(mocker, app: Typer, runner: CliRunner):
     # given
     manager_instance = mocker.MagicMock()
+    manager_instance.create_daily_notes = mocker.AsyncMock()
     mocker.patch("taskjournal.cli.cli.CommandManager", return_value=manager_instance)
 
     # when
@@ -33,6 +34,7 @@ def test_daily_start_debug(
 ):
     # given
     manager_instance = mocker.MagicMock()
+    manager_instance.create_daily_notes = mocker.AsyncMock()
     mocker.patch("taskjournal.cli.cli.CommandManager", return_value=manager_instance)
 
     # when
@@ -52,6 +54,7 @@ def test_daily_start_force(
 ):
     # given
     manager_instance = mocker.MagicMock()
+    manager_instance.create_daily_notes = mocker.AsyncMock()
     mocker.patch("taskjournal.cli.cli.CommandManager", return_value=manager_instance)
 
     # when
@@ -72,6 +75,7 @@ def test_daily_start_force(
 def test_daily_start_date(mocker, app: Typer, runner: CliRunner):
     # given
     manager_instance = mocker.MagicMock()
+    manager_instance.create_daily_notes = mocker.AsyncMock()
     mocker.patch("taskjournal.cli.cli.CommandManager", return_value=manager_instance)
 
     # when
@@ -90,6 +94,7 @@ def test_daily_start_date_and_force(
 ):
     # given
     manager_instance = mocker.MagicMock()
+    manager_instance.create_daily_notes = mocker.AsyncMock()
     mocker.patch("taskjournal.cli.cli.CommandManager", return_value=manager_instance)
 
     # when

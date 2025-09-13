@@ -62,7 +62,7 @@ class CommandManager:
         daily_notes_file = os.path.join(week_folder, daily_notes_name)
         return daily_notes_file
 
-    def create_daily_notes(
+    async def create_daily_notes(
         self,
         create_datetime: datetime,
         force: bool = False,
@@ -88,8 +88,10 @@ class CommandManager:
 
         # Get tasks: unfinished tasks + default tasks
         default_tasks = get_default_tasks()
-        pending_jtasks = self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
-        code_review_jtasks = self.jira.get_current_sprint_tasks_in_code_review()
+        pending_jtasks = (
+            await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
+        )
+        code_review_jtasks = await self.jira.get_current_sprint_tasks_in_code_review()
 
         folder_path = os.path.dirname(daily_notes_file)
         current_file = os.path.basename(daily_notes_file)
@@ -221,7 +223,7 @@ class CommandManager:
 
         return None
 
-    def create_half_year_review(self, custom_date) -> None:
+    async def create_half_year_review(self, custom_date) -> None:
         week_folder = self._get_week_folder(custom_date)
 
         half_year_review_file = os.path.join(
@@ -230,7 +232,7 @@ class CommandManager:
         half_year_content = load_template(HALF_YEAR_REVIEW_TEMPLATE)
 
         # JIRA tasks and epics for the last 6 months
-        tasks = self.jira.get_current_tasks_assigned_to_me_last_6_months()
+        tasks = await self.jira.get_current_tasks_assigned_to_me_last_6_months()
         epics = get_unique_epics(tasks)
         total_tasks = len(tasks)
         total_epics = len(epics)
@@ -262,14 +264,14 @@ class CommandManager:
 
         return None
 
-    def create_month_review(self, custom_date) -> None:
+    async def create_month_review(self, custom_date) -> None:
         week_folder = self._get_week_folder(custom_date)
 
         half_year_review_file = os.path.join(week_folder, f"month.{TEMPLATE_FORMAT}")
         half_year_content = load_template(MONTH_REVIEW_TEMPLATE)
 
         # JIRA tasks and epics for the last month
-        tasks = self.jira.get_current_tasks_assigned_to_me_last_month()
+        tasks = await self.jira.get_current_tasks_assigned_to_me_last_month()
         epics = get_unique_epics(tasks)
         total_tasks = len(tasks)
         total_epics = len(epics)
