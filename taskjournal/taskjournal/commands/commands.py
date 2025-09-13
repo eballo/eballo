@@ -21,10 +21,12 @@ from taskjournal.services.file import (
     write_lines_to_file,
     get_lines,
     get_week_folder,
+    get_summary_from_daily_notes,
 )
 from taskjournal.services.github import GithubService
 from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
+from taskjournal.services.openai import OpenAIService
 from taskjournal.services.task_manager import (
     get_default_tasks,
     get_tasks_from_daily_notes,
@@ -49,6 +51,7 @@ class CommandManager:
         self.jira = JiraService()
         self.github = GithubService()
         self.file_writer = FileWriter()
+        self.openai = OpenAIService()
 
     @staticmethod
     def _get_week_folder(today: datetime) -> str:
@@ -174,7 +177,7 @@ class CommandManager:
         else:
             logger.warning(f"Daily notes file does not exist: {daily_notes_file}")
 
-    def create_week_summary(self, custom_date: datetime) -> None:
+    async def create_week_summary(self, custom_date: datetime) -> None:
         week_folder = self._get_week_folder(custom_date)
         summary_file = os.path.join(week_folder, f"week-summary.{TEMPLATE_FORMAT}")
         week_summary_content = load_template(WEEK_SUMMARY_TEMPLATE)
@@ -213,9 +216,16 @@ class CommandManager:
         week_summary_content = week_summary_content.replace(
             "{{pending_tasks}}", "\n".join(f"{task}" for task in pending_tasks)
         )
-        week_summary_content = week_summary_content.replace(
-            "{{summary}}", "\nWrite your weekly summary here...\n"
-        )
+
+        summary = []
+        for file_name in sorted(os.listdir(week_folder)):
+            if file_name.endswith(f"-DailyNotes.{TEMPLATE_FORMAT}"):
+                daily_file_path = os.path.join(week_folder, file_name)
+                summary.append(get_summary_from_daily_notes(daily_file_path))
+
+        summary_ai = await self.openai.summarize(summary)
+
+        week_summary_content = week_summary_content.replace("{{summary}}", summary_ai)
 
         write_to_file(summary_file, week_summary_content)
 

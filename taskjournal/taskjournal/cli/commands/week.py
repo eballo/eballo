@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 
 from click.exceptions import Exit
@@ -41,6 +42,6 @@ def build_app() -> Typer:
                 logger.error("❌ Invalid date format. Use 'YYYY-MM-DD'.")
                 raise Exit(code=1)
 
-        m.create_week_summary(custom_date)
+        asyncio.run(m.create_week_summary(custom_date))
 
     return app
