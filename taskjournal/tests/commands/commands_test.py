@@ -36,6 +36,10 @@ def cmd(mocker: MockerFixture) -> CommandManager:
         "taskjournal.commands.commands.FileWriter",
         return_value=mocker.MagicMock(name="FileWriterMock"),
     )
+    mocker.patch(
+        "taskjournal.commands.commands.OpenAIService",
+        return_value=mocker.MagicMock(name="OpenAIServiceMock"),
+    )
 
     cm = CommandManager()
     return cm
@@ -384,9 +388,10 @@ def test_daily_time__warns_when_missing(
 # ----------------------------
 
 
-def test_create_week_summary__aggregates_done_pending_and_total_time(
+@mark.asyncio
+async def test_create_week_summary__aggregates_done_pending_and_total_time(
     cmd: CommandManager,
-    mocker: MockerFixture,
+    mocker,
     fixed_datetime: datetime,
     temp_week_folder: str,
 ) -> None:
@@ -399,18 +404,15 @@ def test_create_week_summary__aggregates_done_pending_and_total_time(
     files = ["2025-01-13-DailyNotes.md", "2025-01-14-DailyNotes.md", "notes.txt"]
     mocker.patch("taskjournal.commands.commands.os.listdir", return_value=files)
 
-    # Simulate tasks extracted from daily notes
-    Task = type(
-        "Task",
-        (),
-        {"__str__": lambda self: getattr(self, "name"), "status": Status.DONE},
-    )
+    # Fake tasks
+    Task = type("Task", (), {"__str__": lambda self: getattr(self, "name")})
     todo_task = Task()
     setattr(todo_task, "name", "TODO-1")
     setattr(todo_task, "status", Status.TODO)
     done_task = Task()
     setattr(done_task, "name", "DONE-1")
     setattr(done_task, "status", Status.DONE)
+
     get_tasks = mocker.patch(
         "taskjournal.commands.commands.get_tasks_from_daily_notes",
         side_effect=[[done_task, todo_task], [done_task]],
@@ -419,18 +421,33 @@ def test_create_week_summary__aggregates_done_pending_and_total_time(
         "taskjournal.commands.commands.get_total_time_from_daily_notes",
         side_effect=[3600, 1800],
     )
+    mocker.patch(
+        "taskjournal.commands.commands.get_summary_from_daily_notes",
+        side_effect=["Summary 1", "Summary 2"],
+    )
+
+    async def fake_summarize(_):
+        return "AI Weekly Summary"
+
+    mocker.patch.object(cmd.openai, "summarize", side_effect=fake_summarize)
+
     write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
 
     # when
-    cmd.create_week_summary(fixed_datetime)
+    await cmd.create_week_summary(fixed_datetime)
 
     # then
     assert get_tasks.call_count == 2
     args, _ = write_to_file.call_args
     content: str = args[1]
+
+    # Verify total time calculation
     assert " 1 hours and 30 minutes" in content
+    # Verify tasks
     assert "DONE-1" in content
     assert "TODO-1" in content
+    # Verify AI summary was inserted
+    assert "AI Weekly Summary" in content
 
 
 # ----------------------------

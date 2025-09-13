@@ -49,3 +49,15 @@ def get_week_folder(base_dir: str | Path, date: datetime) -> str:
     week_num = date.isocalendar()[1]
     week_folder = os.path.join(base_dir, f"{year}", f"week{week_num}")
     return week_folder
+
+
+def get_summary_from_daily_notes(daily_file_path: str) -> str:
+    with open(daily_file_path, "r", encoding="utf-8") as file:
+        lines = file.readlines()
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("## 📋 Summary") or stripped == "📋 Summary":
+            return "".join(lines[i + 1 :]).strip()
+
+    return ""

@@ -25,6 +25,7 @@ black = "^25.1.0"
 pre-commit = "^4.2.0"
 poethepoet = "^0.36.0"
 pytest-asyncio = "^1.2.0"
+respx = "^0.22.0"
 
 [tool.poetry.scripts]
 wk = "taskjournal.cli.main:app"
