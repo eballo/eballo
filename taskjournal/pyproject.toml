@@ -13,8 +13,8 @@ typer = "^0.15.2"
 shellingham = "^1.5.4"
 jira = "^3.8.0"
 pydantic = "^2.11.3"
-pygithub = "^2.6.1"
 httpx = "^0.28.1"
+gidgethub = "^5.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
@@ -45,6 +45,7 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=taskjournal --cov-report=term-missing"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.poe.tasks]
 # Format code with black

@@ -238,7 +238,7 @@ class CommandManager:
         total_epics = len(epics)
 
         # GitHub contributions
-        github_contributions = self.github.get_contributions_last_6_months()
+        github_contributions = await self.github.get_contributions_last_6_months()
 
         half_year_content = half_year_content.replace(
             "{{total_tasks}}", f"{total_tasks}"
@@ -261,6 +261,8 @@ class CommandManager:
         write_to_file(half_year_review_file, half_year_content)
 
         logger.info(f"Half year review file created: {half_year_review_file}")
+        # ✅ cleanup
+        await self.github.close()
 
         return None
 
@@ -277,7 +279,7 @@ class CommandManager:
         total_epics = len(epics)
 
         # GitHub contributions
-        github_contributions = self.github.get_contributions_last_month()
+        github_contributions = await self.github.get_contributions_last_month()
 
         half_year_content = half_year_content.replace(
             "{{total_tasks}}", f"{total_tasks}"
@@ -300,6 +302,9 @@ class CommandManager:
         write_to_file(half_year_review_file, half_year_content)
 
         logger.info(f"Month review file created: {half_year_review_file}")
+
+        # ✅ cleanup
+        await self.github.close()
 
         return None
 
