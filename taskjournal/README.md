@@ -64,79 +64,83 @@ poe check        # runs everything
 # How to use it
 
 ```bash
-> wk --help
+> wk
+Usage: wk [OPTIONS] COMMAND [ARGS]...
 
- Usage: wk [OPTIONS] COMMAND [ARGS]...
+ Task Journal CLI.
+ A CLI tool to organize your work by managing notes, summaries, reports.
+ Helping you stay on track and communicate progress effectively.
+ Use --help on any command to see detailed options and examples.
 
-╭─ Options ──────────────────────────────────────────────────────────────────────╮
-│ --help          Show this message and exit.                                    │
-╰────────────────────────────────────────────────────────────────────────────────╯
-╭─ Commands ─────────────────────────────────────────────────────────────────────╮
-│ daily-start                                                                    │
-│ daily-finish                                                                   │
-│ retro                                                                          │
-│ week-summary                                                                   │
-│ half-year-review                                                               │
-│ time                                                                           │
-│ backup                                                                         │
-│ version                                                                        │
-│ git                                                                            │
-│ jira                                                                           │
-╰────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --version                     Show the application version and exit.                                            │
+│ --debug                       Enable debug logging (verbose output).                                            │
+│ --install-completion          Install completion for the current shell.                                         │
+│ --show-completion             Show completion for the current shell, to copy it or customize the installation.  │
+│ --help                        Show this message and exit.                                                       │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ daily       Daily workflow commands (start, finish).                                                            │
+│ week        Weekly reporting commands.                                                                          │
+│ month       Monthly reporting commands.                                                                         │
+│ half-year   Half-year reporting commands.                                                                       │
+│ retro       Create a Retrospective                                                                              │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
 ```
 
 ## Daily Start
 
 ```bash
-> wk daily-start
+> wk daily start
 ```
 
 ## Daily Finish
 
 ```bash
-> wk daily-finish
+> wk daily finish
 ```
 
 ## Retro
 
 ```bash
-> wk retro
+> wk retro report
 ```
 
 ## Week Summary
 
 ```bash
-> wk week-summary
+> wk week report
 ```
 
 ## Haff-Year Review
 
 ```bash
-> wk half-year-review
+> wk half-year report
 ```
 
 ## Time
 
 ```bash
-> wk time
+> wk daily time
 ```
 
 ## Backup
 
 ```bash
-> wk backup
+> wk backup run
 ```
 
 ## Jira
 
 ```bash
-> wk jira
+> wk services jira
 ```
 
 ## version
 
 ```bash
-> wk version
+> wk --version
 ```
 
 ## Wiki
@@ -146,6 +150,14 @@ poe check        # runs everything
 - [Shell Completion](wiki/shell-completion.md)
 
 ## Versions
+
+# 0.8.0
+
+- Improve Jira Service
+    - Improve logging if it doesn't exist
+    - migrate to version 3 jsql
+    - migrate to httpx to use async calls
+- update services to use async calls
 
 # 0.7.0
 

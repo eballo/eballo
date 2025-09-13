@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 def test_month_report_happy_path(mocker, app: Typer, runner: CliRunner):
     # given
     manager_instance = mocker.MagicMock()
+    manager_instance.create_month_review = mocker.AsyncMock()
     mocker.patch("taskjournal.cli.cli.CommandManager", return_value=manager_instance)
 
     # when

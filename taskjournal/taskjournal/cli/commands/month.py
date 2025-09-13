@@ -1,3 +1,5 @@
+import asyncio
+
 from typer import Typer, Context
 
 from taskjournal.services.logger import logger
@@ -20,6 +22,6 @@ def build_app() -> Typer:
         custom_date = ctx.obj.get("today")
         m = ctx.obj.get("manager")
         logger.debug(f"debug={debug}")
-        m.create_month_review(custom_date)
+        asyncio.run(m.create_month_review(custom_date))
 
     return app
