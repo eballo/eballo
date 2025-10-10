@@ -2,7 +2,7 @@ from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.models.task import Task, Status
 
 
-class FileWriter:
+class TaskFormatter:
 
     def __init__(self):
         self.prefix = "" if TEMPLATE_FORMAT == "txt" else " - "
@@ -19,7 +19,13 @@ class FileWriter:
         status = f" ({task.status.value}) " if with_status and task.status else " "
         return f"{checkbox}{key}{task.description}{name}{status}"
 
-    def format_content(
+    def format_tasks(
+        self, tasks: list[Task], with_name: bool = False, with_status: bool = False
+    ) -> str:
+        lines = [self.format_task(task, with_name, with_status) for task in tasks]
+        return "\n".join(lines)
+
+    def format_task_and_replace_content(
         self,
         replace_content: str,
         content: str,
@@ -27,5 +33,5 @@ class FileWriter:
         with_name: bool = False,
         with_status: bool = False,
     ) -> str:
-        lines = [self.format_task(task, with_name, with_status) for task in tasks]
-        return content.replace(replace_content, "\n".join(lines))
+        formated_tasks = self.format_tasks(tasks, with_name, with_status)
+        return content.replace(replace_content, formated_tasks)

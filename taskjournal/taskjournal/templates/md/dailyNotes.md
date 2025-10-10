@@ -1,10 +1,14 @@
-# 📅 Daily Tasks Log
+# 📅 Daily Tasks - {{ day_name }}
 
 **Sprint:** {{sprint_name}}
+
 **Date:** {{date}}
 **Start Time:** {{time}}
 **End Time:**
 **Time Spent:**
+
+**Work from:** {% if work_from|lower in ["home","remote","wfh"] %}🏠 Home{% elif work_from|lower in ["office","onsite"]
+%}🏢 Office{% else %}🧭 {{ work_from }}{% endif %}
 
 ---
 
@@ -25,5 +29,15 @@
 -
 
 ---
+{% if firefighter %}
+
+## 🚒 🔥 Firefighter
+
+Priority incidents handled:
+
+-
+
+---
+{% endif %}
 
 ## 📋 Summary

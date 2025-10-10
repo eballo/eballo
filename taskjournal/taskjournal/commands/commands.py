@@ -2,6 +2,8 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 
+from jinja2 import Template
+
 from taskjournal.config import (
     TEMPLATE_FORMAT,
     DAILY_NOTES_TEMPLATE,
@@ -12,7 +14,7 @@ from taskjournal.config import (
     MONTH_REVIEW_TEMPLATE,
 )
 from taskjournal.models.task import Status
-from taskjournal.repositories.file_writer import FileWriter
+from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.backup import create_backup
 from taskjournal.services.file import (
     load_template,
@@ -33,6 +35,7 @@ from taskjournal.services.task_manager import (
     get_previous_pending_tasks,
     unique_tasks,
     get_unique_epics,
+    get_work_from_defaults,
 )
 from taskjournal.services.time import (
     get_total_time_from_daily_notes,
@@ -50,7 +53,7 @@ class CommandManager:
     def __init__(self):
         self.jira = JiraService()
         self.github = GithubService()
-        self.file_writer = FileWriter()
+        self.task_formatter = TaskFormatter()
         self.openai = OpenAIService()
 
     @staticmethod
@@ -69,6 +72,8 @@ class CommandManager:
         self,
         create_datetime: datetime,
         force: bool = False,
+        firefighter: bool = False,
+        work_from: str | None = None,
     ) -> None:
 
         daily_notes_file = self._get_daily_notes_file_path(create_datetime)
@@ -78,38 +83,34 @@ class CommandManager:
             logger.warning(f"Daily notes file already exists: {daily_notes_file}")
             return None
 
-        creation_date_str = create_datetime.strftime("%Y-%m-%d")
-        creation_time = create_datetime.strftime("%H:%M:%S")
         sprint = self.jira.get_active_sprint()
-
-        daily_notes_content = template_content.replace("{{date}}", creation_date_str)
-        daily_notes_content = daily_notes_content.replace("{{time}}", creation_time)
-        sprint_name = sprint.name if sprint else "No active sprint"
-        daily_notes_content = daily_notes_content.replace(
-            "{{sprint_name}}", sprint_name
-        )
-
-        # Get tasks: unfinished tasks + default tasks
-        default_tasks = get_default_tasks()
-        pending_jtasks = (
-            await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
-        )
-        code_review_jtasks = await self.jira.get_current_sprint_tasks_in_code_review()
 
         folder_path = os.path.dirname(daily_notes_file)
         current_file = os.path.basename(daily_notes_file)
+
+        # work from
+        work_from = work_from if work_from else get_work_from_defaults()
+
+        # tasks
+        default = get_default_tasks()
         previous_pending_tasks = get_previous_pending_tasks(folder_path, current_file)
+        pending = await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
+        code_review = await self.jira.get_current_sprint_tasks_in_code_review()
 
-        tasks = unique_tasks(default_tasks + previous_pending_tasks + pending_jtasks)
+        tasks = unique_tasks(default + previous_pending_tasks + pending)
 
-        daily_notes_content = self.file_writer.format_content(
-            "{{tasks}}", daily_notes_content, tasks, with_status=False
-        )
-        daily_notes_content = self.file_writer.format_content(
-            "{{code_review_tasks}}",
-            daily_notes_content,
-            code_review_jtasks,
-            with_name=True,
+        daily_notes_content = Template(template_content).render(
+            day_name=create_datetime.strftime("%A"),
+            date=create_datetime.strftime("%Y-%m-%d"),
+            time=create_datetime.strftime("%H:%M:%S"),
+            work_from=work_from,
+            sprint_name=sprint.name if sprint else "No active sprint",
+            tasks=self.task_formatter.format_tasks(tasks, with_name=True),
+            code_review_tasks=self.task_formatter.format_tasks(
+                code_review,
+                with_name=True,
+            ),
+            firefighter=firefighter,
         )
 
         write_to_file(daily_notes_file, daily_notes_content)
