@@ -151,6 +151,12 @@ Usage: wk [OPTIONS] COMMAND [ARGS]...
 
 ## Versions
 
+# 0.10.0
+
+- add work location
+- add firefighter mode
+- add use of jinja2 library
+
 # 0.9.0
 
 - Improve Github Service

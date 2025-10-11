@@ -33,8 +33,8 @@ def cmd(mocker: MockerFixture) -> CommandManager:
         return_value=mocker.MagicMock(name="GithubServiceMock"),
     )
     mocker.patch(
-        "taskjournal.commands.commands.FileWriter",
-        return_value=mocker.MagicMock(name="FileWriterMock"),
+        "taskjournal.commands.commands.TaskFormatter",
+        return_value=mocker.MagicMock(name="TaskFormatterMock"),
     )
     mocker.patch(
         "taskjournal.commands.commands.OpenAIService",
@@ -132,7 +132,7 @@ async def test_create_daily_notes__skips_when_file_exists_and_not_forced(
 
     # then
     warn.assert_called_once()
-    cmd.file_writer.format_content.assert_not_called()
+    cmd.task_formatter.format_content.assert_not_called()
 
 
 @mark.asyncio
@@ -187,7 +187,7 @@ async def test_create_daily_notes__creates_when_forced_even_if_exists(
 
     # then
     write_to_file.assert_called_once()
-    assert cmd.file_writer.format_content.call_count == 2
+    assert cmd.task_formatter.format_tasks.call_count == 2
     assert any(
         "Estimated time to finish" in " ".join(map(str, c.args))
         for c in info.mock_calls
@@ -233,7 +233,7 @@ async def test_create_daily_notes__uses_fallback_sprint_name_when_no_active_spri
     write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
 
     # Make FileWriter.format_content a pass-through so it returns the current content string
-    cmd.file_writer.format_content.side_effect = (
+    cmd.task_formatter.format_content.side_effect = (
         lambda marker, content, *_args, **_kwargs: content
     )
 

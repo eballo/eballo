@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Dict
 
 from taskjournal.config import TEMPLATE_FORMAT
-from taskjournal.constants import BASE_TASKS, EXTENDED_TASKS
+from taskjournal.constants import BASE_TASKS, EXTENDED_TASKS, WORK_OFFICE_DAYS
 from taskjournal.models.task import Task, Status, Epic
 from taskjournal.parser.file_parser import ParseFile
 from taskjournal.services.file import get_lines
@@ -25,14 +25,26 @@ def create_task(description: str) -> Task:
     return Task(id=str(uuid.uuid4()), description=description, status=Status.TODO)
 
 
+def get_work_from_defaults() -> str:
+    now = datetime.now()
+    day_of_week = now.strftime("%A")
+    if day_of_week in WORK_OFFICE_DAYS:
+        return "Office"
+    else:
+        return "Home"
+
+
 def get_default_tasks() -> list[Task]:
     """Return the default tasks based on the day of the week."""
-    tasks = [create_task(desc) for desc in BASE_TASKS]
+    tasks: List[Task] = [create_task(desc) for desc in BASE_TASKS]
 
-    day_of_week = datetime.now().strftime("%A")
-    week_number = datetime.now().isocalendar()[1]
+    now = datetime.now()
+    day_of_week = now.strftime("%A")
+    week_number = now.isocalendar()[1]
 
-    if day_of_week == "Wednesday":
+    if day_of_week == "Monday":
+        tasks.append(create_task(EXTENDED_TASKS[3]))
+    elif day_of_week == "Wednesday":
         tasks.append(create_task(EXTENDED_TASKS[0]))
     elif day_of_week == "Thursday" and week_number % 2 == 0:
         tasks.append(create_task(EXTENDED_TASKS[1]))

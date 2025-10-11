@@ -9,6 +9,9 @@ EXTENDED_TASKS = [
     "Check refinement tasks",
     "Get ready for the retro points",
     "Write down the summary of the week",
+    "New relic alarms - report",
 ]
+
+WORK_OFFICE_DAYS = ["Tuesday", "Thursday"]
 
 NORMAL_TASKS = BASE_TASKS + EXTENDED_TASKS

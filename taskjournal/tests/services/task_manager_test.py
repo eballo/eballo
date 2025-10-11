@@ -47,7 +47,7 @@ def test_get_tasks_from_daily_notes_error(mocker):
         ("Thursday", 4, "Get ready for the retro points", 6),  # even week
         ("Thursday", 3, None, 5),  # odd week
         ("Friday", 3, "Write down the summary of the week", 6),
-        ("Monday", 3, None, 5),
+        ("Monday", 3, "New relic alarms - report", 6),
     ],
 )
 def test_get_default_tasks_varies_by_day(

@@ -35,6 +35,18 @@ def build_app() -> Typer:
             help="Overwrite the daily notes file if it already exists.",
             show_default=True,
         ),
+        firefighter: bool = Option(
+            False,
+            "--ff",
+            help="Firefighter mode True/False",
+            show_default=True,
+        ),
+        work_from: str = Option(
+            None,
+            "--w",
+            help="Specify the working place (Home, Office)",
+            show_default=True,
+        ),
     ):
         debug = ctx.obj.get("debug", False)
         creation_date = ctx.obj.get("today")
@@ -53,7 +65,7 @@ def build_app() -> Typer:
                 logger.error("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
                 raise Exit(code=1)
 
-        asyncio.run(m.create_daily_notes(creation_date, force))
+        asyncio.run(m.create_daily_notes(creation_date, force, firefighter, work_from))
 
     @app.command(
         "finish",
