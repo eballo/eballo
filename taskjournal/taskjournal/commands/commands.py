@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from jinja2 import Template
 
@@ -51,9 +52,9 @@ from taskjournal.services.utils import wrap_with_format
 class CommandManager:
 
     def __init__(self, debug: bool = False):
-        self.jira = JiraService(debug)
+        self.jira = JiraService()
         self.github = GithubService()
-        self.task_formatter = TaskFormatter()
+        self.task_formatter: Any = TaskFormatter()  # FIXME: fix the type
         self.openai = OpenAIService()
 
     @staticmethod
@@ -96,6 +97,9 @@ class CommandManager:
         previous_pending_tasks = get_previous_pending_tasks(folder_path, current_file)
         pending = await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
         code_review = await self.jira.get_current_sprint_tasks_in_code_review()
+
+        # validate + update status if is already reviewed
+        await self.github.update_status_if_task_reviewed(code_review)
 
         tasks = unique_tasks(default + previous_pending_tasks + pending)
 

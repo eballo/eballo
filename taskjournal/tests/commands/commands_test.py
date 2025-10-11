@@ -127,12 +127,19 @@ async def test_create_daily_notes__skips_when_file_exists_and_not_forced(
     mocker.patch("taskjournal.commands.commands.os.path.exists", return_value=True)
     warn = mocker.patch("taskjournal.commands.commands.logger.warning")
 
+    mocker.patch.object(
+        cmd.github,
+        "update_status_if_task_reviewed",
+        new_callable=AsyncMock,
+        return_value=[],
+    )
+
     # when
     await cmd.create_daily_notes(fixed_datetime, force=False)
 
     # then
     warn.assert_called_once()
-    cmd.task_formatter.format_content.assert_not_called()
+    cmd.task_formatter.format_tasks.assert_not_called()
 
 
 @mark.asyncio
@@ -180,6 +187,12 @@ async def test_create_daily_notes__creates_when_forced_even_if_exists(
         "get_active_sprint",
         return_value=SimpleNamespace(name="Sprint 42"),
     )
+    mocker.patch.object(
+        cmd.github,
+        "update_status_if_task_reviewed",
+        new_callable=AsyncMock,
+        return_value=["task-code-review"],
+    )
     info = mocker.patch("taskjournal.commands.commands.logger.info")
 
     # when
@@ -226,16 +239,19 @@ async def test_create_daily_notes__uses_fallback_sprint_name_when_no_active_spri
         new_callable=AsyncMock,
         return_value=[],
     )
+    mocker.patch.object(
+        cmd.github,
+        "update_status_if_task_reviewed",
+        new_callable=AsyncMock,
+        return_value=[],
+    )
     mocker.patch(
         "taskjournal.commands.commands.get_previous_pending_tasks", return_value=[]
     )
     mocker.patch("taskjournal.commands.commands.unique_tasks", return_value=[])
     write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
 
-    # Make FileWriter.format_content a pass-through so it returns the current content string
-    cmd.task_formatter.format_content.side_effect = (
-        lambda marker, content, *_args, **_kwargs: content
-    )
+    cmd.task_formatter.format_tasks.call_count == 2
 
     # when
     await cmd.create_daily_notes(fixed_datetime)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from datetime import datetime, timedelta
@@ -21,14 +22,14 @@ from taskjournal.services.logger import logger
 
 class JiraService:
 
-    def __init__(self, debug: bool = False):
-        self.debug = debug
+    def __init__(self):
         self.board_id = JIRA_BOARD_ID
         self.base_url = f"https://{JIRA_ORGANIZATION}.atlassian.net"
         self.auth = (JIRA_EMAIL, JIRA_API_TOKEN)
 
         try:
             self.jira = JIRA(server=self.base_url, basic_auth=self.auth)
+            logger.debug("Jira successfully initialized")
         except Exception as e:
             logger.error(f"Failed to connect to Jira: {e}")
             self.jira = None
@@ -37,7 +38,6 @@ class JiraService:
         if not self.jira:
             logger.warning("Jira service unavailable.")
             return None
-
         try:
             sprints = self.jira.sprints(self.board_id)
             return next((s for s in sprints if s.state == "active"), None)
@@ -82,22 +82,56 @@ class JiraService:
 
         return await self._get_issues(jql)
 
+    async def _fetch_repo_from_devstatus(
+        self, client: httpx.AsyncClient, issue_id: str, issue_key: str
+    ) -> str | None:
+        base = f"{self.base_url}/rest/dev-status/latest/issue/detail"
+        try:
+            resp = await client.get(
+                base,
+                params={
+                    "issueId": issue_id,
+                    "applicationType": "GitHub",
+                    "dataType": "pullrequest",
+                },
+                headers={"Accept": "application/json"},
+            )
+            if resp.status_code == 404 or resp.status_code == 403:
+                return None
+            resp.raise_for_status()
+            data = resp.json() or {}
+
+            logger.debug(f"GitHub - {issue_key} {issue_id}")
+            logger.debug(json.dumps(data, indent=2))
+
+            details = data.get("detail", [])
+            for detail in details:
+                pull_requests = detail.get("pullRequests", [])
+                for pull_request in pull_requests:
+                    if (
+                        pull_request["status"] == "OPEN"
+                        and issue_key in pull_request["name"]
+                    ):
+                        return pull_request["url"]
+        except Exception as e:
+            logger.debug(f"fetch failed for {issue_id}: {e}")
+
+        return None
+
     async def _get_issues(self, jql: str) -> List[Task]:
         """
         Calls Jira Cloud API v3 `/rest/api/3/search/jql` asynchronously with httpx.
         Falls back gracefully if Jira is unavailable.
         """
-        # FIXME : feature #45 add retrials mechanism
         url = f"{self.base_url}/rest/api/3/search/jql"
         params = {
             "jql": jql,
             "startAt": 0,
             "maxResults": 100,
-            "fields": "summary,status,assignee,parent",
+            "fields": "summary,status,assignee,parent,issuetype",
         }
 
-        if self.debug:
-            logger.debug(f"JQL Query: {jql}")
+        logger.debug(f"JQL Query: {jql}")
 
         try:
             async with httpx.AsyncClient(timeout=15.0, auth=self.auth) as client:
@@ -107,47 +141,77 @@ class JiraService:
                     headers={"Accept": "application/json"},
                 )
                 resp.raise_for_status()
+
+                data = resp.json()
+                issues = data.get("issues", []) or []
+
+                logger.debug(f"Total issues found: {len(issues)}")
+                logger.debug(json.dumps(data, indent=2))
+
+                # Build Task objects (without github), keep id/key for hydration
+                tasks: List[Task] = []
+                idx_by_key: dict[str, int] = {}  # key -> index in tasks
+
+                for i, issue in enumerate(issues):
+                    fields = issue.get("fields", {}) or {}
+                    if not fields:
+                        continue
+
+                    epic = None
+                    parent = fields.get("parent")
+                    if parent:
+                        epic = Epic(
+                            key=parent.get("key"),
+                            summary=parent.get("fields", {}).get("summary"),
+                        )
+
+                    assignee = fields.get("assignee")
+                    user = User(name=assignee["displayName"]) if assignee else None
+
+                    task = Task(
+                        id=str(uuid.uuid4()),
+                        key=issue.get("key"),
+                        description=fields.get("summary"),
+                        link=f"{self.base_url}/browse/{issue.get('key')}",
+                        status=self.get_task_status(
+                            fields.get("status", {}).get("name", "")
+                        ),
+                        epic=epic,
+                        assignee=user,
+                    )
+                    tasks.append(task)
+                    if task.key:
+                        idx_by_key[task.key] = i
+
+                # Concurrently hydrate GitHub repo URLs
+                async def _one(issue_obj):
+                    issue_id = issue_obj.get("id")
+                    issue_key = issue_obj.get("key")
+                    if not (issue_id and issue_key):
+                        return issue_key, None
+                    try:
+                        repo_url = await self._fetch_repo_from_devstatus(
+                            client, issue_id, issue_key
+                        )
+                        return issue_key, repo_url
+                    except Exception as e:
+                        logger.debug(f"Failed to resolve repo for {issue_key}: {e}")
+                        return issue_key, None
+
+                results = await asyncio.gather(
+                    *[_one(iss) for iss in issues], return_exceptions=False
+                )
+
+                for issue_key, repo_url in results:
+                    logger.debug(f"Issue: {issue_key}: {repo_url} ")
+                    if issue_key and repo_url and issue_key in idx_by_key:
+                        tasks[idx_by_key[issue_key]].github = repo_url
+
+                return tasks
+
         except Exception as e:
             logger.error(f"Jira API request failed: {e}")
             return []
-
-        data = resp.json()
-        issues = data.get("issues", [])
-
-        if self.debug:
-            logger.debug(f"Total issues found: {len(issues)}")
-            logger.debug(json.dumps(data, indent=2))
-
-        tasks: List[Task] = []
-        for issue in data.get("issues", []):
-            fields = issue.get("fields", {})
-            if not fields:  # skip if missing
-                continue
-
-            # Epic (if parent exists)
-            epic = None
-            parent = fields.get("parent")
-            if parent:
-                epic = Epic(
-                    key=parent["key"],
-                    summary=parent["fields"]["summary"],
-                )
-
-            assignee = fields.get("assignee")
-            user = User(name=assignee["displayName"]) if assignee else None
-
-            task = Task(
-                id=str(uuid.uuid4()),
-                key=issue["key"],
-                description=fields.get("summary"),
-                link=f"{self.base_url}/browse/{issue['key']}",
-                status=self.get_task_status(fields["status"]["name"]),
-                epic=epic,
-                assignee=user,
-            )
-            tasks.append(task)
-
-        return tasks
 
     def get_task_status(self, jira_status: str) -> Status:
         status_mapping = {
