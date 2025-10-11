@@ -87,6 +87,7 @@ class JiraService:
         Calls Jira Cloud API v3 `/rest/api/3/search/jql` asynchronously with httpx.
         Falls back gracefully if Jira is unavailable.
         """
+        # FIXME : feature #45 add retrials mechanism
         url = f"{self.base_url}/rest/api/3/search/jql"
         params = {
             "jql": jql,

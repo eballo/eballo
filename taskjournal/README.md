@@ -151,7 +151,12 @@ Usage: wk [OPTIONS] COMMAND [ARGS]...
 
 ## Versions
 
-# 0.10.0
+# 0.12.0
+
+- add Jira link
+- addd github repo link
+
+# 0.11.0
 
 - add work location
 - add firefighter mode

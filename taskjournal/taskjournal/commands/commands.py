@@ -50,8 +50,8 @@ from taskjournal.services.utils import wrap_with_format
 @dataclass
 class CommandManager:
 
-    def __init__(self):
-        self.jira = JiraService()
+    def __init__(self, debug: bool = False):
+        self.jira = JiraService(debug)
         self.github = GithubService()
         self.task_formatter = TaskFormatter()
         self.openai = OpenAIService()

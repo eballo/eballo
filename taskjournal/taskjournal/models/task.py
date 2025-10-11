@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -31,14 +30,15 @@ class Status(str, Enum):
 
 class Task(BaseModel):
     id: str
-    key: Optional[str] = None
+    key: str | None = None
     description: str
     status: Status = Status.TODO
-    link: Optional[str] = None
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
-    epic: Optional[Epic] = None
-    assignee: Optional[User] = None
+    link: str | None = None
+    github: str | None = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+    epic: Epic | None = None
+    assignee: User | None = None
 
     def __str__(self):
         key = f"[{self.key}]" if self.key else ""
