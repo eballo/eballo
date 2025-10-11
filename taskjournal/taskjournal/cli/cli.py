@@ -70,7 +70,7 @@ def create_app() -> Typer:
             {
                 "version": app_version,
                 "debug": debug,
-                "manager": CommandManager(),
+                "manager": CommandManager(debug),
                 "today": datetime.now(),
             }
         )
