@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta
 from typing import Optional
+from urllib.parse import urlparse
 
 import httpx
 from gidgethub.httpx import GitHubAPI
 
 from taskjournal.config import GIT_HUB_TOKEN, GIT_HUB_ORGANIZATION_NAME
 from taskjournal.models.github import RepoCommitStat
+from taskjournal.models.task import Status, Task
 from taskjournal.services.logger import logger
 
 
@@ -18,7 +21,9 @@ class GithubService:
     """
 
     def __init__(
-        self, token: str = GIT_HUB_TOKEN, org_name: str = GIT_HUB_ORGANIZATION_NAME
+        self,
+        token: str = GIT_HUB_TOKEN,
+        org_name: str = GIT_HUB_ORGANIZATION_NAME,
     ):
         self.token = token
         self.org_name = org_name
@@ -27,6 +32,7 @@ class GithubService:
             self.gh: Optional[GitHubAPI] = GitHubAPI(
                 self.client, requester="taskjournal", oauth_token=self.token
             )
+            logger.debug("Github successfully initialized")
         except Exception as e:
             logger.error(f"Failed to initialize GitHub client: {e}")
             self.gh = None
@@ -122,6 +128,87 @@ class GithubService:
         commit_stats.sort(key=lambda r: r.percentage, reverse=True)
         return commit_stats
 
+    @staticmethod
+    def _parse_pr_url(pr_url: str) -> tuple[str, str, int]:
+        """
+        Parse a GitHub PR URL and return (owner, repo, number).
+        Accepts forms like:
+          https://github.com/owner/repo/pull/123
+          https://github.com/owner/repo/pull/123/files
+          https://github.com/owner/repo/pull/123/commits
+        """
+        try:
+            path = urlparse(pr_url).path.strip("/")
+            # path => owner/repo/pull/123[/...]
+            m = re.match(r"^([^/]+)/([^/]+)/pull/(\d+)", path)
+            if not m:
+                raise ValueError("Not a valid GitHub PR URL.")
+            owner, repo, number_str = m.groups()
+            return owner, repo, int(number_str)
+        except Exception as e:
+            raise ValueError(f"Failed to parse PR URL '{pr_url}': {e}")
+
+    async def has_user_approved_pr(
+        self,
+        pr_url: str | None = None,
+    ) -> Optional[bool]:
+        """
+        Return True if the (latest) review by 'user_login' on the given PR is APPROVED.
+        Return False if they haven't approved (or later changed to CHANGES_REQUESTED/DISMISSED).
+        Return None on API/init errors.
+
+        If user_login is None, uses the authenticated user (self.get_user()).
+        """
+        if not self.gh:
+            logger.error("GitHub client not initialized.")
+            return None
+
+        if not pr_url:
+            return None
+
+        # Determine which user to check
+        user_login = await self.get_user()
+        if not user_login:
+            logger.error("Could not resolve current GitHub user.")
+            return None
+
+        try:
+            owner, repo, number = self._parse_pr_url(pr_url)
+        except ValueError as e:
+            logger.error(str(e))
+            return None
+
+        try:
+            # Iterate all reviews (handles pagination)
+            reviews = []
+            async for review in self.gh.getiter(
+                f"/repos/{owner}/{repo}/pulls/{number}/reviews"
+            ):
+                # Safety: some reviews can be from bots or deleted users
+                u = (review.get("user") or {}).get("login") or ""
+                if u.lower() == user_login.lower():
+                    reviews.append(review)
+
+            if not reviews:
+                # No reviews from that user at all
+                return False
+
+            # Consider only the *latest* review from that user
+            # (Only the most recent state counts)
+            latest = max(
+                reviews,
+                key=lambda r: r.get("submitted_at")
+                or r.get("commit_id")
+                or "",  # fallback tie-breaker
+            )
+            state = (latest.get("state") or "").upper()
+            # Possible values: APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED, PENDING
+            return state == "APPROVED"
+
+        except Exception as e:
+            logger.error(f"Failed to fetch reviews for {owner}/{repo}#{number}: {e}")
+            return None
+
     # --- summary helpers ---
     async def get_contributions_last_6_months(self) -> str:
         last_six_months = datetime.now() - timedelta(days=180)
@@ -187,3 +274,9 @@ class GithubService:
         logger.info(f"   Your commits: {total_user_commits}")
         logger.info(f"   Org total commits: {total_all_commits}")
         logger.info(f"   Your overall contribution: {overall_percentage}%")
+
+    async def update_status_if_task_reviewed(self, code_review: list[Task]):
+        for task in code_review:
+            has_been_reviewed = await self.has_user_approved_pr(task.github)
+            if has_been_reviewed:
+                task.status = Status.DONE

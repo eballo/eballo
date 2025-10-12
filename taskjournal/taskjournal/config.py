@@ -51,3 +51,4 @@ GIT_HUB_ORGANIZATION_NAME = os.getenv(
 )
 GIT_HUB_TOKEN = os.getenv("GIT_HUB_TOKEN", "your-github-token")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-api-key")
+REVIEWER_NAME = "Enric Ballo"

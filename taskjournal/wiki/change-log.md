@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.0
+
+- Add github URL to the Code Review section
+- Validate if the PR was already reviewd
+
+## 0.12.1
+
+- Improve bump version to support (fix/major/minor versions)
+- add changelog section
+
 ## 0.12.0
 
 - add Jira link
