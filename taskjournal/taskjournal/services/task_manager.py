@@ -25,9 +25,8 @@ def create_task(description: str) -> Task:
     return Task(id=str(uuid.uuid4()), description=description, status=Status.TODO)
 
 
-def get_work_from_defaults() -> str:
-    now = datetime.now()
-    day_of_week = now.strftime("%A")
+def get_work_from_defaults(date: datetime) -> str:
+    day_of_week = date.strftime("%A")
     if day_of_week in WORK_OFFICE_DAYS:
         return "Office"
     else:

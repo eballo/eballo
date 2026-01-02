@@ -40,6 +40,6 @@ class Task(BaseModel):
     epic: Epic | None = None
     assignee: User | None = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         key = f"[{self.key}]" if self.key else ""
         return f"{key}{self.description} ({self.assignee})"

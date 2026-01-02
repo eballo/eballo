@@ -19,6 +19,19 @@ def calculate_working_hours(daily_notes_file: str):
         return None, None, None
 
 
+def get_total_time_spent(
+    created_time: datetime, final_time: datetime
+) -> tuple[float, float]:
+    # Calculate finalized time and total time spent
+    total_time_spent = final_time - created_time
+
+    # Properly format total_time_spent
+    hours, remainder = divmod(total_time_spent.total_seconds(), 3600)
+    minutes, _ = divmod(remainder, 60)
+
+    return hours, minutes
+
+
 def get_total_time_from_daily_notes(daily_file_path: str) -> int:
     total_time = 0
     with open(daily_file_path, "r") as file:

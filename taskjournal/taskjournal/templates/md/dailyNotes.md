@@ -3,9 +3,9 @@
 **Sprint:** {{sprint_name}}
 
 **Date:** {{date}}
-**Start Time:** {{time}}
-**End Time:**
-**Time Spent:**
+**Start Time:** {{start_time}}
+**End Time:** {{end_time}}
+**Time Spent:** {{time_spent}}
 
 **Work from:** {% if work_from|lower in ["home","remote","wfh"] %}🏠 Home{% elif work_from|lower in ["office","onsite"]
 %}🏢 Office{% else %}🧭 {{ work_from }}{% endif %}
@@ -26,7 +26,7 @@
 
 ## ✍️ Notes
 
--
+{{notes}}
 
 ---
 {% if firefighter %}
@@ -35,9 +35,14 @@
 
 Priority incidents handled:
 
--
+{{firefighter_notes}}
 
 ---
 {% endif %}
 
 ## 📋 Summary
+
+{{summary}}
+
+---
+{{extra}}
