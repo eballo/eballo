@@ -13,6 +13,7 @@ from taskjournal.config import (
     RETRO_TEMPLATE,
     HALF_YEAR_REVIEW_TEMPLATE,
     MONTH_REVIEW_TEMPLATE,
+    ONE_ON_ONE_TEMPLATE,
 )
 from taskjournal.models.task import Status
 from taskjournal.repositories.task_formatter import TaskFormatter
@@ -45,6 +46,7 @@ from taskjournal.services.time import (
     calculate_working_hours,
     get_daily_notes_name,
     get_total_time_spent,
+    get_1on1_name,
 )
 from taskjournal.services.utils import wrap_with_format
 
@@ -339,6 +341,19 @@ class CommandManager:
 
             write_to_file(retro_file, template_content)
             logger.info(f"Retro file ensured: {retro_file}")
+
+        return None
+
+    def create_one_on_one(self, custom_date: datetime) -> None:
+        one_one_one_file_name = get_1on1_name(custom_date)
+        one_one_one_file = os.path.join(
+            BASE_DIR, f"{custom_date.year}/1on1s/{one_one_one_file_name}"
+        )
+
+        if not os.path.exists(one_one_one_file):
+            template_content = load_template(ONE_ON_ONE_TEMPLATE)
+            write_to_file(one_one_one_file, template_content)
+            logger.info(f"1on1 file ensured: {one_one_one_file}")
 
         return None
 
