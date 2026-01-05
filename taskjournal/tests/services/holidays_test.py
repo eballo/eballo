@@ -119,3 +119,36 @@ def test_get_upcoming_holidays_logic(tmp_path):
     assert len(upcoming) == 1
     assert upcoming[0][0] == future_1
     assert upcoming[0][1]["description"] == "Near Future Holiday"
+
+
+def test_populate_files_generates_markdown(temp_holiday_file, tmp_path, mocker):
+    # Given
+    service = HolidayService(temp_holiday_file)
+
+    # We mock 'get_week_folder' to return a subdirectory inside our test 'tmp_path'.
+    # This prevents the test from trying to write to the real BASE_DIR.
+    fake_week_dir = tmp_path / "mock_week_folder"
+
+    # Patch where the function is USED (imported), not where it is defined
+    with mocker.patch(
+        "taskjournal.services.holidays.get_week_folder", return_value=str(fake_week_dir)
+    ):
+        # When
+        service.populate_files()
+
+    # Then
+    # 1. Verify the directory was created
+    assert fake_week_dir.exists()
+
+    # 2. Verify a specific file was created (2026-01-01 from temp_holiday_file)
+    expected_file = fake_week_dir / "2026-01-01-DailyNotes-Holidays.md"
+    assert expected_file.exists()
+
+    # 3. Verify the file content matches the service logic
+    content = expected_file.read_text(encoding="utf-8")
+    assert "Category: National holidays" in content
+    assert "Description: New Year's Day" in content
+
+    # 4. Verify correct number of files (3 valid dates in temp_holiday_file)
+    generated_files = list(fake_week_dir.glob("*.md"))
+    assert len(generated_files) == 3
