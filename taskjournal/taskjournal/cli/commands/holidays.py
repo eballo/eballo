@@ -1,5 +1,4 @@
 import os.path
-from datetime import datetime
 from typing import Any
 
 from typer import Typer, Context, Option
@@ -18,7 +17,8 @@ def build_app() -> Typer:
     def get_common_logic(ctx: Context, year: str | None) -> tuple[Any, str]:
         if not year:
             logger.warning("Getting default year")
-            year = datetime.now().year
+            custom_date = ctx.obj.get("today")
+            year = custom_date.year
         debug = ctx.obj.get("debug", False)
         holidays_path = os.path.join(BASE_DIR, f"{year}/{HOLIDAYS_FILE}")
         logger.debug(f"debug={debug}, path={holidays_path}")

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.0
+
+- add 1on1 report
+
 ## 0.16.0
 
 - add holidays populate command

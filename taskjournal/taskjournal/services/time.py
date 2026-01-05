@@ -74,6 +74,10 @@ def get_daily_notes_name(date: datetime) -> str:
     return date.strftime("%Y-%m-%d") + f"-DailyNotes.{TEMPLATE_FORMAT}"
 
 
+def get_1on1_name(date: datetime) -> str:
+    return date.strftime("%Y-%m-%d") + f"-1on1.{TEMPLATE_FORMAT}"
+
+
 def get_week_folder_and_daily_notes_file(today: datetime) -> tuple[str, str]:
     week_folder = get_week_folder(BASE_DIR, today)
     os.makedirs(week_folder, exist_ok=True)
