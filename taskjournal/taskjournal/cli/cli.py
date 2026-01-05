@@ -6,6 +6,7 @@ from taskjournal.cli import version as app_version
 from taskjournal.cli.commands.backup import build_app as build_backup
 from taskjournal.cli.commands.daily import build_app as build_daily
 from taskjournal.cli.commands.half_year import build_app as build_half_year
+from taskjournal.cli.commands.holidays import build_app as build_holidays
 from taskjournal.cli.commands.migrate import build_app as build_migrate
 from taskjournal.cli.commands.month import build_app as build_month
 from taskjournal.cli.commands.retro import build_app as build_retro
@@ -46,6 +47,7 @@ def create_app() -> Typer:
     app.add_typer(build_services(), name="services", hidden=True)
     app.add_typer(build_backup(), name="backup", hidden=True)
     app.add_typer(build_migrate(), name="migrate", hidden=True)
+    app.add_typer(build_holidays(), name="holidays")
 
     # Root callback (global flags)
     @app.callback()
