@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.0
+
+- add holidays command to manage holidays
+
 ## 0.14.0
 
 - add migrate command to help migrate from older versions

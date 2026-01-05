@@ -18,6 +18,7 @@ BASE_PROJECT = os.getenv(
     Path.home() / "Documents/work/personal/eballo/taskjournal/taskjournal/",
 )
 BACKUP_DIR = os.getenv("BACKUP_DIR", Path.home() / "Documents/Backup/")
+HOLIDAYS_FILE = "holidays/holidays.md"
 
 # Template paths
 TEMPLATE_FORMAT = os.getenv("TEMPLATE_FORMAT", "md")
