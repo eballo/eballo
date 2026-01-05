@@ -1,7 +1,10 @@
+import os
 from collections import defaultdict
 from datetime import date as datetime
 from re import compile
 
+from taskjournal.config import BASE_DIR
+from taskjournal.services.file import get_week_folder
 from taskjournal.services.logger import logger
 
 
@@ -98,3 +101,30 @@ class HolidayService:
             for date in dates:
                 desc = self.holidays[date]["description"]
                 logger.info(f"  {date}: {desc}")
+
+    def populate_files(self) -> None:
+        """Generates markdown files for all loaded holidays in the output directory."""
+
+        count = 0
+        for date_obj, info in self.holidays.items():
+            week_folder = get_week_folder(BASE_DIR, date_obj)
+            if not os.path.exists(week_folder):
+                os.makedirs(week_folder)
+                logger.info(f"Created directory: {week_folder}")
+            # Format: 2025-01-06-DailyNotes-Holidays.md
+            filename = f"{date_obj}-DailyNotes-Holidays.md"
+            file_path = os.path.join(week_folder, filename)
+
+            content = (
+                f"Category: {info['category']}\n"
+                f"Description: {info['description']}\n"
+            )
+
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                count += 1
+            except Exception as e:
+                logger.error(f"Failed to write {filename}: {e}")
+
+        logger.info(f"Successfully populated {count} holiday files")

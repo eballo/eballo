@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.0
+
+- add holidays populate command
+
 ## 0.15.0
 
 - add holidays command to manage holidays
