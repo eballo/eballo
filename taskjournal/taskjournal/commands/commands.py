@@ -44,6 +44,7 @@ from taskjournal.services.time import (
     get_start_time,
     calculate_working_hours,
     get_daily_notes_name,
+    get_total_time_spent,
 )
 from taskjournal.services.utils import wrap_with_format
 
@@ -90,7 +91,7 @@ class CommandManager:
         current_file = os.path.basename(daily_notes_file)
 
         # work from
-        work_from = work_from if work_from else get_work_from_defaults()
+        work_from = work_from if work_from else get_work_from_defaults(create_datetime)
 
         # tasks
         default = get_default_tasks()
@@ -106,7 +107,9 @@ class CommandManager:
         daily_notes_content = Template(template_content).render(
             day_name=create_datetime.strftime("%A"),
             date=create_datetime.strftime("%Y-%m-%d"),
-            time=create_datetime.strftime("%H:%M:%S"),
+            start_time=create_datetime.strftime("%H:%M:%S"),
+            end_time="",
+            time_spent="",
             work_from=work_from,
             sprint_name=sprint.name if sprint else "No active sprint",
             tasks=self.task_formatter.format_tasks(tasks, with_name=True),
@@ -114,7 +117,11 @@ class CommandManager:
                 code_review,
                 with_name=True,
             ),
+            notes="-",
+            summary="",
             firefighter=firefighter,
+            firefighter_notes="-",
+            extra="",
         )
 
         write_to_file(daily_notes_file, daily_notes_content)
@@ -146,15 +153,11 @@ class CommandManager:
         content = get_lines(daily_notes_file)
         created_line_index, created_time = get_start_time(content)
 
-        # Calculate finalized time and total time spent
-        total_time_spent = final_time - created_time
         end_time = wrap_with_format("End Time:")
         finalized_line = f"{end_time} {final_time.strftime('%H:%M')}\n"
-
-        # Properly format total_time_spent
-        hours, remainder = divmod(total_time_spent.total_seconds(), 3600)
-        minutes, _ = divmod(remainder, 60)
         time_spent = wrap_with_format("Time Spent:")
+
+        hours, minutes = get_total_time_spent(created_time, final_time)
         total_time_line = f"{time_spent} {int(hours):02}:{int(minutes):02}\n"
 
         # Remove old Finalized and Total Time Spent lines if they exist

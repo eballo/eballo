@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.0
+
+- add migrate command to help migrate from older versions
+
 ## 0.13.0
 
 - Add github URL to the Code Review section
