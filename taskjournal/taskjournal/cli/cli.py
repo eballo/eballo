@@ -12,6 +12,7 @@ from taskjournal.cli.commands.month import build_app as build_month
 from taskjournal.cli.commands.one_on_one import build_app as build_one_on_one
 from taskjournal.cli.commands.retro import build_app as build_retro
 from taskjournal.cli.commands.services import build_app as build_services
+from taskjournal.cli.commands.statistics import build_app as build_statistics
 from taskjournal.cli.commands.week import build_app as build_week
 from taskjournal.cli.help_order import GroupedHelpOrder
 from taskjournal.commands.commands import CommandManager
@@ -42,14 +43,15 @@ def create_app() -> Typer:
 
     app.add_typer(build_daily(), name="daily")
     app.add_typer(build_week(), name="week")
+    app.add_typer(build_one_on_one(), name="1on1")
+    app.add_typer(build_retro(), name="retro")
     app.add_typer(build_month(), name="month")
     app.add_typer(build_half_year(), name="half-year")
-    app.add_typer(build_retro(), name="retro")
     app.add_typer(build_services(), name="services", hidden=True)
     app.add_typer(build_backup(), name="backup", hidden=True)
     app.add_typer(build_migrate(), name="migrate", hidden=True)
     app.add_typer(build_holidays(), name="holidays")
-    app.add_typer(build_one_on_one(), name="1on1")
+    app.add_typer(build_statistics(), name="statistics")
 
     # Root callback (global flags)
     @app.callback()

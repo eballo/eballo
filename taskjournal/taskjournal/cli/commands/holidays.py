@@ -37,7 +37,6 @@ def build_app() -> Typer:
         debug, holidays_path = get_common_logic(ctx, year)
         service = HolidayService(debug=debug, filepath=holidays_path)
         service.summary_all()
-        return app
 
     @app.command(
         "upcoming",
@@ -52,7 +51,6 @@ def build_app() -> Typer:
         debug, holidays_path = get_common_logic(ctx, year)
         service = HolidayService(debug=debug, filepath=holidays_path)
         service.summary_upcoming()
-        return app
 
     @app.command("populate", help="Generate Markdown files for holidays.")
     def holidays_populate(

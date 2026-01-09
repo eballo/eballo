@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.0
+
+- add statistics command
+
 ## 0.17.0
 
 - add 1on1 report
