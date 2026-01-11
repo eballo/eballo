@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from jinja2 import Template
@@ -61,8 +61,8 @@ class CommandManager:
         self.openai = OpenAIService()
 
     @staticmethod
-    def _get_week_folder(today: datetime) -> str:
-        week_folder = get_week_folder(BASE_DIR, today)
+    def _get_week_folder(date: datetime) -> str:
+        week_folder = get_week_folder(BASE_DIR, date)
         os.makedirs(week_folder, exist_ok=True)
         return week_folder
 
@@ -97,6 +97,16 @@ class CommandManager:
 
         # tasks
         default = get_default_tasks()
+        if create_datetime.strftime("%A") == "Monday":
+            logger.info("Checking for pending tasks from last week...")
+            one_week_ago = create_datetime - timedelta(weeks=1)
+            week_folder = self._get_week_folder(one_week_ago)
+            last_week_pending_tasks = get_previous_pending_tasks(
+                week_folder, current_file
+            )
+        else:
+            last_week_pending_tasks = []
+
         previous_pending_tasks = get_previous_pending_tasks(folder_path, current_file)
         pending = await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
         code_review = await self.jira.get_current_sprint_tasks_in_code_review()
@@ -104,7 +114,9 @@ class CommandManager:
         # validate + update status if is already reviewed
         await self.github.update_status_if_task_reviewed(code_review)
 
-        tasks = unique_tasks(default + previous_pending_tasks + pending)
+        tasks = unique_tasks(
+            default + last_week_pending_tasks + previous_pending_tasks + pending
+        )
 
         daily_notes_content = Template(template_content).render(
             day_name=create_datetime.strftime("%A"),
@@ -344,7 +356,8 @@ class CommandManager:
 
         return None
 
-    def create_one_on_one(self, custom_date: datetime) -> None:
+    @staticmethod
+    def create_one_on_one(custom_date: datetime) -> None:
         one_one_one_file_name = get_1on1_name(custom_date)
         one_one_one_file = os.path.join(
             BASE_DIR, f"{custom_date.year}/1on1s/{one_one_one_file_name}"
@@ -357,11 +370,13 @@ class CommandManager:
 
         return None
 
-    def create_backup(self) -> None:
+    @staticmethod
+    def create_backup() -> None:
         backup_file = create_backup()
         logger.info(f"Backup created at: {backup_file}")
 
-    def _calculate_time(self, daily_notes_file: str) -> None:
+    @staticmethod
+    def _calculate_time(daily_notes_file: str) -> None:
         started_time, elapsed_hours, finish_time = calculate_working_hours(
             daily_notes_file
         )
