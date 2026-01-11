@@ -2,6 +2,10 @@
 
 ## 0.18.0
 
+- be able to get the pending tasks from previous week
+
+## 0.18.0
+
 - add statistics command
 
 ## 0.17.0

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import asyncio
-import json
-import uuid
+from asyncio import gather
 from datetime import datetime, timedelta
+from json import dumps
+from re import sub
 from typing import List
+from uuid import uuid4
 
-import httpx
+from httpx import AsyncClient
 from jira import JIRA
 from jira.resources import Sprint
 
@@ -82,8 +83,8 @@ class JiraService:
 
         return await self._get_issues(jql)
 
-    async def _fetch_repo_from_devstatus(
-        self, client: httpx.AsyncClient, issue_id: str, issue_key: str
+    async def _fetch_repo_from_dev_status(
+        self, client: AsyncClient, issue_id: str, issue_key: str
     ) -> str | None:
         base = f"{self.base_url}/rest/dev-status/latest/issue/detail"
         try:
@@ -102,7 +103,7 @@ class JiraService:
             data = resp.json() or {}
 
             logger.debug(f"GitHub - {issue_key} {issue_id}")
-            logger.debug(json.dumps(data, indent=2))
+            logger.debug(dumps(data, indent=2))
 
             details = data.get("detail", [])
             for detail in details:
@@ -134,7 +135,7 @@ class JiraService:
         logger.debug(f"JQL Query: {jql}")
 
         try:
-            async with httpx.AsyncClient(timeout=15.0, auth=self.auth) as client:
+            async with AsyncClient(timeout=15.0, auth=self.auth) as client:
                 resp = await client.get(
                     url,
                     params=params,
@@ -146,9 +147,9 @@ class JiraService:
                 issues = data.get("issues", []) or []
 
                 logger.debug(f"Total issues found: {len(issues)}")
-                logger.debug(json.dumps(data, indent=2))
+                logger.debug(dumps(data, indent=2))
 
-                # Build Task objects (without github), keep id/key for hydration
+                # Build Task objects (without GitHub), keep id/key for hydration
                 tasks: List[Task] = []
                 idx_by_key: dict[str, int] = {}  # key -> index in tasks
 
@@ -169,9 +170,9 @@ class JiraService:
                     user = User(name=assignee["displayName"]) if assignee else None
 
                     task = Task(
-                        id=str(uuid.uuid4()),
+                        id=str(uuid4()),
                         key=issue.get("key"),
-                        description=fields.get("summary"),
+                        description=self.sanitize_description(fields.get("summary")),
                         link=f"{self.base_url}/browse/{issue.get('key')}",
                         status=self.get_task_status(
                             fields.get("status", {}).get("name", "")
@@ -190,7 +191,7 @@ class JiraService:
                     if not (issue_id and issue_key):
                         return issue_key, None
                     try:
-                        repo_url = await self._fetch_repo_from_devstatus(
+                        repo_url = await self._fetch_repo_from_dev_status(
                             client, issue_id, issue_key
                         )
                         return issue_key, repo_url
@@ -198,7 +199,7 @@ class JiraService:
                         logger.debug(f"Failed to resolve repo for {issue_key}: {e}")
                         return issue_key, None
 
-                results = await asyncio.gather(
+                results = await gather(
                     *[_one(iss) for iss in issues], return_exceptions=False
                 )
 
@@ -213,7 +214,15 @@ class JiraService:
             logger.error(f"Jira API request failed: {e}")
             return []
 
-    def get_task_status(self, jira_status: str) -> Status:
+    @staticmethod
+    def sanitize_description(text: str) -> str:
+        if not text:
+            return ""
+        # Remove < and > characters
+        return sub(r"[<>]", "", text)
+
+    @staticmethod
+    def get_task_status(jira_status: str) -> Status:
         status_mapping = {
             "TO DO": Status.TODO,
             "IN PROGRESS": Status.IN_PROGRESS,

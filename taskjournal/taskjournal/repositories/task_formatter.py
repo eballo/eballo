@@ -21,12 +21,12 @@ class TaskFormatter:
         elif task.status == Status.BLOCKED:
             checkbox = self.prefix + "[-]"
 
-        key = f" [{task.key}]" if task.key else " "
+        key = f"[{task.key}]" if task.key else ""
         link = f"({task.link})" if task.link else ""
-        name = f" - {task.assignee}" if with_name and task.assignee else " "
-        status = f" ({task.status.value})" if with_status and task.status else " "
+        name = f" - {task.assignee}" if with_name and task.assignee else ""
+        status = f" ({task.status.value})" if with_status and task.status else ""
         github = f"[🐙]({task.github})" if task.github else ""
-        return f"{checkbox} {key}{link} {github} {task.description}{name}{status}"
+        return f"{checkbox} {key}{link}{github}{task.description}{name}{status}"
 
     def format_tasks(
         self, tasks: list[Task], with_name: bool = False, with_status: bool = False
