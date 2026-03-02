@@ -55,4 +55,7 @@ GIT_HUB_ORGANIZATION_NAME = os.getenv(
 )
 GIT_HUB_TOKEN = os.getenv("GIT_HUB_TOKEN", "your-github-token")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-api-key")
-REVIEWER_NAME = "Enric Ballo"
+
+# Wifi
+HOME_WIFI = os.getenv("HOME_WIFI", "CodePI")
+OFFICE_WIFI = os.getenv("OFFICE_WIFI", "TSH")

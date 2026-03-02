@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.18.0
+## 0.20.0
+
+- Improve get location from wifi service
+
+## 0.19.0
 
 - be able to get the pending tasks from previous week
 
