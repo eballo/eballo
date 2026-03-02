@@ -11,7 +11,7 @@ from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.file import load_template
 from taskjournal.services.logger import logger
 from taskjournal.services.parser import DailyParserService
-from taskjournal.services.task_manager import get_work_from_defaults
+from taskjournal.services.task_manager import get_work_from_location
 from taskjournal.services.time import get_total_time_spent
 
 
@@ -71,7 +71,7 @@ class MigrationService:
         return None
 
     def _generate_md_content(self, data: dict, date: datetime) -> str:
-        work_from = get_work_from_defaults(date)
+        work_from = get_work_from_location(date)
         template_content = load_template(DAILY_NOTES_TEMPLATE)
 
         start_date_time = data["start_time"] if data["start_time"] else "09:00:00"

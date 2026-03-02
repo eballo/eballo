@@ -3,11 +3,18 @@ import uuid
 from datetime import datetime
 from typing import List, Dict
 
-from taskjournal.config import TEMPLATE_FORMAT
-from taskjournal.constants import BASE_TASKS, EXTENDED_TASKS, WORK_OFFICE_DAYS
+from taskjournal.config import TEMPLATE_FORMAT, HOME_WIFI, OFFICE_WIFI
+from taskjournal.constants import (
+    BASE_TASKS,
+    EXTENDED_TASKS,
+    WORK_OFFICE_DAYS,
+    WORK_LOCATION_HOME,
+    WORK_LOCATION_OFFICE,
+)
 from taskjournal.models.task import Task, Status, Epic
 from taskjournal.services.logger import logger
 from taskjournal.services.parser import DailyParserService
+from taskjournal.services.wifi import WifiService
 
 
 def get_tasks_from_daily_notes(file_path: str) -> list[Task]:
@@ -27,12 +34,34 @@ def create_task(description: str) -> Task:
     )
 
 
-def get_work_from_defaults(date: datetime) -> str:
+def get_work_from_location(date: datetime) -> str:
+    wifi_location = _get_location_from_wifi()
+    default_location = _get_default_locations(date)
+    work_from = wifi_location if wifi_location else default_location
+    logger.info(f"Work from: {work_from}")
+    return work_from
+
+
+def _get_default_locations(date: datetime) -> str:
     day_of_week = date.strftime("%A")
     if day_of_week in WORK_OFFICE_DAYS:
-        return "Office"
+        working_from_location = WORK_LOCATION_OFFICE
     else:
-        return "Home"
+        working_from_location = WORK_LOCATION_HOME
+    logger.debug(f"Day of the week: {day_of_week} - Location: {working_from_location}")
+    return working_from_location
+
+
+def _get_location_from_wifi() -> str | None:
+    wifi_service = WifiService()
+    wifi_name = wifi_service.get_name()
+    working_from_location = None
+    logger.debug(f"WiFi name: {wifi_name}")
+    if wifi_name == HOME_WIFI:
+        working_from_location = WORK_LOCATION_HOME
+    elif wifi_name == OFFICE_WIFI:
+        working_from_location = WORK_LOCATION_OFFICE
+    return working_from_location
 
 
 def get_default_tasks() -> list[Task]:

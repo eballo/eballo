@@ -37,7 +37,7 @@ from taskjournal.services.task_manager import (
     get_previous_pending_tasks,
     unique_tasks,
     get_unique_epics,
-    get_work_from_defaults,
+    get_work_from_location,
 )
 from taskjournal.services.time import (
     get_total_time_from_daily_notes,
@@ -93,7 +93,7 @@ class CommandManager:
         current_file = os.path.basename(daily_notes_file)
 
         # work from
-        work_from = work_from if work_from else get_work_from_defaults(create_datetime)
+        work_from = work_from if work_from else get_work_from_location(create_datetime)
 
         # tasks
         default = get_default_tasks()
