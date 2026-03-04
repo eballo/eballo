@@ -19,6 +19,7 @@ BASE_PROJECT = os.getenv(
 )
 BACKUP_DIR = os.getenv("BACKUP_DIR", Path.home() / "Documents/Backup/")
 HOLIDAYS_FILE = "holidays/holidays.md"
+FIREMAN_WEEKS_FILE = "fireman/fireman_weeks.md"
 
 # Template paths
 TEMPLATE_FORMAT = os.getenv("TEMPLATE_FORMAT", "md")

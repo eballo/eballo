@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.0
+
+- Add fireman weeks
+
 ## 0.20.0
 
 - Improve get location from wifi service
