@@ -27,6 +27,7 @@ from taskjournal.services.file import (
     get_week_folder,
     get_summary_from_daily_notes,
 )
+from taskjournal.services.fireman import FiremanService
 from taskjournal.services.github import GithubService
 from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
@@ -55,6 +56,7 @@ from taskjournal.services.utils import wrap_with_format
 class CommandManager:
 
     def __init__(self, debug: bool = False):
+        self.debug = debug
         self.jira = JiraService()
         self.github = GithubService()
         self.task_formatter: Any = TaskFormatter()  # FIXME: fix the type
@@ -94,6 +96,12 @@ class CommandManager:
 
         # work from
         work_from = work_from if work_from else get_work_from_location(create_datetime)
+
+        # fireman logic
+        is_fireman_week = FiremanService(
+            debug=self.debug, create_datetime=create_datetime
+        ).is_fireman_week(create_datetime.date())
+        firefighter = firefighter if firefighter else is_fireman_week
 
         # tasks
         default = get_default_tasks()
