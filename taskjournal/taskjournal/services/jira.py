@@ -153,7 +153,7 @@ class JiraService:
                 tasks: List[Task] = []
                 idx_by_key: dict[str, int] = {}  # key -> index in tasks
 
-                for i, issue in enumerate(issues):
+                for issue in issues:
                     fields = issue.get("fields", {}) or {}
                     if not fields:
                         continue
@@ -182,7 +182,9 @@ class JiraService:
                     )
                     tasks.append(task)
                     if task.key:
-                        idx_by_key[task.key] = i
+                        # Map to the index in the filtered `tasks` list, not
+                        # the source `issues` list (which can contain skipped entries).
+                        idx_by_key[task.key] = len(tasks) - 1
 
                 # Concurrently hydrate GitHub repo URLs
                 async def _one(issue_obj):
