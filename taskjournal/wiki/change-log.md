@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.0
+
+- #75 Small improvements test
+
 ## 0.23.0
 
 Improve JiraService + code coverage
