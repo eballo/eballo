@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.23.0
+
+Improve JiraService + code coverage
+
+## 0.22.0
+
+- Improve Readme
+
 ## 0.21.0
 
 - Add fireman weeks

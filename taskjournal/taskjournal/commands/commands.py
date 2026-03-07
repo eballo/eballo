@@ -98,9 +98,7 @@ class CommandManager:
         work_from = work_from if work_from else get_work_from_location(create_datetime)
 
         # fireman logic
-        is_fireman_week = FiremanService(
-            debug=self.debug, create_datetime=create_datetime
-        ).is_fireman_week(create_datetime.date())
+        is_fireman_week = FiremanService(create_datetime).is_fireman_week()
         firefighter = firefighter if firefighter else is_fireman_week
 
         # tasks
