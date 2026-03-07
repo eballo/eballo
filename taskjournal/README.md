@@ -1,154 +1,97 @@
 # Task Journal
 
-TaskJournal CLI is a lightweight command-line tool that helps you manage your daily work notes, track working hours, and
-generate weekly retrospectives and summaries. It's built to support a structured journaling workflow to improve personal
-productivity and accountability.
+[![Version](https://img.shields.io/badge/version-0.21.0-blue.svg)](#task-journal)
+[![Python](https://img.shields.io/badge/python-3.12%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![Poetry](https://img.shields.io/badge/deps-poetry-60A5FA.svg?logo=poetry&logoColor=white)](https://python-poetry.org/)
+[![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC.svg?logo=pytest&logoColor=white)](https://docs.pytest.org/)
 
-## Install
+Task Journal (`wk`) is a Python CLI to manage your day-to-day engineering journal.
+
+For the full explanation of features, configuration, and command examples, see:
+[Tool Overview](wiki/tool-overview.md)
+
+## Requirements
+
+- Python 3.12+
+- Poetry (for dependency and environment management)
+
+## Installation
+
+### Local development setup
+
+Creation of the environment
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install poetry
+```
 
 ```bash
 poetry install
-source .venv/bin/activate
-poetry build
-pip install .
+```
 
+Run the CLI with Poetry:
+
+```bash
+poetry run wk --help
+```
+
+Or use the local virtualenv binary directly if available:
+
+```bash
+./venv/bin/wk --help
+```
+
+### Build and install package
+
+```bash
+poetry build
+pip install dist/*.whl
 wk --help
 ```
 
-After install it you can do wk --shell-completion to get the shell completion script.
-
-## Local Development
+## Quick start
 
 ```bash
-poetry install
-source .venv/bin/activate
+wk --help
+wk daily start
+wk daily finish
+wk week report
 ```
 
-### Configure .env
+## Development
 
-Copy the sample environment file to `.env` and update the values as needed.
-Needs to be placed in ~/config/taskjournal/.env
-
-```bash
-cp sample.env .env
-```
-
-### Run the tests
+Run tests:
 
 ```bash
 poetry run pytest
 ```
 
-### Run the code coverage
+Run coverage:
 
 ```bash
 poetry run pytest --cov=taskjournal --cov-config=.coveragerc tests/
 ```
 
-### Pre-commit
+Pre-commit:
 
 ```bash
 poetry run pre-commit install
 poetry run pre-commit run --all-files
 ```
 
-### with poe
+Poe tasks:
 
 ```bash
-poe format       # runs black
-poe test         # runs pytest
-poe coverage     # runs coverage with HTML report
-poe check        # runs everything
+poe format       # black
+poe test         # pytest
+poe coverage     # coverage XML
+poe check        # format + test + coverage
 ```
 
-# How to use it
+## Documentation
 
-```bash
-> wk
-Usage: wk [OPTIONS] COMMAND [ARGS]...
-
- Task Journal CLI.
- A CLI tool to organize your work by managing notes, summaries, reports.
- Helping you stay on track and communicate progress effectively.
- Use --help on any command to see detailed options and examples.
-
-╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ --version                     Show the application version and exit.                                            │
-│ --debug                       Enable debug logging (verbose output).                                            │
-│ --install-completion          Install completion for the current shell.                                         │
-│ --show-completion             Show completion for the current shell, to copy it or customize the installation.  │
-│ --help                        Show this message and exit.                                                       │
-╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ daily       Daily workflow commands (start, finish).                                                            │
-│ week        Weekly reporting commands.                                                                          │
-│ month       Monthly reporting commands.                                                                         │
-│ half-year   Half-year reporting commands.                                                                       │
-│ retro       Create a Retrospective                                                                              │
-╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-```
-
-## Daily Start
-
-```bash
-> wk daily start
-```
-
-## Daily Finish
-
-```bash
-> wk daily finish
-```
-
-## Retro
-
-```bash
-> wk retro report
-```
-
-## Week Summary
-
-```bash
-> wk week report
-```
-
-## Haff-Year Review
-
-```bash
-> wk half-year report
-```
-
-## Time
-
-```bash
-> wk daily time
-```
-
-## Backup
-
-```bash
-> wk backup run
-```
-
-## Jira
-
-```bash
-> wk services jira
-```
-
-## version
-
-```bash
-> wk --version
-```
-
-## Wiki
-
+- [Tool Overview](wiki/tool-overview.md)
 - [Jira Setup](wiki/jira-setup.md)
 - [Github Setup](wiki/github-setup.md)
-- [Shell Completion](wiki/shell-completion.md)
-
-## Versions
-
 - [Changelog](wiki/change-log.md)
