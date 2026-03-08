@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.0
+
+- fix version
+
 ## 0.24.0
 
 - #75 Small improvements test
