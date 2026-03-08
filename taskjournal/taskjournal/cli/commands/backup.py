@@ -11,7 +11,7 @@ def build_app() -> Typer:
 
     @app.command(
         "run",
-        help=("Create a backup all files" "Examples:\n" "  wk backup run\n"),
+        help="Create a backup all files Examples:\n wk backup run\n",
     )
     def backup_run(ctx: Context) -> None:
         debug = ctx.obj.get("debug", False)
