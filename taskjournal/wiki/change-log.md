@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.26.0
+
+- Fix bump version
+
 ## 0.25.0
 
 - fix version

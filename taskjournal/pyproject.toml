@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "taskjournal"
-version = "0.25.0"
+version = "0.26.0"
 description = "A Python project for tracking daily work tasks."
 authors = ["Enric Ballo <enric.ballo@gmail.com>"]
 readme = "README.md"
