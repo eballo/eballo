@@ -12,7 +12,7 @@ def build_app() -> Typer:
         no_args_is_help=True,
     )
 
-    def get_common_logic(ctx: Context, year: str | None) -> tuple[Any, str]:
+    def get_common_logic(ctx: Context, year: str | None) -> tuple[bool, str | int]:
         if not year:
             logger.warning("Getting default year")
             custom_date = ctx.obj.get("today")
@@ -27,10 +27,10 @@ def build_app() -> Typer:
     )
     def working_days_summary(
         ctx: Context,
-        year: str = Option(
+        year: str | None = Option(
             None, "--year", "-y", help="Year for which to get holidays."
         ),
-    ):
+    ) -> None:
         debug, year = get_common_logic(ctx, year)
         service = WorkingDaysService(year=year, debug=debug)
         service.summary()
@@ -41,10 +41,10 @@ def build_app() -> Typer:
     )
     def working_days_progress(
         ctx: Context,
-        year: str = Option(
+        year: str | None = Option(
             None, "--year", "-y", help="Year for which to get holidays."
         ),
-    ):
+    ) -> None:
         debug, year = get_common_logic(ctx, year)
         service = WorkingDaysService(year=year, debug=debug)
         service.get_progress()
@@ -55,10 +55,10 @@ def build_app() -> Typer:
     )
     def working_days_real(
         ctx: Context,
-        year: str = Option(
+        year: str | None = Option(
             None, "--year", "-y", help="Year for which to get holidays."
         ),
-    ):
+    ) -> None:
         debug, year = get_common_logic(ctx, year)
         service = WorkingDaysService(year=year, debug=debug)
         service.get_real_working_days()

@@ -16,7 +16,7 @@ def create_backup():
     backup_file = BACKUP_DIR / _get_backup_filename()
 
     with zipfile.ZipFile(backup_file, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for root, dirs, files in os.walk(BASE_DIR):
+        for root, _dirs, files in os.walk(BASE_DIR):
             for file in files:
                 full_path = Path(root) / file
                 relative_path = full_path.relative_to(BASE_DIR)

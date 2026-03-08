@@ -7,7 +7,7 @@ from taskjournal.services.logger import logger
 
 
 class ParserService:
-    def parse(self, content: str) -> dict:
+    def parse(self, content: str) -> dict | None:
         raise NotImplementedError()
 
 
@@ -29,7 +29,7 @@ class DailyParserService(ParserService):
         self.task_regex_txt = re.compile(r"^\[([ xX-])\]\s*(.*)")
         self.task_regex_md = re.compile(r"^\s*-\s*\[([ xX-])\]\s*(.*)")
 
-    def parse(self, file_path: str) -> dict:
+    def parse(self, file_path: str) -> dict | None:
         try:
             _, extension = os.path.splitext(file_path)
             lines = self._get_lines(file_path)
@@ -37,6 +37,7 @@ class DailyParserService(ParserService):
             return data
         except Exception as e:
             logger.error(f"Failed to parse daily notes {file_path}: {e}")
+            return None
 
     @staticmethod
     def _get_lines(file_path: str) -> list[str]:
@@ -45,7 +46,7 @@ class DailyParserService(ParserService):
         return lines
 
     def _parse_content(self, lines: List[str], format_extension: str) -> dict:
-        data = {
+        data: dict[str, Any] = {
             "sprint_name": "",
             "date": None,
             "start_time": None,
@@ -90,31 +91,32 @@ class DailyParserService(ParserService):
                         break
 
             # 3. Parse Content based on section
-            if current_section in ["planned_tasks", "code_review_tasks"]:
+            if current_section in ("planned_tasks", "code_review_tasks"):
+                # Type narrowing: we know current_section is one of the two literals
+                assert current_section in ("planned_tasks", "code_review_tasks")
                 self._parse_tasks(
                     current_section, data, line_stripped, format_extension
                 )
 
             elif current_section in ["notes", "summary", "firefighter"]:
                 # Preserve empty lines for notes and summary
-                if line_stripped:
-                    data[current_section].append(line_stripped)
-                elif not data[current_section]:
-                    # Don't add leading empty lines
-                    pass
-                else:
-                    # Add newline to preserve paragraph structure
-                    data[current_section].append("")
+                section_list = data[current_section]
+                if isinstance(section_list, list):
+                    if line_stripped:
+                        section_list.append(line_stripped)
+                    elif len(section_list) > 0:
+                        # Add newline to preserve paragraph structure
+                        section_list.append("")
 
         return data
 
     def _parse_tasks(
         self,
         current_section: Literal["planned_tasks", "code_review_tasks"],
-        data: dict[str | Any, str | None | list[Any] | Any],
+        data: dict[str, Any],
         line_stripped: str,
         format_extension: str,
-    ):
+    ) -> None:
         if format_extension == ".md":
             task_match = self.task_regex_md.match(line_stripped)
         else:
@@ -137,4 +139,6 @@ class DailyParserService(ParserService):
                 description=description,
                 status=status,
             )
-            data[current_section].append(task)
+            section_list = data[current_section]
+            if isinstance(section_list, list):
+                section_list.append(task)

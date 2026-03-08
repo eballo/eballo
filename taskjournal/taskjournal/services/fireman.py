@@ -8,7 +8,7 @@ from taskjournal.services.logger import logger
 
 class FiremanService:
     def __init__(self, create_datetime: datetime) -> None:
-        self.fireman_weeks = set()
+        self.fireman_weeks: set[date] = set()
         self.create_datetime = create_datetime
         self.load_and_parse()
 

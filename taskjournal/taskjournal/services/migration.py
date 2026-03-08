@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from json import dumps
-from typing import Any, Tuple
+from typing import Any
 
 from jinja2 import Template
 
@@ -132,14 +132,21 @@ class MigrationService:
         return f" - [{check}] {task.description}"
 
     @staticmethod
-    def _calculate_time_spent(
-        start_date_time: str, end_date_time: str
-    ) -> Tuple[str, str]:
+    def _calculate_time_spent(start_date_time: str, end_date_time: str) -> str:
         try:
-            start_dt = datetime.strptime(start_date_time, "%H:%M")
-            end_dt = datetime.strptime(end_date_time, "%H:%M")
+
+            def _parse_time(value: str) -> datetime:
+                for fmt in ("%H:%M", "%H:%M:%S"):
+                    try:
+                        return datetime.strptime(value, fmt)
+                    except ValueError:
+                        continue
+                raise ValueError(f"Unsupported time format: {value}")
+
+            start_dt = _parse_time(start_date_time)
+            end_dt = _parse_time(end_date_time)
             hours, minutes = get_total_time_spent(start_dt, end_dt)
-            return f"{hours:02}:{minutes}"
+            return f"{hours:02}:{minutes:02}"
         except Exception as e:
             logger.warning(f"Failed to calculate time spent: {e}")
             return "08:30"  # Default to 8.5 hours

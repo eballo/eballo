@@ -21,6 +21,9 @@ def get_tasks_from_daily_notes(file_path: str) -> list[Task]:
     try:
         daily_parser = DailyParserService()
         data = daily_parser.parse(file_path)
+        if data is None:
+            logger.error(f"Error reading file {file_path}")
+            return []
         tasks = data.get("planned_tasks", [])
         return tasks
     except Exception as e:
@@ -99,6 +102,8 @@ def get_previous_pending_tasks(folder_path: str, current_file: str) -> list[Task
     try:
         daily_parser = DailyParserService()
         data = daily_parser.parse(latest_file)
+        if data is None:
+            return []
         return get_pending_tasks(data)
     except Exception as e:
         logger.warning(f"Warning: Could not read previous file {latest_file}: {e}")

@@ -15,8 +15,12 @@ class HolidayService:
         debug: bool = False,
     ) -> None:
         self.debug = debug
-        self.holidays = {}  # Maps date object -> {description, category}
-        self.categories = defaultdict(list)  # Maps category -> list of dates
+        self.holidays: dict[datetime, dict[str, str]] = (
+            {}
+        )  # Maps date object -> {description, category}
+        self.categories: dict[str, list[datetime]] = defaultdict(
+            list
+        )  # Maps category -> list of dates
         self.load_and_parse(filepath)
 
     def load_and_parse(self, filepath: str) -> None:
@@ -65,7 +69,7 @@ class HolidayService:
                 except ValueError:
                     print(f"Warning: Invalid date format found: {date_str}")
 
-    def is_holiday(self, date_obj: datetime) -> bool:
+    def is_holiday(self, date_obj: datetime) -> dict[str, str] | None:
         """Returns the holiday info if the date is a holiday, else None."""
         return self.holidays.get(date_obj)
 

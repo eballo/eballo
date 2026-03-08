@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from asyncio import gather
 from datetime import datetime, timedelta
 from json import dumps
@@ -169,10 +167,13 @@ class JiraService:
                     assignee = fields.get("assignee")
                     user = User(name=assignee["displayName"]) if assignee else None
 
+                    summary = fields.get("summary")
                     task = Task(
                         id=str(uuid4()),
                         key=issue.get("key"),
-                        description=self.sanitize_description(fields.get("summary")),
+                        description=(
+                            self.sanitize_description(summary) if summary else ""
+                        ),
                         link=f"{self.base_url}/browse/{issue.get('key')}",
                         status=self.get_task_status(
                             fields.get("status", {}).get("name", "")
