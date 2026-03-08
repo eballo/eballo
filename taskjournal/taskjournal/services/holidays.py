@@ -73,7 +73,9 @@ class HolidayService:
         """Returns the holiday info if the date is a holiday, else None."""
         return self.holidays.get(date_obj)
 
-    def get_upcoming_holidays(self, limit=25) -> list[tuple[datetime, dict]]:
+    def get_upcoming_holidays(
+        self, limit: int = 25
+    ) -> list[tuple[datetime, dict[str, str]]]:
         """Returns a list of the next X holidays from today."""
         today = datetime.today()
         upcoming = []
@@ -88,7 +90,7 @@ class HolidayService:
                     break
         return upcoming
 
-    def summary_upcoming(self, limit=25) -> None:
+    def summary_upcoming(self, limit: int = 25) -> None:
         """Prints a loaded summary of upcoming holidays."""
         upcoming_holidays = self.get_upcoming_holidays(limit)
         logger.info(f"--- Upcoming Holidays (next {len(upcoming_holidays)}) ---")

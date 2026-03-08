@@ -7,7 +7,9 @@ from taskjournal.services.logger import logger
 from taskjournal.services.utils import wrap_with_format
 
 
-def calculate_working_hours(daily_notes_file: str):
+def calculate_working_hours(
+    daily_notes_file: str,
+) -> tuple[datetime | None, float | None, datetime | None]:
     try:
         lines = get_lines(daily_notes_file)
         _, created_time = get_start_time(lines)

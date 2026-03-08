@@ -1,7 +1,6 @@
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
 
 from jinja2 import Template
 
@@ -55,11 +54,11 @@ from taskjournal.services.utils import wrap_with_format
 @dataclass
 class CommandManager:
 
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool = False) -> None:
         self.debug = debug
         self.jira = JiraService()
         self.github = GithubService()
-        self.task_formatter: Any = TaskFormatter()  # FIXME: fix the type
+        self.task_formatter = TaskFormatter()
         self.openai = OpenAIService()
 
     @staticmethod
@@ -198,7 +197,7 @@ class CommandManager:
 
         return None
 
-    def daily_time(self, custom_date) -> None:
+    def daily_time(self, custom_date: datetime) -> None:
         daily_notes_file = self._get_daily_notes_file_path(custom_date)
         if os.path.exists(daily_notes_file):
             self._calculate_time(daily_notes_file)
@@ -261,7 +260,7 @@ class CommandManager:
 
         return None
 
-    async def create_half_year_review(self, custom_date) -> None:
+    async def create_half_year_review(self, custom_date: datetime) -> None:
         week_folder = self._get_week_folder(custom_date)
 
         half_year_review_file = os.path.join(
@@ -304,7 +303,7 @@ class CommandManager:
 
         return None
 
-    async def create_month_review(self, custom_date) -> None:
+    async def create_month_review(self, custom_date: datetime) -> None:
         week_folder = self._get_week_folder(custom_date)
 
         half_year_review_file = os.path.join(week_folder, f"month.{TEMPLATE_FORMAT}")
@@ -386,7 +385,7 @@ class CommandManager:
         started_time, elapsed_hours, finish_time = calculate_working_hours(
             daily_notes_file
         )
-        if elapsed_hours is not None:
+        if elapsed_hours is not None and finish_time is not None:
             logger.info(f"Started time: {started_time}")
             logger.info(f"Elapsed working time: {elapsed_hours:.2f}")
             logger.info(

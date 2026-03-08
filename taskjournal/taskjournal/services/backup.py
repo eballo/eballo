@@ -6,14 +6,14 @@ from pathlib import Path
 from taskjournal.config import BACKUP_DIR, BASE_DIR
 
 
-def _get_backup_filename():
+def _get_backup_filename() -> str:
     date_str = datetime.now().strftime("%Y_%m_%d")
     return f"DailyNotes_backup_{date_str}.zip"
 
 
-def create_backup():
+def create_backup() -> Path:
     Path(BACKUP_DIR).mkdir(parents=True, exist_ok=True)
-    backup_file = BACKUP_DIR / _get_backup_filename()
+    backup_file = Path(BACKUP_DIR) / _get_backup_filename()
 
     with zipfile.ZipFile(backup_file, "w", zipfile.ZIP_DEFLATED) as zipf:
         for root, _dirs, files in os.walk(BASE_DIR):

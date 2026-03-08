@@ -1,5 +1,3 @@
-from typing import Any
-
 from typer import Typer, Context, Option
 
 from taskjournal.services.logger import logger
@@ -13,11 +11,11 @@ def build_app() -> Typer:
     )
 
     def get_common_logic(ctx: Context, year: str | None) -> tuple[bool, str | int]:
+        debug = ctx.obj.get("debug", False)
         if not year:
             logger.warning("Getting default year")
             custom_date = ctx.obj.get("today")
-            year = custom_date.year
-        debug = ctx.obj.get("debug", False)
+            return debug, custom_date.year
         logger.debug(f"debug={debug}, year={year}")
         return debug, year
 
@@ -31,8 +29,8 @@ def build_app() -> Typer:
             None, "--year", "-y", help="Year for which to get holidays."
         ),
     ) -> None:
-        debug, year = get_common_logic(ctx, year)
-        service = WorkingDaysService(year=year, debug=debug)
+        debug, final_year = get_common_logic(ctx, year)
+        service = WorkingDaysService(year=final_year, debug=debug)
         service.summary()
 
     @app.command(
@@ -45,8 +43,8 @@ def build_app() -> Typer:
             None, "--year", "-y", help="Year for which to get holidays."
         ),
     ) -> None:
-        debug, year = get_common_logic(ctx, year)
-        service = WorkingDaysService(year=year, debug=debug)
+        debug, final_year = get_common_logic(ctx, year)
+        service = WorkingDaysService(year=final_year, debug=debug)
         service.get_progress()
 
     @app.command(
@@ -59,8 +57,8 @@ def build_app() -> Typer:
             None, "--year", "-y", help="Year for which to get holidays."
         ),
     ) -> None:
-        debug, year = get_common_logic(ctx, year)
-        service = WorkingDaysService(year=year, debug=debug)
+        debug, final_year = get_common_logic(ctx, year)
+        service = WorkingDaysService(year=final_year, debug=debug)
         service.get_real_working_days()
 
     return app

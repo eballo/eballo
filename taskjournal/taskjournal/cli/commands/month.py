@@ -17,7 +17,7 @@ def build_app() -> Typer:
     )
     def month_report(
         ctx: Context,
-    ):
+    ) -> None:
         debug = ctx.obj.get("debug", False)
         custom_date = ctx.obj.get("today")
         m = ctx.obj.get("manager")

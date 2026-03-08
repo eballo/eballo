@@ -1,11 +1,17 @@
 import uuid
-from typing import Literal
+from typing import Literal, TypedDict
 
 from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.constants import NORMAL_TASKS
 from taskjournal.models.task import Task, Status
 
-FORMAT_CONFIG = {
+
+class FormatConfig(TypedDict):
+    prefix: str
+    size: int
+
+
+FORMAT_CONFIG: dict[str, FormatConfig] = {
     "txt": {"prefix": "", "size": 4},
     "md": {"prefix": " - ", "size": 6},
 }
@@ -13,9 +19,12 @@ FORMAT_CONFIG = {
 
 class ParseFile:
 
-    def __init__(self):
-        self.prefix = FORMAT_CONFIG.get(TEMPLATE_FORMAT)["prefix"]
-        self.size = FORMAT_CONFIG.get(TEMPLATE_FORMAT)["size"]
+    def __init__(self) -> None:
+        config = FORMAT_CONFIG.get(TEMPLATE_FORMAT)
+        if config is None:
+            raise ValueError(f"Invalid TEMPLATE_FORMAT: {TEMPLATE_FORMAT}")
+        self.prefix: str = config["prefix"]
+        self.size: int = config["size"]
 
     def get_tasks(self, lines: list[str]) -> list[Task]:
         tasks = []

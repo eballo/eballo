@@ -5,7 +5,7 @@ from taskjournal.services.logger import logger
 
 class TaskFormatter:
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.prefix = "" if TEMPLATE_FORMAT == "txt" else " - "
 
     # FIXME: feature #43 make TaskFormatter compatible for txt (links)

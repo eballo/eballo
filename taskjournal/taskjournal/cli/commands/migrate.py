@@ -19,7 +19,7 @@ def build_app() -> Typer:
     def migrate_daily(
         ctx: Context,
         path: str = Argument(..., help="File path or Directory path to migrate"),
-    ):
+    ) -> None:
         debug = ctx.obj.get("debug", False)
         logger.debug(f"debug={debug}, path={path}")
 

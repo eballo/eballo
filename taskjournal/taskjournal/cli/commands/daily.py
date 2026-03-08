@@ -47,7 +47,7 @@ def build_app() -> Typer:
             help="Specify the working place (Home, Office)",
             show_default=True,
         ),
-    ):
+    ) -> None:
         debug = ctx.obj.get("debug", False)
         creation_date = ctx.obj.get("today")
         m = ctx.obj.get("manager")
@@ -84,7 +84,7 @@ def build_app() -> Typer:
             "--date",
             help="Target date/time: 'today' or 'YYYY-MM-DD HH:MM'. (works as a date override if already exists)",
         ),
-    ):
+    ) -> None:
         debug = ctx.obj.get("debug", False)
         custom_date = ctx.obj.get("today")
         m = ctx.obj.get("manager")
@@ -106,7 +106,7 @@ def build_app() -> Typer:
     )
     def daily_time(
         ctx: Context,
-    ):
+    ) -> None:
         debug = ctx.obj.get("debug", False)
         custom_date = ctx.obj.get("today")
         m = ctx.obj.get("manager")

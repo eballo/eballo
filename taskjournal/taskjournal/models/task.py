@@ -7,7 +7,7 @@ from pydantic import BaseModel
 class User(BaseModel):
     name: str
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -15,7 +15,7 @@ class Epic(BaseModel):
     key: str
     summary: str
 
-    def __str__(self):
+    def __str__(self) -> str:
         key = f"[{self.key}]" if self.key else ""
         return f"{key}{self.summary}"
 

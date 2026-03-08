@@ -1,6 +1,7 @@
 import os
 from datetime import date as datetime  # Keeping your alias convention
 from datetime import timedelta
+from typing import Any
 
 from taskjournal.config import BASE_DIR, HOLIDAYS_FILE
 from taskjournal.services.holidays import HolidayService
@@ -14,7 +15,7 @@ class WorkingDaysService:
         self.holiday_service = HolidayService(filepath=holidays_path)
         self.debug = debug
 
-    def _analyze_year(self, year: str | int) -> list[dict]:
+    def _analyze_year(self, year: str | int) -> list[dict[str, Any]]:
         """
         Internal helper: Generates a day-by-day classification for the entire year.
         Returns a list of dicts: {'date': date_obj, 'type': 'weekend'|'holiday'|'workday'}
@@ -43,7 +44,7 @@ class WorkingDaysService:
 
         return analysis
 
-    def summary(self) -> dict:
+    def summary(self) -> dict[str, Any]:
         """
         Returns an overview of the theoretical capacity of the year.
         """
@@ -69,7 +70,7 @@ class WorkingDaysService:
 
         return summary_data
 
-    def get_progress(self) -> dict:
+    def get_progress(self) -> dict[str, Any]:
         """
         Calculates days already worked vs days missing based on today's date.
         Tracks holidays, weekends (taken/total), and percentage completion.

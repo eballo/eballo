@@ -42,7 +42,7 @@ def build_app() -> Typer:
         month: bool = Option(
             False, "--month", help="Get ALL tasks performed by me in the last month"
         ),
-    ):
+    ) -> None:
         debug = ctx.obj.get("debug", False)
         m = ctx.obj.get("manager")
         logger.debug(f" debug={debug},")
@@ -96,7 +96,7 @@ def build_app() -> Typer:
         organization: str = Option(
             help="GitHub organization name", default=GIT_HUB_ORGANIZATION_NAME
         ),
-    ):
+    ) -> None:
         debug = ctx.obj.get("debug", False)
         m = ctx.obj.get("manager")
         logger.debug(f"debug={debug}")

@@ -7,12 +7,12 @@ from taskjournal.services.logger import logger
 
 
 class ParserService:
-    def parse(self, content: str) -> dict | None:
+    def parse(self, content: str) -> dict[str, Any] | None:
         raise NotImplementedError()
 
 
 class DailyParserService(ParserService):
-    def __init__(self):
+    def __init__(self) -> None:
         self.meta_regex = {
             "sprint_name": re.compile(r"^\s*Sprint(?:[:\s]+)(.*)", re.IGNORECASE),
             "date": re.compile(r"^\s*Date:\s*(.*)", re.IGNORECASE),
@@ -29,7 +29,7 @@ class DailyParserService(ParserService):
         self.task_regex_txt = re.compile(r"^\[([ xX-])\]\s*(.*)")
         self.task_regex_md = re.compile(r"^\s*-\s*\[([ xX-])\]\s*(.*)")
 
-    def parse(self, file_path: str) -> dict | None:
+    def parse(self, file_path: str) -> dict[str, Any] | None:
         try:
             _, extension = os.path.splitext(file_path)
             lines = self._get_lines(file_path)
@@ -45,7 +45,7 @@ class DailyParserService(ParserService):
             lines = f.readlines()
         return lines
 
-    def _parse_content(self, lines: List[str], format_extension: str) -> dict:
+    def _parse_content(self, lines: List[str], format_extension: str) -> dict[str, Any]:
         data: dict[str, Any] = {
             "sprint_name": "",
             "date": None,
@@ -91,11 +91,13 @@ class DailyParserService(ParserService):
                         break
 
             # 3. Parse Content based on section
-            if current_section in ("planned_tasks", "code_review_tasks"):
-                # Type narrowing: we know current_section is one of the two literals
-                assert current_section in ("planned_tasks", "code_review_tasks")
+            if current_section == "planned_tasks":
                 self._parse_tasks(
-                    current_section, data, line_stripped, format_extension
+                    "planned_tasks", data, line_stripped, format_extension
+                )
+            elif current_section == "code_review_tasks":
+                self._parse_tasks(
+                    "code_review_tasks", data, line_stripped, format_extension
                 )
 
             elif current_section in ["notes", "summary", "firefighter"]:
