@@ -8,13 +8,13 @@ from taskjournal.services.logger import logger
 
 
 class WorkingDaysService:
-    def __init__(self, year: str, debug: bool = False) -> None:
+    def __init__(self, year: str | int, debug: bool = False) -> None:
         self.year = year
         holidays_path = os.path.join(BASE_DIR, f"{year}/{HOLIDAYS_FILE}")
         self.holiday_service = HolidayService(filepath=holidays_path)
         self.debug = debug
 
-    def _analyze_year(self, year: str) -> list[dict]:
+    def _analyze_year(self, year: str | int) -> list[dict]:
         """
         Internal helper: Generates a day-by-day classification for the entire year.
         Returns a list of dicts: {'date': date_obj, 'type': 'weekend'|'holiday'|'workday'}

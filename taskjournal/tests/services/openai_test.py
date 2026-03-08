@@ -1,78 +1,112 @@
+import respx
+
 import httpx
-import pytest
+from pytest import MonkeyPatch, mark
 
 from taskjournal.services.openai import OpenAIService
 
 
-@pytest.mark.asyncio
-async def test_summarize_returns_summary(respx_mock):
-    # Mock OpenAI API response
-    route = respx_mock.post("https://api.openai.com/v1/chat/completions").mock(
-        return_value=httpx.Response(
-            200,
-            json={"choices": [{"message": {"content": "This is the weekly summary."}}]},
+class TestOpenai:
+    @mark.asyncio
+    async def test_summarize_returns_summary(
+        self,
+        respx_mock: respx.MockRouter,
+        openai_chat_completions_url: str,
+        openai_service: OpenAIService,
+    ) -> None:
+        # given
+        route = respx_mock.post(openai_chat_completions_url).mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "choices": [{"message": {"content": "This is the weekly summary."}}]
+                },
+            )
         )
-    )
 
-    service = OpenAIService()
-    result = await service.summarize(["Did X", "Fixed Y", "Reviewed Z"])
+        # when
+        result = await openai_service.summarize(["Did X", "Fixed Y", "Reviewed Z"])
 
-    assert result == "This is the weekly summary."
-    assert route.called
+        # then
+        assert result == "This is the weekly summary."
+        assert route.called
 
+    @mark.asyncio
+    async def test_summarize_handles_empty_input(
+        self, openai_service: OpenAIService
+    ) -> None:
+        # when
+        result = await openai_service.summarize([])
+        # then
+        assert result == "No summaries provided."
 
-@pytest.mark.asyncio
-async def test_summarize_handles_empty_input():
-    service = OpenAIService()
-    result = await service.summarize([])
-    assert result == "No summaries provided."
-
-
-@pytest.mark.asyncio
-async def test_summarize_handles_unexpected_format(respx_mock):
-    # Missing "message" in choices
-    respx_mock.post("https://api.openai.com/v1/chat/completions").mock(
-        return_value=httpx.Response(
-            200,
-            json={"choices": [{}]},
+    @mark.asyncio
+    async def test_summarize_handles_unexpected_format(
+        self,
+        respx_mock: respx.MockRouter,
+        openai_chat_completions_url: str,
+        openai_service: OpenAIService,
+    ) -> None:
+        # given
+        respx_mock.post(openai_chat_completions_url).mock(
+            return_value=httpx.Response(
+                200,
+                json={"choices": [{}]},
+            )
         )
-    )
 
-    service = OpenAIService()
-    result = await service.summarize(["Did something"])
-    assert "unexpected response format" in result
+        # when
+        result = await openai_service.summarize(["Did something"])
+        # then
+        assert "unexpected response format" in result
 
+    @mark.asyncio
+    async def test_summarize_handles_timeout(
+        self,
+        respx_mock: respx.MockRouter,
+        openai_chat_completions_url: str,
+        openai_service: OpenAIService,
+    ) -> None:
+        # given
+        respx_mock.post(openai_chat_completions_url).mock(
+            side_effect=httpx.TimeoutException("Request timed out")
+        )
 
-@pytest.mark.asyncio
-async def test_summarize_handles_timeout(respx_mock):
-    respx_mock.post("https://api.openai.com/v1/chat/completions").mock(
-        side_effect=httpx.TimeoutException("Request timed out")
-    )
+        # when
+        result = await openai_service.summarize(["Work A", "Work B"])
+        # then
+        assert "timed out" in result
 
-    service = OpenAIService()
-    result = await service.summarize(["Work A", "Work B"])
-    assert "timed out" in result
+    @mark.asyncio
+    async def test_summarize_handles_http_error(
+        self,
+        respx_mock: respx.MockRouter,
+        openai_chat_completions_url: str,
+        openai_service: OpenAIService,
+    ) -> None:
+        # given
+        respx_mock.post(openai_chat_completions_url).mock(
+            return_value=httpx.Response(500, text="Internal Server Error")
+        )
 
+        # when
+        result = await openai_service.summarize(["Work A", "Work B"])
+        # then
+        assert "service error" in result
 
-@pytest.mark.asyncio
-async def test_summarize_handles_http_error(respx_mock):
-    respx_mock.post("https://api.openai.com/v1/chat/completions").mock(
-        return_value=httpx.Response(500, text="Internal Server Error")
-    )
+    @mark.asyncio
+    async def test_summarize_handles_generic_exception(
+        self,
+        monkeypatch: MonkeyPatch,
+        openai_service: OpenAIService,
+    ) -> None:
+        # given
+        async def broken_post(*_args: object, **_kwargs: object) -> None:
+            raise RuntimeError("Unexpected failure")
 
-    service = OpenAIService()
-    result = await service.summarize(["Work A", "Work B"])
-    assert "service error" in result
+        monkeypatch.setattr("httpx.AsyncClient.post", broken_post)
 
-
-@pytest.mark.asyncio
-async def test_summarize_handles_generic_exception(monkeypatch):
-    async def broken_post(*args, **kwargs):
-        raise RuntimeError("Unexpected failure")
-
-    service = OpenAIService()
-
-    monkeypatch.setattr("httpx.AsyncClient.post", broken_post)
-
-    result = await service.summarize(["Work A", "Work B"])
-    assert "unexpected error" in result
+        # when
+        result = await openai_service.summarize(["Work A", "Work B"])
+        # then
+        assert "unexpected error" in result

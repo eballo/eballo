@@ -1,4 +1,6 @@
-import os
+from pytest_mock import MockerFixture
+
+from os.path import join
 from datetime import datetime
 
 from pytest import raises
@@ -9,106 +11,158 @@ from taskjournal.services.file import (
     load_template,
     check_finalized_in_file,
     write_lines_to_file,
+    get_summary_from_daily_notes,
 )
 
 
-def test_get_week_folder(base_dir, mocker):
-    # Given
-    mock_datetime = mocker.patch("taskjournal.commands.commands.datetime")
-    mock_datetime.now.return_value = datetime(2025, 1, 19)
-    date = mock_datetime.now()
-    expected_folder = os.path.join(base_dir, "2025", "week3")
-    # Then / When
-    assert get_week_folder(base_dir, date) == expected_folder
+class TestFile:
 
+    def test_get_week_folder(self, base_dir: str, mocker: MockerFixture) -> None:
+        # given
+        mock_datetime = mocker.patch("taskjournal.commands.commands.datetime")
+        mock_datetime.now.return_value = datetime(2025, 1, 19)
+        # when
+        date = mock_datetime.now()
+        expected_folder = join(base_dir, "2025", "week3")
+        # then
+        assert get_week_folder(base_dir, date) == expected_folder
 
-def test_write_to_file(mocker):
-    # Given
-    mock_file = mocker.mock_open()
-    mocker.patch("builtins.open", mock_file)
-    file_path = "test.txt"
-    content = "Hello, world!"
-    # When
-    write_to_file(file_path, content)
-    # Then
-    mock_file.assert_called_once_with(file_path, "w")
-    mock_file().write.assert_called_once_with(content)
+    def test_write_to_file(self, mocker: MockerFixture) -> None:
+        # given
+        mock_file = mocker.mock_open()
+        mocker.patch("builtins.open", mock_file)
+        file_path = "test.txt"
+        content = "Hello, world!"
+        # when
+        write_to_file(file_path, content)
+        # then
+        mock_file.assert_called_once_with(file_path, "w")
+        mock_file().write.assert_called_once_with(content)
 
+    def test_write_lines_to_file(self, mocker: MockerFixture) -> None:
+        # given
+        mock_file = mocker.mock_open()
+        mocker.patch("builtins.open", mock_file)
+        file_path = "test.txt"
+        lines = ["Line 1\n", "Line 2\n"]
 
-def test_write_lines_to_file(mocker):
-    # Given
-    mock_file = mocker.mock_open()
-    mocker.patch("builtins.open", mock_file)
-    file_path = "test.txt"
-    lines = ["Line 1\n", "Line 2\n"]
+        # when
+        write_lines_to_file(file_path, lines)
 
-    # When
-    write_lines_to_file(file_path, lines)
+        # then
+        mock_file.assert_called_once_with(file_path, "w")
+        mock_file().writelines.assert_called_once_with(lines)
 
-    # Then
-    mock_file.assert_called_once_with(file_path, "w")
-    mock_file().writelines.assert_called_once_with(lines)
+    def test_load_template_success(self, mocker: MockerFixture) -> None:
+        # given
+        mocker.patch("os.path.exists", return_value=True)
+        mock_open_file = mocker.mock_open(read_data="template content")
+        mocker.patch("builtins.open", mock_open_file)
 
+        # when
+        result = load_template("template.txt")
 
-def test_load_template_success(mocker):
-    # Given
-    mocker.patch("os.path.exists", return_value=True)
-    mock_open_file = mocker.mock_open(read_data="template content")
-    mocker.patch("builtins.open", mock_open_file)
+        # then
+        assert result == "template content"
+        mock_open_file.assert_called_once_with("template.txt", "r")
 
-    # When
-    result = load_template("template.txt")
+    def test_load_template_file_not_found(self, mocker: MockerFixture) -> None:
+        # when
+        mocker.patch("os.path.exists", return_value=False)
 
-    # Then
-    assert result == "template content"
-    mock_open_file.assert_called_once_with("template.txt", "r")
+        # then
+        with raises(FileNotFoundError):
+            load_template("nonexistent.txt")
 
+    def test_check_finalized_in_file_true(self, mocker: MockerFixture) -> None:
+        # given
+        mock_open = mocker.mock_open(read_data="Task 1\nFinalized: yes\nTask 2")
+        mocker.patch("builtins.open", mock_open)
 
-def test_load_template_file_not_found(mocker):
-    # Given
-    mocker.patch("os.path.exists", return_value=False)
+        # when
+        result = check_finalized_in_file("test.txt")
 
-    # Then
-    with raises(FileNotFoundError):
-        load_template("nonexistent.txt")
+        # then
+        assert result is True
 
+    def test_check_finalized_in_file_false(self, mocker: MockerFixture) -> None:
+        # given
+        mock_open = mocker.mock_open(read_data="Task 1\nTask 2")
+        mocker.patch("builtins.open", mock_open)
 
-def test_check_finalized_in_file_true(mocker):
-    # Given
-    mock_open = mocker.mock_open(read_data="Task 1\nFinalized: yes\nTask 2")
-    mocker.patch("builtins.open", mock_open)
+        # when
+        result = check_finalized_in_file("test.txt")
+        # then
+        assert result is False
 
-    # When
-    result = check_finalized_in_file("test.txt")
+    def test_check_finalized_in_file_file_not_found(
+        self, mocker: MockerFixture
+    ) -> None:
+        # given
+        mocker.patch("builtins.open", side_effect=FileNotFoundError())
+        mock_logger = mocker.patch("taskjournal.services.file.logger")
 
-    # Then
-    assert result is True
+        # when
+        result = check_finalized_in_file("missing.txt")
+        # then
+        assert result is False
+        mock_logger.error.assert_called_once_with(
+            "Error: The file 'missing.txt' was not found."
+        )
 
+    def test_check_finalized_in_file_generic_exception(
+        self, mocker: MockerFixture
+    ) -> None:
+        # given
+        mocker.patch("builtins.open", side_effect=OSError("disk error"))
+        mock_logger = mocker.patch("taskjournal.services.file.logger")
 
-def test_check_finalized_in_file_false(mocker):
-    mock_open = mocker.mock_open(read_data="Task 1\nTask 2")
-    mocker.patch("builtins.open", mock_open)
+        # when
+        result = check_finalized_in_file("test.txt")
+        # then
+        assert result is False
+        mock_logger.error.assert_called_once()
+        assert "disk error" in mock_logger.error.call_args[0][0]
 
-    result = check_finalized_in_file("test.txt")
-    assert result is False
+    def test_get_summary_from_daily_notes_markdown_heading(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        # given
+        data = "Header\n## 📋 Summary\nLine 1\nLine 2\n"
+        mock_open = mocker.mock_open(read_data=data)
+        mocker.patch("builtins.open", mock_open)
 
+        # when
+        result = get_summary_from_daily_notes("file.md")
 
-def test_check_finalized_in_file_file_not_found(mocker):
-    mocker.patch("builtins.open", side_effect=FileNotFoundError())
-    mock_logger = mocker.patch("taskjournal.services.file.logger")
+        # then
+        assert result == "Line 1\nLine 2"
 
-    result = check_finalized_in_file("missing.txt")
-    assert result is False
-    mock_logger.error.assert_called_once_with(
-        "Error: The file 'missing.txt' was not found."
-    )
+    def test_get_summary_from_daily_notes_plain_heading(
+        self, mocker: MockerFixture
+    ) -> None:
+        # given
+        data = "Header\n📋 Summary\nOnly line\n"
+        mock_open = mocker.mock_open(read_data=data)
+        mocker.patch("builtins.open", mock_open)
 
+        # when
+        result = get_summary_from_daily_notes("file.md")
 
-def test_check_finalized_in_file_generic_exception(mocker):
-    mocker.patch("builtins.open", side_effect=OSError("disk error"))
-    mock_logger = mocker.patch("taskjournal.services.file.logger")
+        # then
+        assert result == "Only line"
 
-    result = check_finalized_in_file("test.txt")
-    assert result is False
-    mock_logger.error.assert_called_once()
-    assert "disk error" in mock_logger.error.call_args[0][0]
+    def test_get_summary_from_daily_notes_no_heading_returns_empty(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        # given
+        mock_open = mocker.mock_open(read_data="Header\nNo summary section\n")
+        mocker.patch("builtins.open", mock_open)
+
+        # when
+        result = get_summary_from_daily_notes("file.md")
+
+        # then
+        assert result == ""

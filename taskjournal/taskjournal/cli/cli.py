@@ -57,7 +57,7 @@ def create_app() -> Typer:
     @app.callback()
     def _root(
         ctx: Context,
-        version: bool = Option(
+        _version: bool = Option(
             False,
             "--version",
             help="Show the application version and exit.",

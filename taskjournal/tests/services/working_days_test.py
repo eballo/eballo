@@ -1,197 +1,203 @@
-from datetime import date
-from textwrap import dedent
+from pytest_mock import MockerFixture
+from collections.abc import Callable
 
-from pytest import fixture
+from datetime import date
+
+from pytest import mark
 
 from taskjournal.services.working_days import WorkingDaysService
 
 
-# -----------------------------------------------------------------------------
-# Fixtures
-# -----------------------------------------------------------------------------
+class TestWorkingDays:
 
+    def test_initialization_loads_holidays(
+        self,
+        mock_year_structure: str,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        # given
+        year = mock_year_structure
 
-@fixture
-def mock_year_structure(tmp_path, mocker):
-    """
-    Sets up a temporary directory structure mimicking the real app:
-    tmp_path/
-      └── 2026/
-          └── holidays.txt
+        # when
+        service = working_days_service_factory(year)
 
-    It patches 'taskjournal.config.BASE_DIR' to point to this tmp_path.
-    """
-    year = "2026"
-    year_dir = tmp_path / year
-    year_dir.mkdir()
+        # We verify the internal holiday service loaded the 3 dates from our fixture
+        # then
+        assert len(service.holiday_service.holidays) == 3
 
-    # 1. Create a holiday file with specific test cases
-    # 2026-01-01 is a Thursday (Weekday Holiday)
-    # 2026-01-03 is a Saturday (Weekend Holiday - should be counted as weekend)
-    # 2026-01-06 is a Tuesday (Weekday Holiday)
-    content = dedent(
+    def test_summary_calculation(
+        self,
+        mock_year_structure: str,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        # given
+        year = mock_year_structure
+        # when
+        service = working_days_service_factory(year)
+
+        summary = service.summary()
+
+        # then
+        assert summary["year"] == "2026"
+        assert summary["total_calendar_days"] == 365
+
+        # In 2026:
+        # Jan 1 (Thu) -> Holiday
+        # Jan 2 (Fri) -> Workday
+        # Jan 3 (Sat) -> Weekend (Note: Our file lists this as holiday, but code prioritizes Weekend logic)
+        # Jan 4 (Sun) -> Weekend
+        # Jan 5 (Mon) -> Workday
+        # Jan 6 (Tue) -> Holiday
+
+        # Verify holidays_on_weekdays (should be 2: Jan 1 and Jan 6. Jan 3 is hidden by Weekend)
+        assert summary["holidays_on_weekdays"] == 2
+
+        # 2026 has 52 weeks + 1 day = 104 weekend days
+        assert summary["total_weekends"] == 104
+
+        # Real working days = Total - Weekends - WeekdayHolidays
+        # 365 - 104 - 2 = 259
+        assert summary["real_working_days"] == 259
+
+    @mark.usefixtures("mock_today")
+    def test_get_progress_logic(
+        self,
+        mock_year_structure: str,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        # given
+        year = mock_year_structure
+        # when
+        service = working_days_service_factory(year)
+
+        # Mock date is set to 2026-01-10 via fixture
+        # Let's manually calculate expected state for first 10 days of Jan 2026:
+        # 1 Thu (Hol)
+        # 2 Fri (Work)
+        # 3 Sat (Weekend/Hol)
+        # 4 Sun (Weekend)
+        # 5 Mon (Work)
+        # 6 Tue (Hol)
+        # 7 Wed (Work)
+        # 8 Thu (Work)
+        # 9 Fri (Work)
+        # 10 Sat (Weekend) <- Today
+
+        progress = service.get_progress()
+
+        # then
+        assert progress["current_day_number"] == 10
+
+        # Worked: Jan 2, 5, 7, 8, 9 (Total 5)
+        assert progress["worked"] == 5
+
+        # Holidays taken: Jan 1, Jan 6 (Total 2)
+        assert progress["holidays_taken"] == 2
+
+        # Weekends taken: Jan 3, 4, 10 (Total 3)
+        assert progress["weekends_taken"] == 3
+
+        # Percentage calculation
+        # Total workdays for year = 259 (calculated in previous test)
+        # 5 / 259 * 100
+        expected_percent = round((5 / 259) * 100, 2)
+        assert progress["progress_percentage"] == expected_percent
+
+    def test_get_real_working_days_return_int(
+        self,
+        mock_year_structure: str,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        # given
+        service = working_days_service_factory(mock_year_structure)
+
+        # when
+        result = service.get_real_working_days()
+
+        # then
+        assert isinstance(result, int)
+        assert result == 259  # Based on 2026 calendar logic verified above
+
+    @mark.usefixtures("mock_today")
+    def test_missing_days_calculation(
+        self,
+        mock_year_structure: str,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        # given
         """
-        # Weekday Holiday
-        2026-01-01 - New Year
-
-        # Weekend Holiday (Saturday)
-        2026-01-03 - Weekend Holiday
-
-        # Another Weekday Holiday
-        2026-01-06 - Epiphany
+        Verifies that days in the future are counted as 'missing' or 'remaining'.
         """
-    )
+        # when
+        service = working_days_service_factory(mock_year_structure)
 
-    holiday_file = year_dir / "holidays.txt"
-    holiday_file.write_text(content, encoding="utf-8")
+        progress = service.get_progress()
 
-    # 2. Patch BASE_DIR so the service looks in our temp folder
-    # Assuming 'taskjournal.services.working_days' imports BASE_DIR from config
-    mocker.patch("taskjournal.services.working_days.BASE_DIR", str(tmp_path))
+        # Total real working days (259) - Worked (5) = 254
+        # then
+        assert progress["missing"] == 254
 
-    # We also need to patch HOLIDAYS_FILE if it's imported,
-    # but usually patching the config attribute is safer if imported directly.
-    # Here we assume the service does: from taskjournal.config import BASE_DIR, HOLIDAYS_FILE
-    # If the service imports variables directly, we must patch where they are USED.
-    mocker.patch("taskjournal.services.working_days.HOLIDAYS_FILE", "holidays.txt")
+        # Total holidays on weekdays (2) - Taken (2) = 0 remaining
+        # (Because Jan 1 and Jan 6 are passed by Jan 10)
+        assert progress["holidays_remaining"] == 0
 
-    return year
+    def test_get_progress_handles_zero_total_workdays(
+        self,
+        mocker: MockerFixture,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        # given
+        service = working_days_service_factory("2026")
+        mocker.patch.object(
+            service,
+            "_analyze_year",
+            return_value=[
+                {"date": date(2026, 1, 1), "type": "holiday"},
+                {"date": date(2026, 1, 2), "type": "weekend"},
+            ],
+        )
 
+        class MockDate(date):
+            @classmethod
+            def today(cls) -> "MockDate":
+                return cls(2025, 12, 31)
 
-@fixture
-def mock_today(mocker):
-    """
-    Mocks datetime.today() to return a fixed date (2026-01-10).
-    This ensures get_progress() is deterministic.
-    """
+        mocker.patch("taskjournal.services.working_days.datetime", MockDate)
 
-    # Create a fake class that behaves like datetime.date
-    class MockDate(date):
-        @classmethod
-        def today(cls):
-            return cls(2026, 1, 10)
+        # when
+        progress = service.get_progress()
 
-    # Patch the 'datetime' imported in the service module
-    # Note: The service imports it as: from datetime import date as datetime
-    mocker.patch("taskjournal.services.working_days.datetime", MockDate)
+        # then
+        assert progress["total_workdays"] == 0
+        assert progress["progress_percentage"] == 0.0
+        assert progress["holidays_remaining"] == 1
 
-    return date(2026, 1, 10)
+    def test_get_progress_ignores_unknown_entry_type(
+        self,
+        mocker: MockerFixture,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        # given
+        service = working_days_service_factory("2026")
+        mocker.patch.object(
+            service,
+            "_analyze_year",
+            return_value=[
+                {"date": date(2026, 1, 1), "type": "unknown"},
+                {"date": date(2026, 1, 2), "type": "weekend"},
+            ],
+        )
 
+        class MockDate(date):
+            @classmethod
+            def today(cls) -> "MockDate":
+                return cls(2026, 1, 2)
 
-# -----------------------------------------------------------------------------
-# Tests
-# -----------------------------------------------------------------------------
+        mocker.patch("taskjournal.services.working_days.datetime", MockDate)
 
+        # when
+        progress = service.get_progress()
 
-def test_initialization_loads_holidays(mock_year_structure):
-    # Given
-    year = mock_year_structure
-
-    # When
-    service = WorkingDaysService(year)
-
-    # Then
-    # We verify the internal holiday service loaded the 3 dates from our fixture
-    assert len(service.holiday_service.holidays) == 3
-
-
-def test_summary_calculation(mock_year_structure):
-    # Given
-    year = mock_year_structure
-    service = WorkingDaysService(year)
-
-    # When
-    summary = service.summary()
-
-    # Then
-    assert summary["year"] == "2026"
-    assert summary["total_calendar_days"] == 365
-
-    # In 2026:
-    # Jan 1 (Thu) -> Holiday
-    # Jan 2 (Fri) -> Workday
-    # Jan 3 (Sat) -> Weekend (Note: Our file lists this as holiday, but code prioritizes Weekend logic)
-    # Jan 4 (Sun) -> Weekend
-    # Jan 5 (Mon) -> Workday
-    # Jan 6 (Tue) -> Holiday
-
-    # Verify holidays_on_weekdays (should be 2: Jan 1 and Jan 6. Jan 3 is hidden by Weekend)
-    assert summary["holidays_on_weekdays"] == 2
-
-    # 2026 has 52 weeks + 1 day = 104 weekend days
-    assert summary["total_weekends"] == 104
-
-    # Real working days = Total - Weekends - WeekdayHolidays
-    # 365 - 104 - 2 = 259
-    assert summary["real_working_days"] == 259
-
-
-def test_get_progress_logic(mock_year_structure, mock_today):
-    # Given
-    year = mock_year_structure
-    service = WorkingDaysService(year)
-
-    # Mock date is set to 2026-01-10 via fixture
-    # Let's manually calculate expected state for first 10 days of Jan 2026:
-    # 1 Thu (Hol)
-    # 2 Fri (Work)
-    # 3 Sat (Weekend/Hol)
-    # 4 Sun (Weekend)
-    # 5 Mon (Work)
-    # 6 Tue (Hol)
-    # 7 Wed (Work)
-    # 8 Thu (Work)
-    # 9 Fri (Work)
-    # 10 Sat (Weekend) <- Today
-
-    # When
-    progress = service.get_progress()
-
-    # Then
-    assert progress["current_day_number"] == 10
-
-    # Worked: Jan 2, 5, 7, 8, 9 (Total 5)
-    assert progress["worked"] == 5
-
-    # Holidays taken: Jan 1, Jan 6 (Total 2)
-    assert progress["holidays_taken"] == 2
-
-    # Weekends taken: Jan 3, 4, 10 (Total 3)
-    assert progress["weekends_taken"] == 3
-
-    # Percentage calculation
-    # Total workdays for year = 259 (calculated in previous test)
-    # 5 / 259 * 100
-    expected_percent = round((5 / 259) * 100, 2)
-    assert progress["progress_percentage"] == expected_percent
-
-
-def test_get_real_working_days_return_int(mock_year_structure):
-    # Given
-    service = WorkingDaysService(mock_year_structure)
-
-    # When
-    result = service.get_real_working_days()
-
-    # Then
-    assert isinstance(result, int)
-    assert result == 259  # Based on 2026 calendar logic verified above
-
-
-def test_missing_days_calculation(mock_year_structure, mock_today):
-    """
-    Verifies that days in the future are counted as 'missing' or 'remaining'.
-    """
-    # Given
-    service = WorkingDaysService(mock_year_structure)
-
-    # When
-    progress = service.get_progress()
-
-    # Then
-    # Total real working days (259) - Worked (5) = 254
-    assert progress["missing"] == 254
-
-    # Total holidays on weekdays (2) - Taken (2) = 0 remaining
-    # (Because Jan 1 and Jan 6 are passed by Jan 10)
-    assert progress["holidays_remaining"] == 0
+        # then
+        assert progress["weekends_taken"] == 1
+        assert progress["worked"] == 0

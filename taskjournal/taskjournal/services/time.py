@@ -21,12 +21,13 @@ def calculate_working_hours(daily_notes_file: str):
 
 def get_total_time_spent(
     created_time: datetime, final_time: datetime
-) -> tuple[float, float]:
+) -> tuple[int, int]:
     # Calculate finalized time and total time spent
     total_time_spent = final_time - created_time
 
     # Properly format total_time_spent
-    hours, remainder = divmod(total_time_spent.total_seconds(), 3600)
+    total_seconds = int(total_time_spent.total_seconds())
+    hours, remainder = divmod(total_seconds, 3600)
     minutes, _ = divmod(remainder, 60)
 
     return hours, minutes

@@ -1,46 +1,75 @@
-import unittest
-from unittest.mock import patch, MagicMock
+from collections.abc import Callable
+from unittest.mock import MagicMock
 
 from taskjournal.services.wifi import WifiService
 
 
-class TestWifiService(unittest.TestCase):
-    def setUp(self):
-        self.wifi_service = WifiService()
+class TestWifiService:
+    def test_get_name_success(
+        self,
+        wifi_service: WifiService,
+        wifi_subprocess_run: MagicMock,
+        wifi_result_factory: Callable[[str], MagicMock],
+    ) -> None:
+        # given
+        wifi_subprocess_run.return_value = wifi_result_factory(
+            "Preferred networks on en0:\n\tCodePI\n\tTSH\n"
+        )
 
-    @patch("taskjournal.services.wifi.subprocess.run")
-    def test_get_name_success(self, mock_run):
-        """Test getting WiFi name successfully"""
-        mock_result = MagicMock()
-        mock_result.stdout = "Preferred networks on en0:\n\tCodePI\n\tTSH\n"
-        mock_run.return_value = mock_result
+        # when
+        result = wifi_service.get_name()
 
-        result = self.wifi_service.get_name()
-
-        self.assertEqual(result, "CodePI")
-        mock_run.assert_called_once_with(
+        # then
+        assert result == "CodePI"
+        wifi_subprocess_run.assert_called_once_with(
             ["networksetup", "-listpreferredwirelessnetworks", "en0"],
             capture_output=True,
             text=True,
             check=True,
         )
 
-    @patch("taskjournal.services.wifi.subprocess.run")
-    def test_get_name_no_networks(self, mock_run):
-        """Test when no preferred networks are configured"""
-        mock_result = MagicMock()
-        mock_result.stdout = "Preferred networks on en0:\n"
-        mock_run.return_value = mock_result
+    def test_get_name_no_networks(
+        self,
+        wifi_service: WifiService,
+        wifi_subprocess_run: MagicMock,
+        wifi_result_factory: Callable[[str], MagicMock],
+    ) -> None:
+        # given
+        wifi_subprocess_run.return_value = wifi_result_factory(
+            "Preferred networks on en0:\n"
+        )
 
-        result = self.wifi_service.get_name()
+        # when
+        result = wifi_service.get_name()
 
-        self.assertIsNone(result)
+        # then
+        assert result is None
 
-    @patch("taskjournal.services.wifi.subprocess.run")
-    def test_get_name_exception(self, mock_run):
-        """Test when an exception occurs"""
-        mock_run.side_effect = Exception("Network error")
+    def test_get_name_exception(
+        self, wifi_service: WifiService, wifi_subprocess_run: MagicMock
+    ) -> None:
+        # given
+        wifi_subprocess_run.side_effect = Exception("Network error")
 
-        result = self.wifi_service.get_name()
+        # when
+        result = wifi_service.get_name()
 
-        self.assertIsNone(result)
+        # then
+        assert result is None
+
+    def test_get_name_empty_ssid_returns_none(
+        self,
+        wifi_service: WifiService,
+        wifi_subprocess_run: MagicMock,
+        wifi_result_factory: Callable[[str], MagicMock],
+    ) -> None:
+        # given
+        wifi_subprocess_run.return_value = wifi_result_factory(
+            "Preferred networks on en0:\n \nAnotherNetwork\n"
+        )
+
+        # when
+        result = wifi_service.get_name()
+
+        # then
+        assert result is None

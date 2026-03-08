@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 
 from taskjournal.services.logger import logger
@@ -43,10 +43,10 @@ def check_finalized_in_file(file_path: str) -> bool:
         return False
 
 
-def get_week_folder(base_dir: str | Path, date: datetime) -> str:
+def get_week_folder(base_dir: str | Path, date_obj: datetime | date) -> str:
     """Calculate the folder path for the given date."""
-    year = date.year
-    week_num = date.isocalendar()[1]
+    year = date_obj.year
+    week_num = date_obj.isocalendar()[1]
     week_folder = os.path.join(base_dir, f"{year}", f"week{week_num}")
     return week_folder
 

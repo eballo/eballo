@@ -108,6 +108,7 @@ def build_app() -> Typer:
             raise Exit(code=1)
 
         service = m.github
+        service.org_name = organization
 
         if stats:
             if date:
