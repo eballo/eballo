@@ -13,7 +13,7 @@ def build_app() -> Typer:
         "run",
         help=("Create a backup all files" "Examples:\n" "  wk backup run\n"),
     )
-    def backup_run(ctx: Context):
+    def backup_run(ctx: Context) -> None:
         debug = ctx.obj.get("debug", False)
         m = ctx.obj.get("manager")
         logger.debug(f"debug={debug}")

@@ -21,7 +21,7 @@ from taskjournal.services.logger import logger, configure_logging
 APP_NAME = "wk"
 
 
-def _version_callback(value: bool):
+def _version_callback(value: bool) -> None:
     if value:
         configure_logging()
         logger.info(f"{APP_NAME} {app_version}")
@@ -70,7 +70,7 @@ def create_app() -> Typer:
             help="Enable debug logging (verbose output).",
             show_default=True,
         ),
-    ):
+    ) -> None:
         configure_logging(debug)
 
         obj = ctx.ensure_object(dict)

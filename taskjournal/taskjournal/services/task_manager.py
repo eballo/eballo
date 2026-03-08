@@ -1,7 +1,7 @@
 import os
 import uuid
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Any
 
 from taskjournal.config import TEMPLATE_FORMAT, HOME_WIFI, OFFICE_WIFI
 from taskjournal.constants import (
@@ -25,6 +25,8 @@ def get_tasks_from_daily_notes(file_path: str) -> list[Task]:
             logger.error(f"Error reading file {file_path}")
             return []
         tasks = data.get("planned_tasks", [])
+        if not isinstance(tasks, list):
+            return []
         return tasks
     except Exception as e:
         logger.error(f"Error reading file {file_path}")
@@ -110,7 +112,7 @@ def get_previous_pending_tasks(folder_path: str, current_file: str) -> list[Task
         return []
 
 
-def get_pending_tasks(data: dict) -> list[Task]:
+def get_pending_tasks(data: dict[str, Any]) -> list[Task]:
     tasks = data.get("planned_tasks", [])
     return [task for task in tasks if task.status == Status.TODO]
 

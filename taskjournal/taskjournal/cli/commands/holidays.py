@@ -30,10 +30,10 @@ def build_app() -> Typer:
     )
     def holidays_all(
         ctx: Context,
-        year: str = Option(
+        year: str | None = Option(
             None, "--year", "-y", help="Year for which to get holidays."
         ),
-    ):
+    ) -> None:
         debug, holidays_path = get_common_logic(ctx, year)
         service = HolidayService(debug=debug, filepath=holidays_path)
         service.summary_all()
@@ -44,10 +44,10 @@ def build_app() -> Typer:
     )
     def holidays_upcoming(
         ctx: Context,
-        year: str = Option(
+        year: str | None = Option(
             None, "--year", "-y", help="Year for which to get holidays."
         ),
-    ):
+    ) -> None:
         debug, holidays_path = get_common_logic(ctx, year)
         service = HolidayService(debug=debug, filepath=holidays_path)
         service.summary_upcoming()
@@ -55,10 +55,10 @@ def build_app() -> Typer:
     @app.command("populate", help="Generate Markdown files for holidays.")
     def holidays_populate(
         ctx: Context,
-        year: str = Option(
+        year: str | None = Option(
             None, "--year", "-y", help="Year for which to populate files."
         ),
-    ):
+    ) -> None:
         debug, holidays_path = get_common_logic(ctx, year)
         service = HolidayService(debug=debug, filepath=holidays_path)
         service.populate_files()

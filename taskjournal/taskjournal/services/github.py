@@ -47,7 +47,12 @@ class GithubService:
             return None
         try:
             user = await self.gh.getitem("/user")
-            return user.get("login")
+            if not isinstance(user, dict):
+                return None
+            login = user.get("login")
+            if isinstance(login, str):
+                return login
+            return None
         except Exception as e:
             logger.error(f"Failed to fetch user: {e}")
             return None
@@ -273,7 +278,7 @@ class GithubService:
         logger.info(f"   Org total commits: {total_all_commits}")
         logger.info(f"   Your overall contribution: {overall_percentage}%")
 
-    async def update_status_if_task_reviewed(self, code_review: list[Task]):
+    async def update_status_if_task_reviewed(self, code_review: list[Task]) -> None:
         for task in code_review:
             has_been_reviewed = await self.has_user_approved_pr(task.github)
             if has_been_reviewed:

@@ -2,7 +2,7 @@ from asyncio import gather
 from datetime import datetime, timedelta
 from json import dumps
 from re import sub
-from typing import List
+from typing import List, Any
 from uuid import uuid4
 
 from httpx import AsyncClient
@@ -21,13 +21,13 @@ from taskjournal.services.logger import logger
 
 class JiraService:
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.board_id = JIRA_BOARD_ID
         self.base_url = f"https://{JIRA_ORGANIZATION}.atlassian.net"
         self.auth = (JIRA_EMAIL, JIRA_API_TOKEN)
 
         try:
-            self.jira = JIRA(server=self.base_url, basic_auth=self.auth)
+            self.jira: JIRA | None = JIRA(server=self.base_url, basic_auth=self.auth)
             logger.debug("Jira successfully initialized")
         except Exception as e:
             logger.error(f"Failed to connect to Jira: {e}")
@@ -86,13 +86,14 @@ class JiraService:
     ) -> str | None:
         base = f"{self.base_url}/rest/dev-status/latest/issue/detail"
         try:
+            params: dict[str, str | int | float | bool | None] = {
+                "issueId": issue_id,
+                "applicationType": "GitHub",
+                "dataType": "pullrequest",
+            }
             resp = await client.get(
                 base,
-                params={
-                    "issueId": issue_id,
-                    "applicationType": "GitHub",
-                    "dataType": "pullrequest",
-                },
+                params=params,
                 headers={"Accept": "application/json"},
             )
             if resp.status_code == 404 or resp.status_code == 403:
@@ -111,7 +112,11 @@ class JiraService:
                         pull_request["status"] == "OPEN"
                         and issue_key in pull_request["name"]
                     ):
-                        return pull_request["url"]
+                        return (
+                            pull_request.get("url")
+                            if isinstance(pull_request, dict)
+                            else None
+                        )
         except Exception as e:
             logger.debug(f"fetch failed for {issue_id}: {e}")
 
@@ -123,7 +128,7 @@ class JiraService:
         Falls back gracefully if Jira is unavailable.
         """
         url = f"{self.base_url}/rest/api/3/search/jql"
-        params = {
+        params: dict[str, str | int | float | bool | None] = {
             "jql": jql,
             "startAt": 0,
             "maxResults": 100,
@@ -188,7 +193,7 @@ class JiraService:
                         idx_by_key[task.key] = len(tasks) - 1
 
                 # Concurrently hydrate GitHub repo URLs
-                async def _one(issue_obj):
+                async def _one(issue_obj: Any) -> tuple[str | None, str | None]:
                     issue_id = issue_obj.get("id")
                     issue_key = issue_obj.get("key")
                     if not (issue_id and issue_key):
@@ -202,7 +207,8 @@ class JiraService:
                         logger.debug(f"Failed to resolve repo for {issue_key}: {e}")
                         return issue_key, None
 
-                results = await gather(
+                # Type-safe gather results
+                results: List[tuple[str | None, str | None]] = await gather(
                     *[_one(iss) for iss in issues], return_exceptions=False
                 )
 

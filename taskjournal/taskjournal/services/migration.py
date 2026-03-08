@@ -16,9 +16,9 @@ from taskjournal.services.time import get_total_time_spent
 
 
 class MigrationService:
-    def __init__(self):
-        self.task_formatter = TaskFormatter()
-        self.daily_parser_service = DailyParserService()
+    def __init__(self) -> None:
+        self.task_formatter: TaskFormatter = TaskFormatter()
+        self.daily_parser_service: DailyParserService = DailyParserService()
         self.statistics = {
             "migrated_files": 0,
             "skipped_files": 0,
@@ -38,9 +38,15 @@ class MigrationService:
         logger.info(f"Migrating {file_path}...")
         try:
             data = self.daily_parser_service.parse(file_path)
+            if data is None:
+                logger.error(f"Failed to parse daily notes {file_path}")
+                return
             logger.debug(dumps(data, indent=4, sort_keys=True))
 
             date = self._extract_datetime_object(file_path)
+            if date is None:
+                logger.error(f"Failed to extract date from {file_path}")
+                return
             md_content = self._generate_md_content(data, date)
 
             # Define new filename
@@ -57,7 +63,7 @@ class MigrationService:
             logger.error(f"Failed to migrate {file_path}: {e}")
 
     @staticmethod
-    def _extract_datetime_object(file_path: str) -> Any:
+    def _extract_datetime_object(file_path: str) -> datetime | None:
         # 1. Find the date pattern (YYYY-MM-DD)
         match = re.search(r"(\d{4}-\d{2}-\d{2})", file_path)
 
@@ -70,7 +76,7 @@ class MigrationService:
             return dt_object
         return None
 
-    def _generate_md_content(self, data: dict, date: datetime) -> str:
+    def _generate_md_content(self, data: dict[str, Any], date: datetime) -> str:
         work_from = get_work_from_location(date)
         template_content = load_template(DAILY_NOTES_TEMPLATE)
 

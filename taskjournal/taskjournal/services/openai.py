@@ -6,7 +6,7 @@ from taskjournal.config import OPENAI_API_KEY
 
 
 class OpenAIService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.base_url = "https://api.openai.com/v1/chat/completions"
         self.headers = {
             "Authorization": f"Bearer {OPENAI_API_KEY}",
@@ -59,10 +59,18 @@ class OpenAIService:
 
             # Validate structure
             choices = data.get("choices")
-            if not choices or "message" not in choices[0]:
+            if (
+                not isinstance(choices, list)
+                or not choices
+                or "message" not in choices[0]
+            ):
                 return "⚠️ OpenAI service returned an unexpected response format."
 
-            return choices[0]["message"]["content"].strip()
+            content = choices[0]["message"]["content"]
+            if not isinstance(content, str):
+                return "⚠️ OpenAI service returned an unexpected content format."
+
+            return content.strip()
 
         except httpx.TimeoutException:
             return "⚠️ The request to OpenAI timed out. Please try again."
