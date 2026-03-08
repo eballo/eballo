@@ -3,6 +3,7 @@ from typing import List
 import httpx
 
 from taskjournal.config import OPENAI_API_KEY
+from taskjournal.services.logger import logger
 
 
 class OpenAIService:
@@ -36,9 +37,9 @@ class OpenAIService:
             {
                 "role": "user",
                 "content": (
-                    f"Here are the daily summaries for the week:\n\n"
+                    "Here are the daily summaries for the week:\n\n"
                     + "\n".join(f"- {s}" for s in daily_summaries)
-                    + f"\n\nPlease create a summary."
+                    + "\n\nPlease create a summary."
                 ),
             },
         ]
@@ -64,17 +65,27 @@ class OpenAIService:
                 or not choices
                 or "message" not in choices[0]
             ):
-                return "⚠️ OpenAI service returned an unexpected response format."
+                msg = "⚠️ OpenAI service returned an unexpected response format."
+                logger.error(msg)
+                return msg
 
             content = choices[0]["message"]["content"]
             if not isinstance(content, str):
-                return "⚠️ OpenAI service returned an unexpected content format."
+                msg = "⚠️ OpenAI service returned an unexpected content format."
+                logger.error(msg)
+                return msg
 
             return content.strip()
 
         except httpx.TimeoutException:
-            return "⚠️ The request to OpenAI timed out. Please try again."
+            msg = "⚠️ The request to OpenAI timed out. Please try again."
+            logger.error(msg)
+            return msg
         except httpx.HTTPStatusError as e:
-            return f"⚠️ OpenAI service error: {e.response.status_code} {e.response.reason_phrase}"
+            msg = f"⚠️ OpenAI service error: {e.response.status_code} {e.response.reason_phrase}"
+            logger.error(msg)
+            return msg
         except Exception as e:
-            return f"⚠️ Failed to summarize due to an unexpected error: {e}"
+            msg = f"⚠️ Failed to summarize due to an unexpected error: {e}"
+            logger.error(msg)
+            return msg

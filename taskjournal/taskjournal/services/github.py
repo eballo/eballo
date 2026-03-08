@@ -35,11 +35,6 @@ class GithubService:
             logger.error(f"Failed to initialize GitHub client: {e}")
             self.gh = None
 
-    async def close(self) -> None:
-        """Gracefully close the underlying httpx client."""
-        if self.client:
-            await self.client.aclose()
-
     # --- GitHub API helpers ---
     async def get_user(self) -> Optional[str]:
         if not self.gh:
@@ -65,7 +60,6 @@ class GithubService:
         if not self.gh:
             logger.error("GitHub client not initialized.")
             return None
-
         username = await self.get_user()
         if not username:
             return None
@@ -283,3 +277,8 @@ class GithubService:
             has_been_reviewed = await self.has_user_approved_pr(task.github)
             if has_been_reviewed:
                 task.status = Status.DONE
+
+    async def close(self) -> None:
+        """Gracefully close the underlying httpx client."""
+        if self.client:
+            await self.client.aclose()

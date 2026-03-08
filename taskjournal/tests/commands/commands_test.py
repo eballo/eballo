@@ -1,5 +1,5 @@
-from os.path import join
 from datetime import datetime, timedelta
+from os.path import join
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -311,9 +311,6 @@ class TestCommands:
 
         # when
         cmd.finalize_daily_notes(custom_date=None)  # type: ignore[arg-type]
-
-        # then
-        assert True
 
     def test_daily_time__calculates_when_file_exists(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime

@@ -1,3 +1,5 @@
+from typing import Any
+
 from typer import Typer, Context, Option
 
 from taskjournal.services.logger import logger
@@ -10,14 +12,20 @@ def build_app() -> Typer:
         no_args_is_help=True,
     )
 
-    def get_common_logic(ctx: Context, year: str | None) -> tuple[bool, str | int]:
+    def get_service(ctx: Context, year: str | None) -> WorkingDaysService:
         debug = ctx.obj.get("debug", False)
         if not year:
             logger.warning("Getting default year")
             custom_date = ctx.obj.get("today")
-            return debug, custom_date.year
-        logger.debug(f"debug={debug}, year={year}")
-        return debug, year
+            final_year = custom_date.year
+        else:
+            logger.debug(f"debug={debug}, year={year}")
+            final_year = year
+        return WorkingDaysService(year=final_year, debug=debug)
+
+    common_year_option: Any = Option(
+        None, "--year", "-y", help="Year for which to get holidays."
+    )
 
     @app.command(
         "all",
@@ -25,13 +33,9 @@ def build_app() -> Typer:
     )
     def working_days_summary(
         ctx: Context,
-        year: str | None = Option(
-            None, "--year", "-y", help="Year for which to get holidays."
-        ),
+        year: str | None = common_year_option,
     ) -> None:
-        debug, final_year = get_common_logic(ctx, year)
-        service = WorkingDaysService(year=final_year, debug=debug)
-        service.summary()
+        get_service(ctx, year).summary()
 
     @app.command(
         "progress",
@@ -39,13 +43,9 @@ def build_app() -> Typer:
     )
     def working_days_progress(
         ctx: Context,
-        year: str | None = Option(
-            None, "--year", "-y", help="Year for which to get holidays."
-        ),
+        year: str | None = common_year_option,
     ) -> None:
-        debug, final_year = get_common_logic(ctx, year)
-        service = WorkingDaysService(year=final_year, debug=debug)
-        service.get_progress()
+        get_service(ctx, year).get_progress()
 
     @app.command(
         "real",
@@ -53,12 +53,8 @@ def build_app() -> Typer:
     )
     def working_days_real(
         ctx: Context,
-        year: str | None = Option(
-            None, "--year", "-y", help="Year for which to get holidays."
-        ),
+        year: str | None = common_year_option,
     ) -> None:
-        debug, final_year = get_common_logic(ctx, year)
-        service = WorkingDaysService(year=final_year, debug=debug)
-        service.get_real_working_days()
+        get_service(ctx, year).get_real_working_days()
 
     return app

@@ -28,7 +28,7 @@ def get_tasks_from_daily_notes(file_path: str) -> list[Task]:
         if not isinstance(tasks, list):
             return []
         return tasks
-    except Exception as e:
+    except Exception:
         logger.error(f"Error reading file {file_path}")
         return []
 

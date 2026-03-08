@@ -2,11 +2,11 @@
 
 ## 0.26.0
 
-- Fix bump version
+- Add Mypy + fix issues
 
 ## 0.25.0
 
-- fix version
+- Improve code coverage
 
 ## 0.24.0
 
