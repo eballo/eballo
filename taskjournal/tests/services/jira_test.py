@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import Any
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock
 
 from pytest import mark
@@ -99,9 +99,27 @@ class TestJira:
         self, jira_service: JiraService
     ) -> None:
         # given
-        inactive = SimpleNamespace(state="closed")
-        active = SimpleNamespace(state="active", id=7)
-        jira_service.jira.sprints.return_value = [inactive, active]
+        active = SimpleNamespace(state="active", id=7, name="Sprint 2")
+        jira_service.jira.sprints.return_value = [active]
+
+        # when
+        sprint = jira_service.get_active_sprint()
+
+        # then
+        assert sprint is active
+        jira_service.jira.sprints.assert_called_with(
+            jira_service.board_id, state="active"
+        )
+
+    def test_get_active_sprint_returns_active_sprint_from_raw(
+        self, jira_service: JiraService
+    ) -> None:
+        # given
+        active = SimpleNamespace(raw={"state": "active"}, id=8, name="Sprint 3")
+        # remove 'state' attribute if it exists to test raw fallback
+        if hasattr(active, "state"):
+            delattr(active, "state")
+        jira_service.jira.sprints.return_value = [active]
 
         # when
         sprint = jira_service.get_active_sprint()
