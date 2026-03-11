@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.28.0
+
+- fix jira issue - pagination
+
 ## 0.27.0
 
 - Fix some sonar issues
