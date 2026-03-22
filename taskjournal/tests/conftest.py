@@ -1,9 +1,9 @@
 from collections.abc import Callable, Sequence
+from datetime import date, datetime
 from os.path import join
 from pathlib import Path
-from datetime import date, datetime
 from textwrap import dedent
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, AsyncMock
 
 from pytest import MonkeyPatch, fixture
 from pytest_mock import MockerFixture
@@ -12,6 +12,7 @@ from typer.testing import CliRunner, Result
 
 from taskjournal.cli.cli import create_app
 from taskjournal.commands.commands import CommandManager
+from taskjournal.services.daily import DailyService
 from taskjournal.services.file import get_week_folder
 from taskjournal.services.fireman import FiremanService
 from taskjournal.services.github import GithubService
@@ -20,6 +21,7 @@ from taskjournal.services.jira import JiraService
 from taskjournal.services.migration import MigrationService
 from taskjournal.services.openai import OpenAIService
 from taskjournal.services.parser import DailyParserService
+from taskjournal.services.report import ReportService
 from taskjournal.services.wifi import WifiService
 from taskjournal.services.working_days import WorkingDaysService
 
@@ -133,6 +135,26 @@ def cmd(mocker: MockerFixture) -> CommandManager:
     mocker.patch(
         "taskjournal.commands.commands.OpenAIService",
         return_value=mocker.MagicMock(name="OpenAIServiceMock"),
+    )
+    mocker.patch(
+        "taskjournal.commands.commands.DailyService",
+        return_value=mocker.Mock(
+            spec=DailyService,
+            create_daily_notes=AsyncMock(),
+            finalize_daily_notes=mocker.Mock(),
+            daily_time=mocker.Mock(),
+        ),
+    )
+    mocker.patch(
+        "taskjournal.commands.commands.ReportService",
+        return_value=mocker.Mock(
+            spec=ReportService,
+            create_week_report=AsyncMock(),
+            create_month_review=AsyncMock(),
+            create_half_year_review=AsyncMock(),
+            create_retro=mocker.Mock(),
+            create_1on1=mocker.Mock(),
+        ),
     )
     return CommandManager()
 
