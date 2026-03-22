@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.29.0
+
+- #87 Fix total time spent calculation
+
 ## 0.28.0
 
 - fix jira issue - pagination
