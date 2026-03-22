@@ -36,12 +36,15 @@ def get_total_time_spent(
 
 
 def get_total_time_from_daily_notes(daily_file_path: str) -> int:
+    import taskjournal.services.utils
+
     total_time = 0
+    time_spent_marker = taskjournal.services.utils.wrap_with_format("Time Spent:")
     with open(daily_file_path, "r") as file:
         for line in file:
-            if line.startswith(" Time Spent:"):
+            if line.startswith(time_spent_marker):
                 try:
-                    time_str = line.replace(" Time Spent:", "").strip().split(".")[0]
+                    time_str = line.replace(time_spent_marker, "").strip().split(".")[0]
                     h, m = map(int, time_str.split(":"))
                     total_time += h * 3600 + m * 60
                 except (ValueError, IndexError):

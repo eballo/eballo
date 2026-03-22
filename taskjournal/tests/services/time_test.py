@@ -1,9 +1,8 @@
-from pytest_mock import MockerFixture
-
 from datetime import datetime, timedelta
 
 from freezegun import freeze_time
 from pytest import raises
+from pytest_mock import MockerFixture
 
 from taskjournal.services.time import (
     calculate_working_hours,
@@ -94,6 +93,7 @@ class TestTime:
         mocker: MockerFixture,
     ) -> None:
         # given
+        mocker.patch("taskjournal.services.utils.TEMPLATE_FORMAT", "txt")
         mock_open = mocker.mock_open(read_data=" Time Spent: 01:15\n")
         mocker.patch("builtins.open", mock_open)
 
@@ -107,6 +107,7 @@ class TestTime:
         mocker: MockerFixture,
     ) -> None:
         # given
+        mocker.patch("taskjournal.services.utils.TEMPLATE_FORMAT", "txt")
         data = " Time Spent: 00:30\nTask: something\n Time Spent: 01:00\n"
         mock_open = mocker.mock_open(read_data=data)
         mocker.patch("builtins.open", mock_open)
@@ -121,6 +122,7 @@ class TestTime:
         mocker: MockerFixture,
     ) -> None:
         # given
+        mocker.patch("taskjournal.services.utils.TEMPLATE_FORMAT", "txt")
         data = " Time Spent: abc\n Time Spent: 01:00"
         mock_open = mocker.mock_open(read_data=data)
         mocker.patch("builtins.open", mock_open)
