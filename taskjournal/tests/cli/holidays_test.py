@@ -1,7 +1,7 @@
-from pytest_mock import MockerFixture
 from collections.abc import Callable
 
 from freezegun import freeze_time
+from pytest_mock import MockerFixture
 from typer.testing import Result
 
 
@@ -49,6 +49,46 @@ class TestHolidays:
         service_cls.assert_called_once()
         assert "2030/holidays/holidays.md" in service_cls.call_args.kwargs["filepath"]
         service_instance.summary_upcoming.assert_called_once()
+
+    @freeze_time("2026-02-20 10:00:00")
+    def test_holidays_past_calls_summary_past(
+        self,
+        mocker: MockerFixture,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        # given
+        service_instance = mocker.MagicMock()
+        mocker.patch(
+            "taskjournal.cli.commands.holidays.HolidayService",
+            return_value=service_instance,
+        )
+
+        # when
+        result = invoke_cli(["holidays", "past"])
+
+        # then
+        assert result.exit_code == 0
+        service_instance.summary_past.assert_called_once()
+
+    @freeze_time("2026-02-20 10:00:00")
+    def test_holidays_summary_calls_summary(
+        self,
+        mocker: MockerFixture,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        # given
+        service_instance = mocker.MagicMock()
+        mocker.patch(
+            "taskjournal.cli.commands.holidays.HolidayService",
+            return_value=service_instance,
+        )
+
+        # when
+        result = invoke_cli(["holidays", "summary"])
+
+        # then
+        assert result.exit_code == 0
+        service_instance.summary.assert_called_once()
 
     @freeze_time("2026-02-20 10:00:00")
     def test_holidays_populate_uses_debug_flag(

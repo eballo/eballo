@@ -74,7 +74,7 @@ class HolidayService:
         return self.holidays.get(date_obj)
 
     def get_upcoming_holidays(
-        self, limit: int = 25
+        self, limit: int = 50
     ) -> list[tuple[datetime, dict[str, str]]]:
         """Returns a list of the next X holidays from today."""
         today = datetime.today()
@@ -90,23 +90,89 @@ class HolidayService:
                     break
         return upcoming
 
-    def summary_upcoming(self, limit: int = 25) -> None:
+    def get_past_holidays(self) -> list[tuple[datetime, dict[str, str]]]:
+        """Returns a list of all holidays before today."""
+        today = datetime.today()
+        past = []
+
+        # Sort dates to ensure order
+        sorted_dates = sorted(self.holidays.keys())
+
+        for date in sorted_dates:
+            if date < today:
+                past.append((date, self.holidays[date]))
+        return past
+
+    def summary_upcoming(self, limit: int = 50, sort_by: str = "date") -> None:
         """Prints a loaded summary of upcoming holidays."""
         upcoming_holidays = self.get_upcoming_holidays(limit)
+
+        if sort_by == "category":
+            upcoming_holidays.sort(key=lambda x: x[1]["category"])
+        elif sort_by == "date":
+            upcoming_holidays.sort(key=lambda x: x[0])
+        else:
+            raise ValueError("Invalid sort_by value. Use either 'category' or 'date'.")
+
         logger.info(f"--- Upcoming Holidays (next {len(upcoming_holidays)}) ---")
+        # Find maximum description length for alignment
+        max_desc_len = max(
+            (len(info["description"]) for _, info in upcoming_holidays), default=0
+        )
+
+        today = datetime.today()
         for date, info in upcoming_holidays:
             desc = info["description"]
             category = info["category"]
-            logger.info(f"  {date} [{category}]: {desc}")
+            status = "[x]" if date < today else "[ ]"
+            logger.info(f"{status} {date} : {desc:<{max_desc_len}} [{category}]")
 
-    def summary_all(self) -> None:
+    def summary_past(self, sort_by: str = "date") -> None:
+        """Prints a loaded summary of past holidays."""
+        past_holidays = self.get_past_holidays()
+
+        if sort_by == "category":
+            past_holidays.sort(key=lambda x: x[1]["category"])
+        elif sort_by == "date":
+            past_holidays.sort(key=lambda x: x[0])
+        else:
+            raise ValueError("Invalid sort_by value. Use either 'category' or 'date'.")
+
+        logger.info(f"--- Past Holidays ({len(past_holidays)} total) ---")
+        # Find maximum description length for alignment
+        max_desc_len = max(
+            (len(info["description"]) for _, info in past_holidays), default=0
+        )
+
+        today = datetime.today()
+        for date, info in past_holidays:
+            desc = info["description"]
+            category = info["category"]
+            status = "[x]" if date < today else "[ ]"
+            logger.info(f"{status} {date} : {desc:<{max_desc_len}} [{category}]")
+
+    def summary_all(self, sort_by: str = "date") -> None:
         """Prints a loaded summary by category."""
-        logger.info(f"--- Holiday Summary ({len(self.holidays)} total) ---")
-        for category, dates in self.categories.items():
-            logger.info(f"\n[{category}]")
-            for date in dates:
-                desc = self.holidays[date]["description"]
-                logger.info(f"  {date}: {desc}")
+
+        if sort_by == "category":
+            all_holidays = sorted(self.holidays.items(), key=lambda x: x[1]["category"])
+        elif sort_by == "date":
+            all_holidays = sorted(self.holidays.items())
+        else:
+            raise ValueError("Invalid sort_by value. Use either 'category' or 'date'.")
+
+        logger.info(f"--- Holiday Summary ({len(all_holidays)} total) ---")
+        # Find maximum description length for alignment
+        max_desc_len = max(
+            (len(info["description"]) for _, info in all_holidays), default=0
+        )
+
+        today = datetime.today()
+        for date, info in all_holidays:
+            desc = info["description"]
+            category = info["category"]
+            status = "[x]" if date < today else "[ ]"
+            logger.info(f"{status} {date} : {desc:<{max_desc_len}} [{category}]")
 
     def populate_files(self) -> None:
         """Generates markdown files for all loaded holidays in the output directory."""
@@ -134,3 +200,43 @@ class HolidayService:
                 logger.error(f"Failed to write {filename}: {e}")
 
         logger.info(f"Successfully populated {count} holiday files")
+
+    def get_days_until_next_holiday(self) -> tuple[int, datetime | None, str]:
+        today = datetime.today()
+        upcoming_holidays = self.get_upcoming_holidays(limit=1)
+
+        if not upcoming_holidays:
+            return 0, None, ""
+
+        next_holiday_date, _ = upcoming_holidays[0]
+        next_holiday_description = upcoming_holidays[0][1]["description"]
+        days_until_holiday = (next_holiday_date - today).days
+        return max(days_until_holiday, 0), next_holiday_date, next_holiday_description
+
+    def summary(self) -> None:
+        """Prints a general summary of holidays."""
+        today = datetime.today()
+        all_holidays = sorted(self.holidays.keys())
+        total = len(all_holidays)
+
+        if total == 0:
+            logger.info("No holidays found.")
+            return
+
+        past = [d for d in all_holidays if d < today]
+        upcoming = [d for d in all_holidays if d >= today]
+
+        done = len(past)
+        remaining = len(upcoming)
+        percent = (done / total) * 100 if total > 0 else 0
+
+        logger.info("--- Holiday Summary Statistics ---")
+        logger.info(f"Total holidays: {total}")
+        logger.info(f"Done:      {done} ({percent:.1f}%)")
+        logger.info(f"Remaining:      {remaining}")
+
+        if upcoming:
+            days, next_date, next_desc = self.get_days_until_next_holiday()
+            logger.info(f"Next holiday:   {next_desc} ({next_date}) - In {days} day(s)")
+        else:
+            logger.info("No more holidays left for this year!")
