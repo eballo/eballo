@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.30.0
+
+- #87 Improve Holidays command
+
 ## 0.29.0
 
 - #87 Fix total time spent calculation
