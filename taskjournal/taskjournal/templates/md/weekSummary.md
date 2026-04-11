@@ -1,18 +1,14 @@
 # 📅 Weekly Summary
 
+**📅 Start Date:** {{start_date}}
+**📅 End Date:** {{end_date}}
+
 **🕒 Total Time Spent:** {{total_time}}
-
----
-
-## ✅ Tasks Completed
-
-{{done_tasks}}
-
----
-
-## 🔄 Tasks Pending
-
-{{pending_tasks}}
+**📅 Total Worked Days:** {{total_worked_days}}
+**🏖️ Vacation Days:** {{vacation_days}}
+**🏢 Days at Office:** {{days_at_office}}
+**🏠 Days at Home:** {{days_at_home}}
+**👨‍🚒 Fireman Week:** {{is_fireman_week}}
 
 ---
 

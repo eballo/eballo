@@ -14,7 +14,6 @@ from taskjournal.config import (
     MONTH_REVIEW_TEMPLATE,
     ONE_ON_ONE_TEMPLATE,
 )
-from taskjournal.models.task import Status
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.backup import create_backup
 from taskjournal.services.file import (
@@ -33,14 +32,12 @@ from taskjournal.services.logger import logger
 from taskjournal.services.openai import OpenAIService
 from taskjournal.services.task_manager import (
     get_default_tasks,
-    get_tasks_from_daily_notes,
     get_previous_pending_tasks,
     unique_tasks,
     get_unique_epics,
     get_work_from_location,
 )
 from taskjournal.services.time import (
-    get_total_time_from_daily_notes,
     estimated_finish_time,
     get_start_time,
     calculate_working_hours,
@@ -49,6 +46,7 @@ from taskjournal.services.time import (
     get_1on1_name,
 )
 from taskjournal.services.utils import wrap_with_format
+from taskjournal.services.working_days import WorkingDaysService
 
 
 @dataclass
@@ -209,39 +207,40 @@ class CommandManager:
         summary_file = os.path.join(week_folder, f"week-summary.{TEMPLATE_FORMAT}")
         week_summary_content = load_template(WEEK_SUMMARY_TEMPLATE)
 
-        done_tasks = []
-        pending_tasks = []
-        total_time_seconds = 0
+        # Get statistics
+        working_days_service = WorkingDaysService(year=custom_date.year)
+        stats = working_days_service.get_week_stats(custom_date, week_folder)
 
-        for file_name in sorted(os.listdir(week_folder)):
-            if file_name.endswith(f"-DailyNotes.{TEMPLATE_FORMAT}"):
-                daily_file_path = os.path.join(week_folder, file_name)
-                tasks = get_tasks_from_daily_notes(daily_file_path)
-                daily_done = [task for task in tasks if task.status == Status.DONE]
-                daily_pending = [task for task in tasks if task.status == Status.TODO]
-                daily_time = get_total_time_from_daily_notes(
-                    daily_file_path
-                )  # Extract total time from daily notes
-
-                done_tasks.extend(daily_done)
-                pending_tasks.extend(daily_pending)
-                total_time_seconds += daily_time
-
-        # Remove pending tasks that have been completed
-        pending_tasks = [task for task in pending_tasks if task not in done_tasks]
+        # Get fireman status
+        is_fireman_week = FiremanService(custom_date).is_fireman_week()
 
         # Calculate total hours and minutes for the week
-        total_hours, remainder = divmod(total_time_seconds, 3600)
+        total_hours, remainder = divmod(stats["total_time_seconds"], 3600)
         total_minutes, _ = divmod(remainder, 60)
 
+        week_summary_content = week_summary_content.replace(
+            "{{start_date}}", stats["start_date"].strftime("%Y-%m-%d")
+        )
+        week_summary_content = week_summary_content.replace(
+            "{{end_date}}", stats["end_date"].strftime("%Y-%m-%d")
+        )
         week_summary_content = week_summary_content.replace(
             "{{total_time}}", f" {total_hours} hours and {total_minutes} minutes"
         )
         week_summary_content = week_summary_content.replace(
-            "{{done_tasks}}", "\n".join(f"{task}" for task in done_tasks)
+            "{{total_worked_days}}", str(stats["total_worked_days"])
         )
         week_summary_content = week_summary_content.replace(
-            "{{pending_tasks}}", "\n".join(f"{task}" for task in pending_tasks)
+            "{{vacation_days}}", str(stats["vacation_days"])
+        )
+        week_summary_content = week_summary_content.replace(
+            "{{days_at_office}}", str(stats["days_at_office"])
+        )
+        week_summary_content = week_summary_content.replace(
+            "{{days_at_home}}", str(stats["days_at_home"])
+        )
+        week_summary_content = week_summary_content.replace(
+            "{{is_fireman_week}}", "Yes" if is_fireman_week else "No"
         )
 
         summary = []
@@ -250,13 +249,34 @@ class CommandManager:
                 daily_file_path = os.path.join(week_folder, file_name)
                 summary.append(get_summary_from_daily_notes(daily_file_path))
 
-        summary_ai = await self.openai.summarize(summary)
+        summary_ai = await self.openai.summarize(
+            summary, stats=stats, is_fireman_week=is_fireman_week
+        )
 
         week_summary_content = week_summary_content.replace("{{summary}}", summary_ai)
 
         write_to_file(summary_file, week_summary_content)
 
         logger.info(f"Week summary file created at: {summary_file}")
+
+        return None
+
+    async def recreate_week_summaries(
+        self, start_date: datetime, end_date: datetime
+    ) -> None:
+        """
+        Recreate all week reports from start_date to end_date (inclusive).
+        It identifies each week and calls create_week_summary.
+        """
+        # Align start_date to Monday of its week
+        current_date = start_date - timedelta(days=start_date.weekday())
+
+        while current_date <= end_date:
+            logger.info(
+                f"Recreating week summary for week starting {current_date.strftime('%Y-%m-%d')}..."
+            )
+            await self.create_week_summary(current_date)
+            current_date += timedelta(days=7)
 
         return None
 
@@ -379,6 +399,17 @@ class CommandManager:
     def create_backup() -> None:
         backup_file = create_backup()
         logger.info(f"Backup created at: {backup_file}")
+
+    @staticmethod
+    def show_info(today: datetime) -> None:
+        # Get day name and week number
+        day_name = today.strftime("%A")
+        # ISO week number: week starts on Monday, first week has at least 4 days
+        # Some systems might prefer different week number definitions, but isocalendar is standard
+        week_number = today.isocalendar()[1]
+
+        logger.info(f"📅 Today is {day_name}, {today.strftime('%Y-%m-%d')}")
+        logger.info(f"🔢 We are in week {week_number}")
 
     @staticmethod
     def _calculate_time(daily_notes_file: str) -> None:

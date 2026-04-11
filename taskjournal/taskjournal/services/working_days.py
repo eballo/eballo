@@ -4,8 +4,14 @@ from datetime import timedelta
 from typing import Any
 
 from taskjournal.config import BASE_DIR, HOLIDAYS_FILE
+from taskjournal.constants import WORK_LOCATION_HOME, WORK_LOCATION_OFFICE
 from taskjournal.services.holidays import HolidayService
 from taskjournal.services.logger import logger
+from taskjournal.services.parser import DailyParserService
+from taskjournal.services.time import (
+    get_daily_notes_name,
+    get_total_time_from_daily_notes,
+)
 
 
 class WorkingDaysService:
@@ -157,3 +163,51 @@ class WorkingDaysService:
 
         logger.info(f"Real working days in {self.year}: {real_days}")
         return real_days
+
+    def get_week_stats(self, custom_date: datetime, week_folder: str) -> dict[str, Any]:
+        """
+        Calculates weekly statistics based on daily notes in the week folder.
+        """
+        total_time_seconds = 0
+        days_at_office = 0
+        days_at_home = 0
+        total_worked_days = 0
+        vacation_days = 0
+
+        parser = DailyParserService()
+
+        # Get start of week (Monday) and end of week (Friday)
+        start_of_week = custom_date - timedelta(days=custom_date.weekday())
+        end_of_week = start_of_week + timedelta(days=4)
+
+        for i in range(5):  # Monday to Friday
+            day = start_of_week + timedelta(days=i)
+            daily_notes_name = get_daily_notes_name(day)
+            daily_file_path = os.path.join(week_folder, daily_notes_name)
+
+            if os.path.exists(daily_file_path):
+                total_worked_days += 1
+                daily_time = get_total_time_from_daily_notes(daily_file_path)
+                total_time_seconds += daily_time
+
+                # Extract statistics
+                data = parser.parse(daily_file_path)
+                if data:
+                    work_from = data.get("work_from", "").strip().capitalize()
+                    if WORK_LOCATION_OFFICE.lower() in work_from.lower():
+                        days_at_office += 1
+                    elif WORK_LOCATION_HOME.lower() in work_from.lower():
+                        days_at_home += 1
+            else:
+                # If no daily note, it's a vacation day or a holiday
+                vacation_days += 1
+
+        return {
+            "start_date": start_of_week,
+            "end_date": end_of_week,
+            "total_time_seconds": total_time_seconds,
+            "total_worked_days": total_worked_days,
+            "vacation_days": vacation_days,
+            "days_at_office": days_at_office,
+            "days_at_home": days_at_home,
+        }

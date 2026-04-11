@@ -14,16 +14,29 @@ class ParserService:
 class DailyParserService(ParserService):
     def __init__(self) -> None:
         self.meta_regex = {
-            "sprint_name": re.compile(r"^\s*Sprint(?:[:\s]+)(.*)", re.IGNORECASE),
-            "date": re.compile(r"^\s*Date:\s*(.*)", re.IGNORECASE),
-            "start_time": re.compile(r"^\s*Start Time:\s*(.*)", re.IGNORECASE),
+            "sprint_name": re.compile(
+                r"^\s*(?:\*\*)?Sprint(?:\*\*)?(?:[:\s\*]+)(.*?)(?:\*\*)?\s*$",
+                re.IGNORECASE,
+            ),
+            "date": re.compile(
+                r"^\s*(?:\*\*)?Date(?:\*\*)?[:\s\*]+(.*?)(?:\*\*)?\s*$", re.IGNORECASE
+            ),
+            "start_time": re.compile(
+                r"^\s*(?:\*\*)?Start Time(?:\*\*)?[:\s\*]+(.*?)(?:\*\*)?\s*$",
+                re.IGNORECASE,
+            ),
             "end_time": re.compile(
-                r"^\s*(?:End Time|Finalized):\s*(.*)", re.IGNORECASE
+                r"^\s*(?:\*\*)?(?:End Time|Finalized)(?:\*\*)?[:\s\*]+(.*?)(?:\*\*)?\s*$",
+                re.IGNORECASE,
             ),
             "time_spent": re.compile(
-                r"^\s*(?:Total\s+)?Time Spent:\s*(.*)", re.IGNORECASE
+                r"^\s*(?:\*\*)?(?:Total\s+)?Time Spent(?:\*\*)?[:\s\*]+(.*?)(?:\*\*)?\s*$",
+                re.IGNORECASE,
             ),
-            "work_from": re.compile(r"^\s*Work from:\s*(.*)", re.IGNORECASE),
+            "work_from": re.compile(
+                r"^\s*(?:\*\*)?Work from(?:\*\*)?[:\s\*]+(.*?)(?:\*\*)?\s*$",
+                re.IGNORECASE,
+            ),
         }
         # Regex for tasks in .txt format: [ ] Description or [x] Description
         self.task_regex_txt = re.compile(r"^\[([ xX-])\]\s*(.*)")
