@@ -1,68 +1,55 @@
-🗓️ Month Review Template
-📌 Performed a total number of {{total_tasks}} Tasks and contributed to {{total_epics}} projects in the last 6 months.
+🗓️ Month Review
 
-Projects I took part in:
+📅 Start Date: {{start_date}}
+📅 End Date: {{end_date}}
+
+🕒 Total Time Spent: {{total_time}}
+📅 Total Worked Days: {{total_worked_days}}
+🏖️ Vacation Days: {{vacation_days}}
+🏢 Days at Office: {{days_at_office}}
+🏠 Days at Home: {{days_at_home}}
+
+---
+
+Performed a total number of {{total_tasks}} tasks
+Contributed to {{total_epics}} projects
+
+---
+
+📝 General Summary
+
+{{summary}}
+
+---
+
+📌 Projects I Took Part In
 
 {{epics}}
 
-
-Tasks I completed:
-
-{{tasks}}
+---
 
 🐙 GitHub Contributions:
 
 {{github_contributions}}
 
+---
+
 🌟 Reflection Questions
-What are you most proud of accomplishing in the past month?
 
+1. What are you most proud of accomplishing in the past month?
+-
 
-Were you happy with your performance this past month? Why or why not?
+2. Were you happy with your performance this past month? Why or why not?
+-
 
+3. Do you feel challenged by the work delegated or assigned to you?
+-
 
-Do you feel challenged by the work delegated or assigned to you?
+4. What obstacles have you encountered, and how have you addressed them?
+-
 
+5. Is there anything your manager or lead can do differently to support you?
+-
 
-What obstacles have you encountered, and how have you addressed them?
-
-
-Is there anything your manager or lead can do differently to support you?
-
-
-Please provide a summary of your focus areas for the upcoming month.
-
-
-
-1. Technical Contributions
-Code Contributions: Record major code changes, features developed, or bugs fixed. Include links to PRs, commits, or tickets.
-System Design: Document designs, architectures, or major decisions you contributed to.
-Tech Debt: Note any technical debt resolved or refactoring work done.
-2. Leadership and Collaboration
-Mentorship: Track time spent mentoring junior developers, conducting code reviews, or helping peers.
-Cross-Team Collaboration: Document significant interactions with other teams, such as joint projects or knowledge-sharing sessions.
-Knowledge Sharing: Record presentations, documentation created, or training sessions led.
-3. Problem-Solving
-Major Issues Resolved: Note critical incidents or blockers you resolved and their impact on the team or product.
-Debugging Challenges: Track notable debugging efforts and solutions implemented.
-4. Metrics and Impact
-Performance Metrics: Document quantifiable outcomes (e.g., reduced latency by X%, improved build time by Y%).
-Business Impact: Highlight contributions that influenced business goals, such as improving user experience or increasing revenue.
-5. Process and Efficiency Improvements
-Automation: Track workflows or tasks you automated and the time saved.
-Process Enhancements: Record contributions to improving team processes, CI/CD pipelines, or documentation.
-6. Feedback
-Received Feedback: Note feedback from peers, managers, or stakeholders (positive or constructive).
-Given Feedback: Track significant feedback you gave to others that helped improve their work.
-7. Challenges and Learning
-Challenges Overcome: Record significant challenges faced and how you overcame them.
-Learning: Keep a log of new skills, technologies, or tools you learned and applied.
-8. Communication
-Meeting Contributions: Document your role in key meetings (e.g., sprint planning, retrospectives, stakeholder presentations).
-Written Communication: Highlight impactful emails, documentation, or proposals.
-9. Goals and Progress
-Personal Goals: Track progress against your personal development goals.
-Team Goals: Record contributions toward team OKRs or goals.
-10. Notable Events
-Critical Events: Note any high-impact events (e.g., outages, deployments) and your role in them.
-Recognition: Record moments of recognition, awards, or praise from others.
+6. Please provide a summary of your focus areas for the upcoming month.
+-
