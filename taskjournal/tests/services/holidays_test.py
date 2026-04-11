@@ -1,8 +1,8 @@
 from collections.abc import Callable
-from pytest_mock import MockerFixture
+from datetime import date, timedelta
 from pathlib import Path
 
-from datetime import date, timedelta
+from pytest_mock import MockerFixture
 
 from taskjournal.services.holidays import HolidayService
 
@@ -197,6 +197,101 @@ class TestHolidays:
         mocked_print.assert_called_once_with(
             "Warning: Invalid date format found: 2026-01-01"
         )
+
+    def test_get_past_holidays_logic(
+        self,
+        tmp_path: Path,
+        holiday_service_factory: Callable[[str], HolidayService],
+    ) -> None:
+        # given
+        today = date.today()
+        past_1 = today - timedelta(days=20)
+        past_2 = today - timedelta(days=10)
+        future = today + timedelta(days=10)
+
+        content = f"""
+        # History
+        {past_1} - Old Holiday
+        {past_2} - Recent Past Holiday
+        {future} - Future Holiday
+        """
+
+        file_path = tmp_path / "past_holidays.txt"
+        file_path.write_text(content, encoding="utf-8")
+
+        # when
+        service = holiday_service_factory(str(file_path))
+        past = service.get_past_holidays()
+
+        # then
+        assert len(past) == 2
+        assert past[0][0] == past_1
+        assert past[1][0] == past_2
+        assert past[0][1]["description"] == "Old Holiday"
+        assert past[1][1]["description"] == "Recent Past Holiday"
+
+    def test_summary_logic_calculations(
+        self,
+        tmp_path: Path,
+        mocker: MockerFixture,
+        holiday_service_factory: Callable[[str], HolidayService],
+    ) -> None:
+        # given
+        today = date.today()
+        past_date = today - timedelta(days=5)
+        future_date = today + timedelta(days=5)
+
+        content = f"""
+        # Test
+        {past_date} - Past
+        {today} - Today
+        {future_date} - Future
+        """
+        file_path = tmp_path / "summary_test.txt"
+        file_path.write_text(content, encoding="utf-8")
+        service = holiday_service_factory(str(file_path))
+        logger = mocker.patch("taskjournal.services.holidays.logger")
+
+        # when
+        service.summary()
+
+        # then
+        # Total: 3, Done: 1 (33.3%), Remaining: 2
+        logger.info.assert_any_call("Total holidays: 3")
+        logger.info.assert_any_call("Done:      1 (33.3%)")
+        logger.info.assert_any_call("Remaining:      2")
+
+    def test_summary_methods_output_format(
+        self,
+        tmp_path: Path,
+        mocker: MockerFixture,
+        holiday_service_factory: Callable[[str], HolidayService],
+    ) -> None:
+        # given
+        today = date.today()
+        past_date = today - timedelta(days=5)
+        future_date = today + timedelta(days=5)
+
+        # Use different lengths for descriptions to test alignment
+        content = f"""
+        # Test
+        {past_date} - Short
+        {future_date} - Very Long Description
+        """
+        file_path = tmp_path / "alignment_test.txt"
+        file_path.write_text(content, encoding="utf-8")
+        service = holiday_service_factory(str(file_path))
+        logger = mocker.patch("taskjournal.services.holidays.logger")
+
+        # when
+        service.summary_all()
+
+        # then
+        # Check for status indicators and alignment
+        # max_desc_len should be len("Very Long Description") = 21
+        # Short description should be padded: "Short                "
+        logger.info.assert_any_call(f"[x] {past_date} : Short                 [Test]")
+        logger.info.assert_any_call(f"[ ] {future_date} : Very Long Description [Test]")
 
     def test_summary_methods_emit_logs(
         self,
