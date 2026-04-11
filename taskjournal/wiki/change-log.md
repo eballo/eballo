@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.0
+
+- #91 Improve week command
+
 ## 0.30.0
 
 - #87 Improve Holidays command
