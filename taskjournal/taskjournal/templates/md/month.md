@@ -1,19 +1,30 @@
 # 🗓️ Month Review
 
+**📅 Start Date:** {{start_date}}
+**📅 End Date:** {{end_date}}
+
+**🕒 Total Time Spent:** {{total_time}}
+**📅 Total Worked Days:** {{total_worked_days}}
+**🏖️ Vacation Days:** {{vacation_days}}
+**🏢 Days at Office:** {{days_at_office}}
+**🏠 Days at Home:** {{days_at_home}}
+
+---
+
 **Performed a total number of:** {{total_tasks}} tasks
-**Contributed to:** {{total_epics}} projects in the last 6 months
+**Contributed to:** {{total_epics}} projects
+
+---
+
+## 📝 General Summary
+
+{{summary}}
 
 ---
 
 ## 📌 Projects I Took Part In
 
 {{epics}}
-
----
-
-## ✅ Tasks I Completed
-
-{{tasks}}
 
 ---
 
@@ -42,75 +53,3 @@
 
 **6. Please provide a summary of your focus areas for the upcoming month.**
 -
-
----
-
-## 🧑‍💻 1. Technical Contributions
-
-- **Code Contributions:**
-- **System Design:**
-- **Tech Debt:**
-
----
-
-## 🤝 2. Leadership and Collaboration
-
-- **Mentorship:**
-- **Cross-Team Collaboration:**
-- **Knowledge Sharing:**
-
----
-
-## 🧩 3. Problem-Solving
-
-- **Major Issues Resolved:**
-- **Debugging Challenges:**
-
----
-
-## 📊 4. Metrics and Impact
-
-- **Performance Metrics:**
-- **Business Impact:**
-
----
-
-## ⚙️ 5. Process and Efficiency Improvements
-
-- **Automation:**
-- **Process Enhancements:**
-
----
-
-## 💬 6. Feedback
-
-- **Received Feedback:**
-- **Given Feedback:**
-
----
-
-## 🚧 7. Challenges and Learning
-
-- **Challenges Overcome:**
-- **Learning:**
-
----
-
-## 🗣️ 8. Communication
-
-- **Meeting Contributions:**
-- **Written Communication:**
-
----
-
-## 🎯 9. Goals and Progress
-
-- **Personal Goals:**
-- **Team Goals:**
-
----
-
-## 🎉 10. Notable Events
-
-- **Critical Events:**
-- **Recognition:**

@@ -520,7 +520,7 @@ class TestCommands:
         mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
         mocker.patch(
             "taskjournal.commands.commands.load_template",
-            return_value="tasks={{total_tasks}}, epics={{total_epics}}, gh={{github_contributions}}",
+            return_value="tasks={{total_tasks}}, epics={{total_epics}}, gh={{github_contributions}}, summary={{summary}}, time={{total_time}}",
         )
         mocker.patch.object(
             cmd.jira,
@@ -542,6 +542,29 @@ class TestCommands:
             "close",
             new_callable=AsyncMock,
         )
+
+        mock_stats = {
+            "start_date": datetime(2025, 1, 1),
+            "end_date": datetime(2025, 1, 31),
+            "total_time_seconds": 3600,
+            "total_worked_days": 20,
+            "vacation_days": 2,
+            "days_at_office": 10,
+            "days_at_home": 10,
+            "daily_summaries": ["Done something"],
+        }
+        mocker.patch(
+            "taskjournal.services.working_days.WorkingDaysService.get_month_stats",
+            return_value=mock_stats,
+        )
+
+        mocker.patch.object(
+            cmd.openai,
+            "summarize",
+            new_callable=AsyncMock,
+            return_value="AI Month Summary",
+        )
+
         write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
 
         # when
@@ -549,7 +572,13 @@ class TestCommands:
 
         content: str = write_to_file.call_args[0][1]
         # then
-        assert "tasks=1" in content and "epics=1" in content and "gh=7" in content
+        assert "tasks=1" in content
+        assert "epics=1" in content
+        assert "gh=7" in content
+        assert "summary=AI Month Summary" in content
+        assert "time=1h 0m" in content
+        assert "fireman" not in content.lower()
+        assert "completed" not in content.lower()
 
     def test_create_retro__creates_when_missing_and_injects_sprint_name(
         self,

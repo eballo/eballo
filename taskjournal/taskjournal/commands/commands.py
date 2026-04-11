@@ -325,9 +325,12 @@ class CommandManager:
 
     async def create_month_review(self, custom_date: datetime) -> None:
         week_folder = self._get_week_folder(custom_date)
+        month_review_file = os.path.join(week_folder, f"month.{TEMPLATE_FORMAT}")
+        month_content = load_template(MONTH_REVIEW_TEMPLATE)
 
-        half_year_review_file = os.path.join(week_folder, f"month.{TEMPLATE_FORMAT}")
-        half_year_content = load_template(MONTH_REVIEW_TEMPLATE)
+        # Get month statistics and daily summaries
+        working_days_service = WorkingDaysService(custom_date.year, self.debug)
+        stats = working_days_service.get_month_stats(custom_date, BASE_DIR)
 
         # JIRA tasks and epics for the last month
         tasks = await self.jira.get_current_tasks_assigned_to_me_last_month()
@@ -338,31 +341,43 @@ class CommandManager:
         # GitHub contributions
         github_contributions = await self.github.get_contributions_last_month()
 
-        half_year_content = half_year_content.replace(
-            "{{total_tasks}}", f"{total_tasks}"
-        )
-        half_year_content = half_year_content.replace(
-            "{{total_epics}}", f"{total_epics}"
-        )
-        half_year_content = half_year_content.replace(
-            "{{github_contributions}}", f"{github_contributions}"
+        # Generate AI summary
+        summary = await self.openai.summarize(
+            stats["daily_summaries"],
+            stats=stats,
+            is_fireman_week=False,
+            period="monthly",
         )
 
-        half_year_content = half_year_content.replace(
-            "{{tasks}}", "\n".join(f"{task}" for task in tasks)
-        )
+        # Format total time
+        total_hours, remainder = divmod(stats["total_time_seconds"], 3600)
+        total_minutes, _ = divmod(remainder, 60)
+        total_time_str = f"{total_hours}h {total_minutes}m"
 
-        half_year_content = half_year_content.replace(
-            "{{epics}}", "\n".join(f"{epic}" for epic in epics)
-        )
+        # Replace placeholders in template
+        replacements = {
+            "{{start_date}}": stats["start_date"].strftime("%Y-%m-%d"),
+            "{{end_date}}": stats["end_date"].strftime("%Y-%m-%d"),
+            "{{total_time}}": total_time_str,
+            "{{total_worked_days}}": str(stats["total_worked_days"]),
+            "{{vacation_days}}": str(stats["vacation_days"]),
+            "{{days_at_office}}": str(stats["days_at_office"]),
+            "{{days_at_home}}": str(stats["days_at_home"]),
+            "{{total_tasks}}": str(total_tasks),
+            "{{total_epics}}": str(total_epics),
+            "{{github_contributions}}": str(github_contributions),
+            "{{epics}}": "\n".join(f"{epic}" for epic in epics),
+            "{{summary}}": summary,
+        }
 
-        write_to_file(half_year_review_file, half_year_content)
+        for placeholder, value in replacements.items():
+            month_content = month_content.replace(placeholder, value)
 
-        logger.info(f"Month review file created: {half_year_review_file}")
+        write_to_file(month_review_file, month_content)
+        logger.info(f"Month review file created: {month_review_file}")
 
         # ✅ cleanup
         await self.github.close()
-
         return None
 
     def create_retro(self, custom_date: datetime) -> None:

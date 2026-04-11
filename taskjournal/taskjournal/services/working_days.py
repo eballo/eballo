@@ -211,3 +211,76 @@ class WorkingDaysService:
             "days_at_office": days_at_office,
             "days_at_home": days_at_home,
         }
+
+    def get_month_stats(self, custom_date: datetime, base_dir: str) -> dict[str, Any]:
+        """
+        Calculates monthly statistics by iterating through all weeks of the month.
+        """
+        import calendar
+
+        from taskjournal.services.file import get_week_folder as g_week_folder
+
+        year = custom_date.year
+        month = custom_date.month
+
+        # Get first and last day of the month
+        _, last_day = calendar.monthrange(year, month)
+        start_date = datetime(year, month, 1)
+        end_date = datetime(year, month, last_day)
+
+        total_time_seconds = 0
+        days_at_office = 0
+        days_at_home = 0
+        total_worked_days = 0
+        vacation_days = 0
+        all_daily_summaries = []
+
+        parser = DailyParserService()
+
+        # Iterate through every day of the month
+        for day_num in range(1, last_day + 1):
+            current_day = datetime(year, month, day_num)
+
+            # Skip weekends for stats, but we still check if notes exist
+            is_weekend = current_day.weekday() >= 5
+
+            week_folder = g_week_folder(base_dir, current_day)
+            daily_notes_name = get_daily_notes_name(current_day)
+            daily_file_path = os.path.join(week_folder, daily_notes_name)
+
+            if os.path.exists(daily_file_path):
+                total_worked_days += 1
+                daily_time = get_total_time_from_daily_notes(daily_file_path)
+                total_time_seconds += daily_time
+
+                # Extract statistics
+                data = parser.parse(daily_file_path)
+                if data:
+                    work_from = data.get("work_from", "").strip().capitalize()
+                    if WORK_LOCATION_OFFICE.lower() in work_from.lower():
+                        days_at_office += 1
+                    elif WORK_LOCATION_HOME.lower() in work_from.lower():
+                        days_at_home += 1
+
+                    # Collect summaries for AI
+                    summary_lines = data.get("summary", [])
+                    if summary_lines:
+                        summary_text = " ".join(
+                            line for line in summary_lines if line.strip()
+                        )
+                        if summary_text:
+                            all_daily_summaries.append(summary_text)
+            elif not is_weekend:
+                # If no daily note on a weekday, it's a vacation day or a holiday
+                vacation_days += 1
+
+        return {
+            "start_date": start_date,
+            "end_date": end_date,
+            "total_time_seconds": total_time_seconds,
+            "total_worked_days": total_worked_days,
+            "vacation_days": vacation_days,
+            "days_at_office": days_at_office,
+            "days_at_home": days_at_home,
+            "daily_summaries": all_daily_summaries,
+        }

@@ -58,6 +58,46 @@ class TestOpenai:
         )
 
     @mark.asyncio
+    async def test_summarize_monthly_period(
+        self,
+        respx_mock: respx.MockRouter,
+        openai_chat_completions_url: str,
+        openai_service: OpenAIService,
+    ) -> None:
+        # given
+        route = respx_mock.post(openai_chat_completions_url).mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "choices": [
+                        {"message": {"content": "This is the monthly summary."}}
+                    ]
+                },
+            )
+        )
+
+        # when
+        result = await openai_service.summarize(
+            ["Work done throughout the month"],
+            stats={
+                "total_time_seconds": 3600 * 160,
+                "days_at_office": 10,
+                "days_at_home": 10,
+                "vacation_days": 2,
+            },
+            period="monthly",
+        )
+
+        # then
+        assert result == "This is the monthly summary."
+        assert route.called
+
+        request_body = route.calls.last.request.content.decode()
+        assert "monthly work summary" in request_body
+        assert "Monthly Statistics" in request_body
+        assert "Monthly Work Summary" in request_body
+
+    @mark.asyncio
     async def test_summarize_handles_empty_input(
         self, openai_service: OpenAIService
     ) -> None:

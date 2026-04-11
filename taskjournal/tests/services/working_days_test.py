@@ -201,6 +201,59 @@ class TestWorkingDays:
         assert progress["weekends_taken"] == 1
         assert progress["worked"] == 0
 
+    def test_get_month_stats(
+        self,
+        mocker: MockerFixture,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        # given
+        service = working_days_service_factory("2025")
+        custom_date = datetime(2025, 1, 15)  # January
+        base_dir = "/dummy/base"
+
+        # Mock g_week_folder (aliased import inside the method)
+        mocker.patch(
+            "taskjournal.services.working_days.g_week_folder",
+            create=True,
+            return_value="/dummy/base/2025/weeks/03",
+        )
+        # Mock get_daily_notes_name
+        mocker.patch(
+            "taskjournal.services.working_days.get_daily_notes_name",
+            side_effect=lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md",
+        )
+        # Mock os.path.exists to return True for Jan 1st and Jan 2nd
+        mocker.patch(
+            "taskjournal.services.working_days.os.path.exists",
+            side_effect=lambda p: "2025-01-01" in p or "2025-01-02" in p,
+        )
+        # Mock get_total_time_from_daily_notes
+        mocker.patch(
+            "taskjournal.services.working_days.get_total_time_from_daily_notes",
+            side_effect=[3600, 7200],
+        )
+        # Mock DailyParserService.parse
+        mock_data_1 = {"work_from": "office", "summary": ["Did A"]}
+        mock_data_2 = {"work_from": "home", "summary": ["Did B"]}
+        mocker.patch(
+            "taskjournal.services.working_days.DailyParserService.parse",
+            side_effect=[mock_data_1, mock_data_2],
+        )
+
+        # when
+        stats = service.get_month_stats(custom_date, base_dir)
+
+        # then
+        assert stats["start_date"] == date(2025, 1, 1)
+        assert stats["end_date"] == date(2025, 1, 31)
+        assert stats["total_time_seconds"] == 10800  # 3600 + 7200
+        assert stats["total_worked_days"] == 2
+        # Jan 2025 has 31 days. 23 weekdays. 2 worked -> 21 vacation/holidays
+        assert stats["vacation_days"] == 21
+        assert stats["days_at_office"] == 1
+        assert stats["days_at_home"] == 1
+        assert stats["daily_summaries"] == ["Did A", "Did B"]
+
     def test_get_week_stats(
         self,
         mocker: MockerFixture,

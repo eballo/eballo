@@ -1,6 +1,8 @@
 import asyncio
+from datetime import datetime
 
-from typer import Typer, Context
+from click.exceptions import Exit
+from typer import Typer, Context, Option
 
 from taskjournal.services.logger import logger
 
@@ -13,15 +15,33 @@ def build_app() -> Typer:
 
     @app.command(
         "report",
-        help="Create a monthly report .\n\n Examples:\n wk month report\n",
+        help=(
+            "Create a monthly report for the month containing the given date.\n\n"
+            "Examples:\n"
+            "  wk month report\n"
+            "  wk month report --date 2025-08-31\n"
+        ),
     )
     def month_report(
         ctx: Context,
+        date: str = Option(
+            None,
+            "--date",
+            help="Any date within the target month: 'YYYY-MM-DD'.",
+        ),
     ) -> None:
         debug = ctx.obj.get("debug", False)
         custom_date = ctx.obj.get("today")
         m = ctx.obj.get("manager")
-        logger.debug(f"debug={debug}")
+        logger.debug(f"date={date!r}, debug={debug}")
+
+        if date:
+            try:
+                custom_date = datetime.strptime(date, "%Y-%m-%d")
+            except ValueError:
+                logger.error("❌ Invalid date format. Use 'YYYY-MM-DD'.")
+                raise Exit(code=1)
+
         asyncio.run(m.create_month_review(custom_date))
 
     return app
