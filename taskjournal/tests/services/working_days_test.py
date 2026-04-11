@@ -1,9 +1,8 @@
-from pytest_mock import MockerFixture
 from collections.abc import Callable
-
-from datetime import date
+from datetime import date, datetime
 
 from pytest import mark
+from pytest_mock import MockerFixture
 
 from taskjournal.services.working_days import WorkingDaysService
 
@@ -201,3 +200,57 @@ class TestWorkingDays:
         # then
         assert progress["weekends_taken"] == 1
         assert progress["worked"] == 0
+
+    def test_get_week_stats(
+        self,
+        mocker: MockerFixture,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        # given
+        service = working_days_service_factory("2025")
+        custom_date = datetime(2025, 1, 15)  # Wednesday
+        week_folder = "/dummy/path"
+
+        # Mon: 2025-01-13
+        # Tue: 2025-01-14
+        # Wed: 2025-01-15
+        # Thu: 2025-01-16
+        # Fri: 2025-01-17
+
+        # Mock get_daily_notes_name
+        mocker.patch(
+            "taskjournal.services.working_days.get_daily_notes_name",
+            side_effect=lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md",
+        )
+
+        # Mock os.path.exists to return True for Mon and Tue
+        mocker.patch(
+            "taskjournal.services.working_days.os.path.exists",
+            side_effect=lambda p: "2025-01-13" in p or "2025-01-14" in p,
+        )
+
+        # Mock get_total_time_from_daily_notes
+        mocker.patch(
+            "taskjournal.services.working_days.get_total_time_from_daily_notes",
+            side_effect=[3600, 1800],
+        )
+
+        # Mock DailyParserService.parse
+        mock_data_mon = {"work_from": "office"}
+        mock_data_tue = {"work_from": "home"}
+        mocker.patch(
+            "taskjournal.services.working_days.DailyParserService.parse",
+            side_effect=[mock_data_mon, mock_data_tue],
+        )
+
+        # when
+        stats = service.get_week_stats(custom_date, week_folder)
+
+        # then
+        assert stats["start_date"].date() == date(2025, 1, 13)
+        assert stats["end_date"].date() == date(2025, 1, 17)
+        assert stats["total_time_seconds"] == 5400  # 3600 + 1800
+        assert stats["total_worked_days"] == 2
+        assert stats["vacation_days"] == 3  # Wed, Thu, Fri missing
+        assert stats["days_at_office"] == 1
+        assert stats["days_at_home"] == 1

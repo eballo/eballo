@@ -129,3 +129,31 @@ class TestParser:
         # then
         assert data["sprint_name"] == ""
         assert len(data["planned_tasks"]) == 1
+
+    def test_daily_parser_parse_work_from_with_emojis_and_markdown(
+        self, daily_parser_service: DailyParserService
+    ) -> None:
+        # given
+        lines = [
+            "**Work from:** 🏠 Home\n",
+            "**Work from:** 🏢 Office\n",
+            "Work from: 🏠 Home\n",
+            "Work from: Office\n",
+        ]
+
+        # when & then
+        # 1. Markdown with bold and emoji
+        data = daily_parser_service._parse_content([lines[0]], ".md")
+        assert data["work_from"] == "🏠 Home"
+
+        # 2. Markdown with bold and office emoji
+        data = daily_parser_service._parse_content([lines[1]], ".md")
+        assert data["work_from"] == "🏢 Office"
+
+        # 3. Plain text with emoji
+        data = daily_parser_service._parse_content([lines[2]], ".txt")
+        assert data["work_from"] == "🏠 Home"
+
+        # 4. Plain text standard
+        data = daily_parser_service._parse_content([lines[3]], ".txt")
+        assert data["work_from"] == "Office"

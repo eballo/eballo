@@ -44,4 +44,35 @@ def build_app() -> Typer:
 
         asyncio.run(m.create_week_summary(custom_date))
 
+    @app.command(
+        "recreate-since",
+        help=(
+            "Recreate all weekly reports from the given date up to today.\n\n"
+            "Examples:\n"
+            "  wk week recreate-since --date 2026-01-01\n"
+        ),
+    )
+    def recreate_since(
+        ctx: Context,
+        date: str = Option(
+            ...,
+            "--date",
+            help="Start date to begin recreation: 'YYYY-MM-DD'.",
+        ),
+    ) -> None:
+        m = ctx.obj.get("manager")
+        today = ctx.obj.get("today")
+
+        try:
+            start_date = datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            logger.error("❌ Invalid date format. Use 'YYYY-MM-DD'.")
+            raise Exit(code=1)
+
+        if start_date > today:
+            logger.error("❌ Start date cannot be in the future.")
+            raise Exit(code=1)
+
+        asyncio.run(m.recreate_week_summaries(start_date, today))
+
     return app

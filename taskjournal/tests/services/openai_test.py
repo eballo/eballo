@@ -1,6 +1,5 @@
-import respx
-
 import httpx
+import respx
 from pytest import MonkeyPatch, mark
 
 from taskjournal.services.openai import OpenAIService
@@ -25,11 +24,38 @@ class TestOpenai:
         )
 
         # when
-        result = await openai_service.summarize(["Did X", "Fixed Y", "Reviewed Z"])
+        result = await openai_service.summarize(
+            ["Did X", "Fixed Y", "Reviewed Z"],
+            stats={
+                "total_time_seconds": 3600 * 8,
+                "days_at_office": 2,
+                "days_at_home": 3,
+                "vacation_days": 0,
+            },
+            is_fireman_week=True,
+        )
 
         # then
         assert result == "This is the weekly summary."
         assert route.called
+
+        # Check that the request contains the context instruction
+        request_body = route.calls.last.request.content.decode()
+        assert "CONTEXT ONLY" in request_body
+        assert "DO NOT REPEAT" in request_body
+        assert "Do NOT include titles like 'Weekly Work Summary'" in request_body
+        assert "Key Achievements" in request_body
+        assert "Problems Fixed" in request_body
+        assert "Technical Debt" in request_body
+        assert "Collaboration & Mentoring" in request_body
+        assert "Strategic Decisions" in request_body
+        assert "Upcoming Focus" in request_body
+        assert "bullet points" in request_body
+        assert "brief cohesive summary first" in request_body
+        assert (
+            "highlight achievements and challenges related to being on-call"
+            in request_body
+        )
 
     @mark.asyncio
     async def test_summarize_handles_empty_input(

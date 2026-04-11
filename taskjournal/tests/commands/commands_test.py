@@ -7,7 +7,6 @@ from pytest import mark
 from pytest_mock import MockerFixture
 
 from taskjournal.commands.commands import CommandManager
-from taskjournal.models.task import Status
 
 
 class TestCommands:
@@ -344,7 +343,7 @@ class TestCommands:
         warn.assert_called_once()
 
     @mark.asyncio
-    async def test_create_week_summary__aggregates_done_pending_and_total_time(
+    async def test_create_week_summary__aggregates_total_time_stats_and_summary(
         self,
         cmd: CommandManager,
         mocker: MockerFixture,
@@ -355,36 +354,59 @@ class TestCommands:
         mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
         mocker.patch(
             "taskjournal.commands.commands.load_template",
-            return_value="t={{total_time}}\ndone={{done_tasks}}\npending={{pending_tasks}}\n{{summary}}",
+            return_value="start={{start_date}}\nend={{end_date}}\nt={{total_time}}\nworked={{total_worked_days}}\nvacation={{vacation_days}}\noffice={{days_at_office}}\nhome={{days_at_home}}\nfireman={{is_fireman_week}}\n{{summary}}",
         )
-        files = ["2025-01-13-DailyNotes.md", "2025-01-14-DailyNotes.md", "notes.txt"]
+
+        # Mock os.path.exists to return True for Mon/Tue, False otherwise
+        # start_of_week (Mon) is 2025-01-13
+        # Tue is 2025-01-14
+        def mock_exists(path):
+            return "2025-01-13" in path or "2025-01-14" in path
+
+        mocker.patch(
+            "taskjournal.commands.commands.os.path.exists", side_effect=mock_exists
+        )
+
+        mocker.patch(
+            "taskjournal.commands.commands.get_daily_notes_name",
+            side_effect=lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md",
+        )
+
+        files = ["2025-01-13-DailyNotes.md", "2025-01-14-DailyNotes.md"]
         mocker.patch("taskjournal.commands.commands.os.listdir", return_value=files)
 
-        # Fake tasks
-        # when
-        Task = type("Task", (), {"__str__": lambda self: getattr(self, "name")})
-        todo_task = Task()
-        setattr(todo_task, "name", "TODO-1")
-        setattr(todo_task, "status", Status.TODO)
-        done_task = Task()
-        setattr(done_task, "name", "DONE-1")
-        setattr(done_task, "status", Status.DONE)
-
-        get_tasks = mocker.patch(
-            "taskjournal.commands.commands.get_tasks_from_daily_notes",
-            side_effect=[[done_task, todo_task], [done_task]],
-        )
-        mocker.patch(
-            "taskjournal.commands.commands.get_total_time_from_daily_notes",
-            side_effect=[3600, 1800],
-        )
         mocker.patch(
             "taskjournal.commands.commands.get_summary_from_daily_notes",
             side_effect=["Summary 1", "Summary 2"],
         )
 
-        async def fake_summarize(_: list[str]) -> str:
-            return "AI Weekly Summary"
+        mock_stats = {
+            "start_date": fixed_datetime - timedelta(days=fixed_datetime.weekday()),
+            "end_date": fixed_datetime
+            - timedelta(days=fixed_datetime.weekday())
+            + timedelta(days=4),
+            "total_time_seconds": 5400,  # 1h 30m
+            "total_worked_days": 2,
+            "vacation_days": 3,
+            "days_at_office": 1,
+            "days_at_home": 1,
+        }
+        mocker.patch(
+            "taskjournal.services.working_days.WorkingDaysService.get_week_stats",
+            return_value=mock_stats,
+        )
+
+        mocker.patch(
+            "taskjournal.services.fireman.FiremanService.is_fireman_week",
+            return_value=False,
+        )
+
+        async def fake_summarize(
+            summaries: list[str], stats: dict = None, is_fireman_week: bool = False
+        ) -> str:
+            if stats == mock_stats and not is_fireman_week:
+                return "AI Weekly Summary"
+            return "Failed summary"
 
         mocker.patch.object(cmd.openai, "summarize", side_effect=fake_summarize)
 
@@ -393,17 +415,52 @@ class TestCommands:
         await cmd.create_week_summary(fixed_datetime)
 
         # then
-        assert get_tasks.call_count == 2
         args, _ = write_to_file.call_args
         content: str = args[1]
 
         # Verify total time calculation
         assert " 1 hours and 30 minutes" in content
-        # Verify tasks
-        assert "DONE-1" in content
-        assert "TODO-1" in content
         # Verify AI summary was inserted
         assert "AI Weekly Summary" in content
+        # Verify stats
+        assert "worked=2" in content
+        # Mon-Fri = 5 days. 2 worked -> 3 vacation
+        assert "vacation=3" in content
+        assert "office=1" in content
+        assert "home=1" in content
+        assert "fireman=No" in content
+        assert "start=2025-01-13" in content
+        assert "end=2025-01-17" in content
+
+    @mark.asyncio
+    async def test_recreate_week_summaries__calls_create_week_summary_for_each_week(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+    ) -> None:
+        # given
+        create_week_summary = mocker.patch.object(
+            cmd, "create_week_summary", new_callable=AsyncMock
+        )
+        start_date = datetime(2025, 1, 1)  # Wednesday (Week 1)
+        end_date = datetime(2025, 1, 15)  # Wednesday (Week 3)
+
+        # when
+        await cmd.recreate_week_summaries(start_date, end_date)
+
+        # then
+        # start_date 2025-01-01 is Wednesday. Monday is 2024-12-30.
+        # Week 1: starts 2024-12-30
+        # Week 2: starts 2025-01-06
+        # Week 3: starts 2025-01-13
+        assert create_week_summary.call_count == 3
+        create_week_summary.assert_has_awaits(
+            [
+                mocker.call(datetime(2024, 12, 30)),
+                mocker.call(datetime(2025, 1, 6)),
+                mocker.call(datetime(2025, 1, 13)),
+            ]
+        )
 
     @mark.asyncio
     async def test_create_half_year_review__writes_counts_and_lists(
@@ -589,3 +646,20 @@ class TestCommands:
 
         # then
         err.assert_called_once()
+
+    def test_show_info__logs_day_and_week(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        # given
+        info = mocker.patch("taskjournal.commands.commands.logger.info")
+
+        # when
+        cmd.show_info(fixed_datetime)
+
+        # then
+        # fixed_datetime is 2025-01-15 (Wednesday)
+        # 2025-01-15 is ISO week 3
+        assert info.call_count == 2
+        calls = [c.args[0] for c in info.mock_calls]
+        assert "Today is Wednesday, 2025-01-15" in calls[0]
+        assert "We are in week 3" in calls[1]
