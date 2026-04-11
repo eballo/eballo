@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.0
+
+- #93 Improve month command
+
 ## 0.31.0
 
 - #91 Improve week command
