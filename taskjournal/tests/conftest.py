@@ -93,9 +93,17 @@ def week_folder(base_dir: str, today: datetime) -> str:
 
 
 @fixture
-def cli_manager(mocker: MockerFixture) -> MagicMock:
+def cli_container(mocker: MockerFixture) -> MagicMock:
+    """Returns a mock AppContainer; patches cli.cli.AppContainer before app creation."""
+    mock_container = mocker.MagicMock()
+    mocker.patch("taskjournal.cli.cli.AppContainer", return_value=mock_container)
+    return mock_container
+
+
+@fixture
+def cli_manager(cli_container: MagicMock, mocker: MockerFixture) -> MagicMock:
     manager = mocker.MagicMock()
-    mocker.patch("taskjournal.cli.cli.CommandManager", return_value=manager)
+    cli_container.command_manager.return_value = manager
     return manager
 
 
@@ -112,29 +120,37 @@ def cli_github(cli_manager: MagicMock, mocker: MockerFixture) -> MagicMock:
 
 
 @fixture
+def cli_migration(cli_container: MagicMock, mocker: MockerFixture) -> MagicMock:
+    """Provides a mock MigrationService from the CLI container."""
+    cli_container.command_manager.return_value = mocker.MagicMock()
+    service = mocker.MagicMock()
+    cli_container.migration.return_value = service
+    return service
+
+
+@fixture
+def cli_working_days(cli_container: MagicMock, mocker: MockerFixture) -> MagicMock:
+    """Provides a mock WorkingDaysService from the CLI container."""
+    cli_container.command_manager.return_value = mocker.MagicMock()
+    service = mocker.MagicMock()
+    cli_container.working_days_service.return_value = service
+    return service
+
+
+@fixture
 def fixed_datetime() -> datetime:
     return datetime(2025, 1, 15, 9, 30, 0)
 
 
 @fixture
 def cmd(mocker: MockerFixture) -> CommandManager:
-    mocker.patch(
-        "taskjournal.commands.commands.JiraService",
-        return_value=mocker.MagicMock(name="JiraServiceMock"),
+    return CommandManager(
+        jira=mocker.MagicMock(name="JiraServiceMock"),
+        github=mocker.MagicMock(name="GithubServiceMock"),
+        task_formatter=mocker.MagicMock(name="TaskFormatterMock"),
+        openai=mocker.MagicMock(name="OpenAIServiceMock"),
+        parser=mocker.MagicMock(name="DailyParserServiceMock"),
     )
-    mocker.patch(
-        "taskjournal.commands.commands.GithubService",
-        return_value=mocker.MagicMock(name="GithubServiceMock"),
-    )
-    mocker.patch(
-        "taskjournal.commands.commands.TaskFormatter",
-        return_value=mocker.MagicMock(name="TaskFormatterMock"),
-    )
-    mocker.patch(
-        "taskjournal.commands.commands.OpenAIService",
-        return_value=mocker.MagicMock(name="OpenAIServiceMock"),
-    )
-    return CommandManager()
 
 
 @fixture

@@ -3,7 +3,7 @@ from typing import Any
 from typer import Typer, Context, Option
 
 from taskjournal.services.logger import logger
-from taskjournal.services.working_days import WorkingDaysService
+from taskjournal.services.working_days import WorkingDaysService  # kept for type hint
 
 
 def build_app() -> Typer:
@@ -21,7 +21,8 @@ def build_app() -> Typer:
         else:
             logger.debug(f"debug={debug}, year={year}")
             final_year = year
-        return WorkingDaysService(year=final_year, debug=debug)
+        container = ctx.obj.get("container")
+        return container.working_days_service(year=final_year, debug=debug)
 
     common_year_option: Any = Option(
         None, "--year", "-y", help="Year for which to get holidays."

@@ -15,11 +15,20 @@ from taskjournal.services.time import (
 
 
 class WorkingDaysService:
-    def __init__(self, year: str | int, debug: bool = False) -> None:
+    def __init__(
+        self,
+        year: str | int,
+        holiday_service: HolidayService | None = None,
+        parser: DailyParserService | None = None,
+        debug: bool = False,
+    ) -> None:
         self.year = year
-        holidays_path = os.path.join(BASE_DIR, f"{year}/{HOLIDAYS_FILE}")
-        self.holiday_service = HolidayService(filepath=holidays_path)
         self.debug = debug
+        if holiday_service is None:
+            holidays_path = os.path.join(BASE_DIR, f"{year}/{HOLIDAYS_FILE}")
+            holiday_service = HolidayService(filepath=holidays_path)
+        self.holiday_service = holiday_service
+        self.parser = parser or DailyParserService()
 
     def _analyze_year(self, year: str | int) -> list[dict[str, Any]]:
         """
@@ -174,8 +183,6 @@ class WorkingDaysService:
         total_worked_days = 0
         vacation_days = 0
 
-        parser = DailyParserService()
-
         # Get start of week (Monday) and end of week (Friday)
         start_of_week = custom_date - timedelta(days=custom_date.weekday())
         end_of_week = start_of_week + timedelta(days=4)
@@ -191,7 +198,7 @@ class WorkingDaysService:
                 total_time_seconds += daily_time
 
                 # Extract statistics
-                data = parser.parse(daily_file_path)
+                data = self.parser.parse(daily_file_path)
                 if data:
                     work_from = data.get("work_from", "").strip().capitalize()
                     if WORK_LOCATION_OFFICE.lower() in work_from.lower():
@@ -235,8 +242,6 @@ class WorkingDaysService:
         vacation_days = 0
         all_daily_summaries = []
 
-        parser = DailyParserService()
-
         # Iterate through every day of the month
         for day_num in range(1, last_day + 1):
             current_day = datetime(year, month, day_num)
@@ -254,7 +259,7 @@ class WorkingDaysService:
                 total_time_seconds += daily_time
 
                 # Extract statistics
-                data = parser.parse(daily_file_path)
+                data = self.parser.parse(daily_file_path)
                 if data:
                     work_from = data.get("work_from", "").strip().capitalize()
                     if WORK_LOCATION_OFFICE.lower() in work_from.lower():

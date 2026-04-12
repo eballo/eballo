@@ -16,9 +16,13 @@ from taskjournal.services.time import get_total_time_spent
 
 
 class MigrationService:
-    def __init__(self) -> None:
-        self.task_formatter: TaskFormatter = TaskFormatter()
-        self.daily_parser_service: DailyParserService = DailyParserService()
+    def __init__(
+        self,
+        task_formatter: TaskFormatter | None = None,
+        parser: DailyParserService | None = None,
+    ) -> None:
+        self.task_formatter: TaskFormatter = task_formatter or TaskFormatter()
+        self.daily_parser_service: DailyParserService = parser or DailyParserService()
         self.statistics = {
             "migrated_files": 0,
             "skipped_files": 0,

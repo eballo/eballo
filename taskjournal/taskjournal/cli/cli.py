@@ -3,6 +3,7 @@ from datetime import datetime
 from typer import Exit, Typer, Context, Option
 
 from taskjournal.cli import version as app_version
+from taskjournal.container import AppContainer
 from taskjournal.cli.commands.backup import build_app as build_backup
 from taskjournal.cli.commands.daily import build_app as build_daily
 from taskjournal.cli.commands.half_year import build_app as build_half_year
@@ -16,7 +17,6 @@ from taskjournal.cli.commands.services import build_app as build_services
 from taskjournal.cli.commands.statistics import build_app as build_statistics
 from taskjournal.cli.commands.week import build_app as build_week
 from taskjournal.cli.help_order import GroupedHelpOrder
-from taskjournal.commands.commands import CommandManager
 from taskjournal.services.logger import logger, configure_logging
 
 APP_NAME = "wk"
@@ -55,6 +55,8 @@ def create_app() -> Typer:
     app.add_typer(build_statistics(), name="statistics")
     app.add_typer(build_info(), name="info")
 
+    container = AppContainer()
+
     # Root callback (global flags)
     @app.callback()
     def _root(
@@ -80,7 +82,8 @@ def create_app() -> Typer:
             {
                 "version": app_version,
                 "debug": debug,
-                "manager": CommandManager(debug),
+                "container": container,
+                "manager": container.command_manager(debug=debug),
                 "today": datetime.now(),
             }
         )

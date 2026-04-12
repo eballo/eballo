@@ -3,7 +3,6 @@ import os
 from typer import Typer, Context, Argument
 
 from taskjournal.services.logger import logger
-from taskjournal.services.migration import MigrationService
 
 
 def build_app() -> Typer:
@@ -23,7 +22,8 @@ def build_app() -> Typer:
         debug = ctx.obj.get("debug", False)
         logger.debug(f"debug={debug}, path={path}")
 
-        service = MigrationService()
+        container = ctx.obj.get("container")
+        service = container.migration()
 
         if os.path.isfile(path):
             service.migrate_file(path)
