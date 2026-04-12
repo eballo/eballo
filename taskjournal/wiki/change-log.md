@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.37.0
+
+- #110 Group commands wk output
+
 ## 0.36.0
 
 - #108 transform all code into classes
