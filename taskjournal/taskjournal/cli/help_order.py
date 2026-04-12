@@ -3,7 +3,7 @@ from typer.core import TyperGroup
 
 
 class GroupedHelpOrder(TyperGroup):
-    desired_order = ["daily", "week", "month", "half-year", "retro", "backup"]
+    desired_order = ["daily", "week", "month", "half-year", "retro", "1on1", "holidays", "statistics", "info"]
 
     def list_commands(self, ctx: Context) -> list[str]:
         cmds = list(self.commands.keys())
