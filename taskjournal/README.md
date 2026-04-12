@@ -1,4 +1,4 @@
-# Task Journal
+# 🗓️ Task Journal
 
 [![Version](https://img.shields.io/badge/version-0.32.0-blue.svg)](#task-journal)
 [![Python](https://img.shields.io/badge/python-3.12%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/downloads/)
@@ -7,19 +7,62 @@
 
 Task Journal (`wk`) is a Python CLI to manage your day-to-day engineering journal.
 
+It helps you:
+- create and finalize daily notes from templates
+- track time spent and working days
+- carry pending tasks forward between days/weeks
+- generate weekly, monthly, half-year, retrospective, and 1:1 reports
+- generate AI-assisted summaries
+- pull context from Jira and GitHub
+- compute holidays and working-day statistics
+- create backups and migrate legacy files
+
 For the full explanation of features, configuration, and command examples, see:
 [Tool Overview](wiki/tool-overview.md)
+
+## Features
+
+### Daily workflow
+- Start a daily note from a template
+- Finalize the day and calculate total time spent
+- Track daily tasks, planned work, and notes
+- Reuse pending tasks from previous periods
+
+### Reports
+- Weekly report
+- Monthly report
+- Half-year report
+- Retrospective report
+- 1:1 report
+
+### Statistics and calendar
+- Holiday listing and population
+- Upcoming holidays
+- Working-day statistics
+- Progress and real-time statistics
+
+### Integrations
+- Jira task context
+- GitHub contribution statistics
+- AI summary generation
+
+### Maintenance
+- Backup notes
+- Migrate legacy `.txt` files to `.md`
+- Support for templates in Markdown and plain text
 
 ## Requirements
 
 - Python 3.12+
-- Poetry (for dependency and environment management)
+- Virtualenv for local environment management
+- Poetry for dependency management and packaging
 
 ## Installation
 
 ### Local development setup
 
-Creation of the environment
+Create the environment:
+
 ```bash
 python -m venv venv
 source venv/bin/activate
