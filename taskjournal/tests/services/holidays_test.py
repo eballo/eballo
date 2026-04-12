@@ -126,9 +126,8 @@ class TestHolidays:
         # This prevents the test from trying to write to the real BASE_DIR.
         fake_week_dir = tmp_path / "mock_week_folder"
 
-        # Patch where the function is USED (imported), not where it is defined
         mocker.patch(
-            "taskjournal.services.holidays.get_week_folder",
+            "taskjournal.services.file.FileService.get_week_folder",
             return_value=str(fake_week_dir),
         )
 
@@ -320,7 +319,7 @@ class TestHolidays:
         # given
         service = holiday_service_factory(temp_holiday_file)
         mocker.patch(
-            "taskjournal.services.holidays.get_week_folder", return_value=str(tmp_path)
+            "taskjournal.services.file.FileService.get_week_folder", return_value=str(tmp_path)
         )
         mocker.patch("builtins.open", side_effect=OSError("disk full"))
         logger = mocker.patch("taskjournal.services.holidays.logger")

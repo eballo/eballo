@@ -115,11 +115,11 @@ class TestMigration:
         self, migration_service: MigrationService, mocker: MockerFixture
     ) -> None:
         # given
-        mocker.patch(
-            "taskjournal.services.migration.get_work_from_location", return_value="Home"
+        mocker.patch.object(
+            migration_service.task_manager, "get_work_from_location", return_value="Home"
         )
         mocker.patch(
-            "taskjournal.services.migration.load_template",
+            "taskjournal.services.file.FileService.load_template",
             return_value=(
                 "Sprint={{ sprint_name }}|Date={{ date }}|Start={{ start_time }}|"
                 "End={{ end_time }}|Spent={{ time_spent }}|WF={{ work_from }}|"
@@ -160,12 +160,11 @@ class TestMigration:
         self, migration_service: MigrationService, mocker: MockerFixture
     ) -> None:
         # given
-        mocker.patch(
-            "taskjournal.services.migration.get_work_from_location",
-            return_value="Office",
+        mocker.patch.object(
+            migration_service.task_manager, "get_work_from_location", return_value="Office"
         )
         mocker.patch(
-            "taskjournal.services.migration.load_template",
+            "taskjournal.services.file.FileService.load_template",
             return_value="End={{ end_time }}|Spent={{ time_spent }}|FF={{ firefighter }}|FFN={{ firefighter_notes }}",
         )
         mocker.patch.object(

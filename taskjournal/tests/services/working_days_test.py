@@ -211,15 +211,14 @@ class TestWorkingDays:
         custom_date = datetime(2025, 1, 15)  # January
         base_dir = "/dummy/base"
 
-        # Mock g_week_folder (aliased import inside the method)
+        # Mock FileService.get_week_folder
         mocker.patch(
-            "taskjournal.services.working_days.g_week_folder",
-            create=True,
+            "taskjournal.services.file.FileService.get_week_folder",
             return_value="/dummy/base/2025/weeks/03",
         )
-        # Mock get_daily_notes_name
+        # Mock TimeService.get_daily_notes_name
         mocker.patch(
-            "taskjournal.services.working_days.get_daily_notes_name",
+            "taskjournal.services.time.TimeService.get_daily_notes_name",
             side_effect=lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md",
         )
         # Mock os.path.exists to return True for Jan 1st and Jan 2nd
@@ -227,9 +226,9 @@ class TestWorkingDays:
             "taskjournal.services.working_days.os.path.exists",
             side_effect=lambda p: "2025-01-01" in p or "2025-01-02" in p,
         )
-        # Mock get_total_time_from_daily_notes
+        # Mock TimeService.get_total_time_from_daily_notes
         mocker.patch(
-            "taskjournal.services.working_days.get_total_time_from_daily_notes",
+            "taskjournal.services.time.TimeService.get_total_time_from_daily_notes",
             side_effect=[3600, 7200],
         )
         # Mock DailyParserService.parse
@@ -270,9 +269,9 @@ class TestWorkingDays:
         # Thu: 2025-01-16
         # Fri: 2025-01-17
 
-        # Mock get_daily_notes_name
+        # Mock TimeService.get_daily_notes_name
         mocker.patch(
-            "taskjournal.services.working_days.get_daily_notes_name",
+            "taskjournal.services.time.TimeService.get_daily_notes_name",
             side_effect=lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md",
         )
 
@@ -282,9 +281,9 @@ class TestWorkingDays:
             side_effect=lambda p: "2025-01-13" in p or "2025-01-14" in p,
         )
 
-        # Mock get_total_time_from_daily_notes
+        # Mock TimeService.get_total_time_from_daily_notes
         mocker.patch(
-            "taskjournal.services.working_days.get_total_time_from_daily_notes",
+            "taskjournal.services.time.TimeService.get_total_time_from_daily_notes",
             side_effect=[3600, 1800],
         )
 

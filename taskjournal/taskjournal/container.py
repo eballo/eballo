@@ -8,6 +8,8 @@ from taskjournal.services.jira import JiraService
 from taskjournal.services.migration import MigrationService
 from taskjournal.services.openai import OpenAIService
 from taskjournal.services.parser import DailyParserService
+from taskjournal.services.task_manager import TaskManager
+from taskjournal.services.wifi import WifiService
 from taskjournal.services.working_days import WorkingDaysService
 
 
@@ -18,6 +20,7 @@ class AppContainer(containers.DeclarativeContainer):
     openai = providers.Singleton(OpenAIService)
     task_formatter = providers.Singleton(TaskFormatter)
     daily_parser = providers.Singleton(DailyParserService)
+    wifi_service = providers.Singleton(WifiService)
 
     # Services with runtime dependencies — factories (created per invocation)
     # filepath is passed at call time: container.holiday_service(filepath=...)
@@ -29,11 +32,19 @@ class AppContainer(containers.DeclarativeContainer):
         parser=daily_parser,
     )
 
+    # Task manager — singleton with injected parser and wifi
+    task_manager = providers.Singleton(
+        TaskManager,
+        parser=daily_parser,
+        wifi_service=wifi_service,
+    )
+
     # Composite services
     migration = providers.Singleton(
         MigrationService,
         task_formatter=task_formatter,
         parser=daily_parser,
+        task_manager=task_manager,
     )
 
     command_manager = providers.Factory(
@@ -43,4 +54,5 @@ class AppContainer(containers.DeclarativeContainer):
         task_formatter=task_formatter,
         openai=openai,
         parser=daily_parser,
+        task_manager=task_manager,
     )

@@ -3,7 +3,7 @@ from zipfile import ZipFile
 
 from pytest import mark
 
-from taskjournal.services.backup import create_backup
+from taskjournal.services.backup import BackupService
 
 
 @mark.usefixtures("backup_source_dir", "backup_output_dir")
@@ -18,7 +18,7 @@ class TestBackup:
         )
 
         # when
-        backup_file = create_backup()
+        backup_file = BackupService.create()
 
         # then
         assert backup_file.name == expected_filename
