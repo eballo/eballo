@@ -1,9 +1,8 @@
-from datetime import datetime
 from typing import Optional
 
 from typer import Typer, Context, Option
 
-from taskjournal.services.logger import logger
+from taskjournal.cli.context import get_manager, get_today, parse_date
 
 
 def build_app() -> Typer:
@@ -29,16 +28,9 @@ def build_app() -> Typer:
             help="Show info for a specific date: 'YYYY-MM-DD'.",
         ),
     ) -> None:
-        m = ctx.obj.get("manager")
-        today = ctx.obj.get("today")
-
+        today = get_today(ctx)
         if date:
-            try:
-                today = datetime.strptime(date, "%Y-%m-%d")
-            except ValueError:
-                logger.error("❌ Invalid date format. Use 'YYYY-MM-DD'.")
-                return
-
-        m.show_info(today)
+            today = parse_date(date)
+        get_manager(ctx).show_info(today)
 
     return app

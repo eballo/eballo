@@ -2,6 +2,7 @@ import asyncio
 
 from typer import Typer, Context
 
+from taskjournal.cli.context import get_manager, get_today, get_debug
 from taskjournal.services.logger import logger
 
 
@@ -18,10 +19,7 @@ def build_app() -> Typer:
     def half_year_report(
         ctx: Context,
     ) -> None:
-        debug = ctx.obj.get("debug", False)
-        custom_date = ctx.obj.get("today")
-        m = ctx.obj.get("manager")
-        logger.debug(f"debug={debug}")
-        asyncio.run(m.create_half_year_review(custom_date))
+        logger.debug(f"debug={get_debug(ctx)}")
+        asyncio.run(get_manager(ctx).create_half_year_review(get_today(ctx)))
 
     return app

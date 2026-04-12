@@ -5,6 +5,7 @@ from datetime import date, datetime
 from textwrap import dedent
 from unittest.mock import MagicMock
 
+from dependency_injector import providers
 from pytest import MonkeyPatch, fixture
 from pytest_mock import MockerFixture
 from typer import Typer
@@ -12,6 +13,7 @@ from typer.testing import CliRunner, Result
 
 from taskjournal.cli.cli import create_app
 from taskjournal.commands.commands import CommandManager
+from taskjournal.container import AppContainer
 from taskjournal.services.file import get_week_folder
 from taskjournal.services.fireman import FiremanService
 from taskjournal.services.github import GithubService
@@ -24,9 +26,22 @@ from taskjournal.services.wifi import WifiService
 from taskjournal.services.working_days import WorkingDaysService
 
 
+@fixture
+def cli_container(mocker: MockerFixture) -> AppContainer:
+    """Real AppContainer with all external services overridden by mocks."""
+    container = AppContainer()
+    container.jira.override(providers.Object(mocker.MagicMock(name="JiraServiceMock")))
+    container.github.override(providers.Object(mocker.MagicMock(name="GithubServiceMock")))
+    container.openai.override(providers.Object(mocker.MagicMock(name="OpenAIServiceMock")))
+    container.task_formatter.override(providers.Object(mocker.MagicMock(name="TaskFormatterMock")))
+    container.daily_parser.override(providers.Object(mocker.MagicMock(name="DailyParserMock")))
+    yield container
+    container.reset_override()
+
+
 @fixture()
-def app() -> Typer:
-    return create_app()
+def app(cli_container: AppContainer) -> Typer:
+    return create_app(container=cli_container)
 
 
 @fixture()
@@ -93,48 +108,44 @@ def week_folder(base_dir: str, today: datetime) -> str:
 
 
 @fixture
-def cli_container(mocker: MockerFixture) -> MagicMock:
-    """Returns a mock AppContainer; patches cli.cli.AppContainer before app creation."""
-    mock_container = mocker.MagicMock()
-    mocker.patch("taskjournal.cli.cli.AppContainer", return_value=mock_container)
-    return mock_container
-
-
-@fixture
-def cli_manager(cli_container: MagicMock, mocker: MockerFixture) -> MagicMock:
-    manager = mocker.MagicMock()
-    cli_container.command_manager.return_value = manager
+def cli_manager(cli_container: AppContainer, mocker: MockerFixture) -> MagicMock:
+    manager = mocker.MagicMock(name="CommandManagerMock")
+    cli_container.command_manager.override(providers.Object(manager))
     return manager
 
 
 @fixture
-def cli_jira(cli_manager: MagicMock, mocker: MockerFixture) -> MagicMock:
-    cli_manager.jira = mocker.MagicMock()
+def cli_jira(cli_manager: MagicMock) -> MagicMock:
     return cli_manager.jira
 
 
 @fixture
-def cli_github(cli_manager: MagicMock, mocker: MockerFixture) -> MagicMock:
-    cli_manager.github = mocker.MagicMock()
+def cli_github(cli_manager: MagicMock) -> MagicMock:
     return cli_manager.github
 
 
 @fixture
-def cli_migration(cli_container: MagicMock, mocker: MockerFixture) -> MagicMock:
+def cli_migration(cli_container: AppContainer, mocker: MockerFixture) -> MagicMock:
     """Provides a mock MigrationService from the CLI container."""
-    cli_container.command_manager.return_value = mocker.MagicMock()
-    service = mocker.MagicMock()
-    cli_container.migration.return_value = service
+    service = mocker.MagicMock(name="MigrationServiceMock")
+    cli_container.migration.override(providers.Object(service))
     return service
 
 
 @fixture
-def cli_working_days(cli_container: MagicMock, mocker: MockerFixture) -> MagicMock:
-    """Provides a mock WorkingDaysService from the CLI container."""
-    cli_container.command_manager.return_value = mocker.MagicMock()
-    service = mocker.MagicMock()
-    cli_container.working_days_service.return_value = service
-    return service
+def cli_working_days(
+    cli_container: AppContainer, mocker: MockerFixture
+) -> tuple[MagicMock, MagicMock]:
+    """Provides a mock WorkingDaysService factory and instance.
+
+    Returns (factory_mock, service_mock) so tests can assert on call arguments
+    (e.g. factory.assert_called_once_with(year=2026, debug=False)) and on
+    service method calls (e.g. service.summary.assert_called_once()).
+    """
+    service = mocker.MagicMock(name="WorkingDaysServiceMock")
+    factory = mocker.MagicMock(name="WorkingDaysFactoryMock", return_value=service)
+    cli_container.working_days_service.override(providers.Factory(factory))
+    return factory, service
 
 
 @fixture

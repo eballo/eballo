@@ -3,6 +3,7 @@ from typing import Any
 
 from typer import Typer, Context, Option
 
+from taskjournal.cli.context import get_today, get_debug
 from taskjournal.config import BASE_DIR, HOLIDAYS_FILE
 from taskjournal.services.holidays import HolidayService
 from taskjournal.services.logger import logger
@@ -14,15 +15,25 @@ def build_app() -> Typer:
         no_args_is_help=True,
     )
 
-    def get_common_logic(ctx: Context, year: str | None = None) -> tuple[Any, str]:
+    def get_service(ctx: Context, year: str | None = None) -> HolidayService:
         if not year:
             logger.debug("Getting default year")
-            custom_date = ctx.obj.get("today")
-            year = custom_date.year
-        debug = ctx.obj.get("debug", False)
+            year = get_today(ctx).year
+        debug = get_debug(ctx)
         holidays_path = os.path.join(BASE_DIR, f"{year}/{HOLIDAYS_FILE}")
         logger.debug(f"debug={debug}, path={holidays_path}")
-        return debug, holidays_path
+        return HolidayService(debug=debug, filepath=holidays_path)
+
+    common_year_option: Any = Option(
+        None, "--year", "-y", help="Year for which to get holidays."
+    )
+    common_sort_option: Any = Option(
+        "date",
+        "--sort-by",
+        "-s",
+        show_default=False,
+        help="Sort holidays by 'category' or 'date'",
+    )
 
     @app.command(
         "all",
@@ -30,20 +41,10 @@ def build_app() -> Typer:
     )
     def holidays_all(
         ctx: Context,
-        year: str | None = Option(
-            None, "--year", "-y", help="Year for which to get holidays."
-        ),
-        sort_by: str = Option(
-            "date",
-            "--sort-by",
-            "-s",
-            show_default=False,
-            help="Sort holidays by 'category' or 'date'",
-        ),
+        year: str | None = common_year_option,
+        sort_by: str = common_sort_option,
     ) -> None:
-        debug, holidays_path = get_common_logic(ctx, year)
-        service = HolidayService(debug=debug, filepath=holidays_path)
-        service.summary_all(sort_by=sort_by)
+        get_service(ctx, year).summary_all(sort_by=sort_by)
 
     @app.command(
         "upcoming",
@@ -51,20 +52,10 @@ def build_app() -> Typer:
     )
     def holidays_upcoming(
         ctx: Context,
-        year: str | None = Option(
-            None, "--year", "-y", help="Year for which to get holidays."
-        ),
-        sort_by: str = Option(
-            "date",
-            "--sort-by",
-            "-s",
-            show_default=False,
-            help="Sort holidays by 'category' or 'date'",
-        ),
+        year: str | None = common_year_option,
+        sort_by: str = common_sort_option,
     ) -> None:
-        debug, holidays_path = get_common_logic(ctx, year)
-        service = HolidayService(debug=debug, filepath=holidays_path)
-        service.summary_upcoming(sort_by=sort_by)
+        get_service(ctx, year).summary_upcoming(sort_by=sort_by)
 
     @app.command(
         "past",
@@ -72,20 +63,10 @@ def build_app() -> Typer:
     )
     def holidays_past(
         ctx: Context,
-        year: str | None = Option(
-            None, "--year", "-y", help="Year for which to get holidays."
-        ),
-        sort_by: str = Option(
-            "date",
-            "--sort-by",
-            "-s",
-            show_default=False,
-            help="Sort holidays by 'category' or 'date'",
-        ),
+        year: str | None = common_year_option,
+        sort_by: str = common_sort_option,
     ) -> None:
-        debug, holidays_path = get_common_logic(ctx, year)
-        service = HolidayService(debug=debug, filepath=holidays_path)
-        service.summary_past(sort_by=sort_by)
+        get_service(ctx, year).summary_past(sort_by=sort_by)
 
     @app.command(
         "summary",
@@ -93,37 +74,25 @@ def build_app() -> Typer:
     )
     def holidays_summary(
         ctx: Context,
-        year: str | None = Option(
-            None, "--year", "-y", help="Year for which to get summary."
-        ),
+        year: str | None = common_year_option,
     ) -> None:
-        debug, holidays_path = get_common_logic(ctx, year)
-        service = HolidayService(debug=debug, filepath=holidays_path)
-        service.summary()
+        get_service(ctx, year).summary()
 
     @app.command("populate", help="Generate Markdown files for holidays.")
     def holidays_populate(
         ctx: Context,
-        year: str | None = Option(
-            None, "--year", "-y", help="Year for which to populate files."
-        ),
+        year: str | None = common_year_option,
     ) -> None:
-        debug, holidays_path = get_common_logic(ctx, year)
-        service = HolidayService(debug=debug, filepath=holidays_path)
-        service.populate_files()
+        get_service(ctx, year).populate_files()
 
     @app.command(
         "days_until_next_holiday", help="Get the number of days until the next holiday."
     )
-    def holidays_days_until_next_holiday(ctx: Context):
-        debug, holidays_path = get_common_logic(ctx)
-        service = HolidayService(debug=debug, filepath=holidays_path)
-        days_until_next_holiday, next_holiday_date, next_holiday_description = (
-            service.get_days_until_next_holiday()
-        )
+    def holidays_days_until_next_holiday(ctx: Context) -> None:
+        days, next_date, description = get_service(ctx).get_days_until_next_holiday()
         logger.info(
-            f"There are {days_until_next_holiday} day(s) until the next holiday. "
-            f"Next holiday: {next_holiday_description} on {next_holiday_date}"
+            f"There are {days} day(s) until the next holiday. "
+            f"Next holiday: {description} on {next_date}"
         )
 
     return app

@@ -123,12 +123,12 @@ def get_pending_tasks(data: dict[str, Any]) -> list[Task]:
 
 def unique_tasks(tasks: list[Task]) -> list[Task]:
     seen = set()
-    unique_tasks = []
+    result = []
     for task in tasks:
         if task.description not in seen:
             seen.add(task.description)
-            unique_tasks.append(task)
-    return unique_tasks
+            result.append(task)
+    return result
 
 
 def get_unique_epics(tasks: List[Task]) -> List[Epic]:

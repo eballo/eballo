@@ -1,5 +1,6 @@
 from typer import Typer, Context
 
+from taskjournal.cli.context import get_manager, get_debug
 from taskjournal.services.logger import logger
 
 
@@ -14,10 +15,7 @@ def build_app() -> Typer:
         help="Create a backup all files Examples:\n wk backup run\n",
     )
     def backup_run(ctx: Context) -> None:
-        debug = ctx.obj.get("debug", False)
-        m = ctx.obj.get("manager")
-        logger.debug(f"debug={debug}")
-
-        m.create_backup()
+        logger.debug(f"debug={get_debug(ctx)}")
+        get_manager(ctx).create_backup()
 
     return app

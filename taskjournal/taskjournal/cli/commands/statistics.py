@@ -2,6 +2,7 @@ from typing import Any
 
 from typer import Typer, Context, Option
 
+from taskjournal.cli.context import get_container, get_today, get_debug
 from taskjournal.services.logger import logger
 from taskjournal.services.working_days import WorkingDaysService  # kept for type hint
 
@@ -13,16 +14,13 @@ def build_app() -> Typer:
     )
 
     def get_service(ctx: Context, year: str | None) -> WorkingDaysService:
-        debug = ctx.obj.get("debug", False)
+        debug = get_debug(ctx)
         if not year:
             logger.warning("Getting default year")
-            custom_date = ctx.obj.get("today")
-            final_year = custom_date.year
+            year = get_today(ctx).year
         else:
             logger.debug(f"debug={debug}, year={year}")
-            final_year = year
-        container = ctx.obj.get("container")
-        return container.working_days_service(year=final_year, debug=debug)
+        return get_container(ctx).working_days_service(year=year, debug=debug)
 
     common_year_option: Any = Option(
         None, "--year", "-y", help="Year for which to get holidays."

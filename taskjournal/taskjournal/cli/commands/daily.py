@@ -1,10 +1,12 @@
 import asyncio
-from datetime import datetime
 
 from click.exceptions import Exit
 from typer import Typer, Context, Option
 
+from taskjournal.cli.context import get_manager, get_today, get_debug, parse_date
 from taskjournal.services.logger import logger
+
+_DATETIME_FMT = "%Y-%m-%d %H:%M"
 
 
 def build_app() -> Typer:
@@ -48,10 +50,9 @@ def build_app() -> Typer:
             show_default=True,
         ),
     ) -> None:
-        debug = ctx.obj.get("debug", False)
-        creation_date = ctx.obj.get("today")
-        m = ctx.obj.get("manager")
-        logger.debug(f"date={date!r}, force={force}, debug={debug}")
+        m = get_manager(ctx)
+        creation_date = get_today(ctx)
+        logger.debug(f"date={date!r}, force={force}, debug={get_debug(ctx)}")
 
         if force:
             logger.warning(
@@ -59,11 +60,7 @@ def build_app() -> Typer:
             )
 
         if date:
-            try:
-                creation_date = datetime.strptime(date, "%Y-%m-%d %H:%M")
-            except ValueError:
-                logger.error("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
-                raise Exit(code=1)
+            creation_date = parse_date(date, _DATETIME_FMT)
 
         asyncio.run(m.create_daily_notes(creation_date, force, firefighter, work_from))
 
@@ -85,18 +82,12 @@ def build_app() -> Typer:
             help="Target date/time: 'today' or 'YYYY-MM-DD HH:MM'. (works as a date override if already exists)",
         ),
     ) -> None:
-        debug = ctx.obj.get("debug", False)
-        custom_date = ctx.obj.get("today")
-        m = ctx.obj.get("manager")
-
-        logger.debug(f"date={date!r}, debug={debug}")
+        m = get_manager(ctx)
+        custom_date = get_today(ctx)
+        logger.debug(f"date={date!r}, debug={get_debug(ctx)}")
 
         if date:
-            try:
-                custom_date = datetime.strptime(date, "%Y-%m-%d %H:%M")
-            except ValueError:
-                logger.error("❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'.")
-                raise Exit(code=1)
+            custom_date = parse_date(date, _DATETIME_FMT)
 
         m.finalize_daily_notes(custom_date)
 
@@ -107,12 +98,7 @@ def build_app() -> Typer:
     def daily_time(
         ctx: Context,
     ) -> None:
-        debug = ctx.obj.get("debug", False)
-        custom_date = ctx.obj.get("today")
-        m = ctx.obj.get("manager")
-
-        logger.debug(f"debug={debug}")
-
-        m.daily_time(custom_date)
+        logger.debug(f"debug={get_debug(ctx)}")
+        get_manager(ctx).daily_time(get_today(ctx))
 
     return app

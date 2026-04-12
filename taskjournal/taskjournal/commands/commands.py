@@ -1,5 +1,4 @@
 import os
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from jinja2 import Template
@@ -50,7 +49,18 @@ from taskjournal.services.utils import wrap_with_format
 from taskjournal.services.working_days import WorkingDaysService
 
 
-@dataclass
+def _apply_replacements(template: str, replacements: dict[str, str]) -> str:
+    for placeholder, value in replacements.items():
+        template = template.replace(placeholder, value)
+    return template
+
+
+def _to_hours_minutes(total_seconds: int) -> tuple[int, int]:
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, _ = divmod(remainder, 60)
+    return int(hours), int(minutes)
+
+
 class CommandManager:
 
     def __init__(
@@ -224,33 +234,19 @@ class CommandManager:
         # Get fireman status
         is_fireman_week = FiremanService(custom_date).is_fireman_week()
 
-        # Calculate total hours and minutes for the week
-        total_hours, remainder = divmod(stats["total_time_seconds"], 3600)
-        total_minutes, _ = divmod(remainder, 60)
-
-        week_summary_content = week_summary_content.replace(
-            "{{start_date}}", stats["start_date"].strftime("%Y-%m-%d")
-        )
-        week_summary_content = week_summary_content.replace(
-            "{{end_date}}", stats["end_date"].strftime("%Y-%m-%d")
-        )
-        week_summary_content = week_summary_content.replace(
-            "{{total_time}}", f" {total_hours} hours and {total_minutes} minutes"
-        )
-        week_summary_content = week_summary_content.replace(
-            "{{total_worked_days}}", str(stats["total_worked_days"])
-        )
-        week_summary_content = week_summary_content.replace(
-            "{{vacation_days}}", str(stats["vacation_days"])
-        )
-        week_summary_content = week_summary_content.replace(
-            "{{days_at_office}}", str(stats["days_at_office"])
-        )
-        week_summary_content = week_summary_content.replace(
-            "{{days_at_home}}", str(stats["days_at_home"])
-        )
-        week_summary_content = week_summary_content.replace(
-            "{{is_fireman_week}}", "Yes" if is_fireman_week else "No"
+        total_hours, total_minutes = _to_hours_minutes(stats["total_time_seconds"])
+        week_summary_content = _apply_replacements(
+            week_summary_content,
+            {
+                "{{start_date}}": stats["start_date"].strftime("%Y-%m-%d"),
+                "{{end_date}}": stats["end_date"].strftime("%Y-%m-%d"),
+                "{{total_time}}": f" {total_hours} hours and {total_minutes} minutes",
+                "{{total_worked_days}}": str(stats["total_worked_days"]),
+                "{{vacation_days}}": str(stats["vacation_days"]),
+                "{{days_at_office}}": str(stats["days_at_office"]),
+                "{{days_at_home}}": str(stats["days_at_home"]),
+                "{{is_fireman_week}}": "Yes" if is_fireman_week else "No",
+            },
         )
 
         summary = []
@@ -307,22 +303,15 @@ class CommandManager:
         # GitHub contributions
         github_contributions = await self.github.get_contributions_last_6_months()
 
-        half_year_content = half_year_content.replace(
-            "{{total_tasks}}", f"{total_tasks}"
-        )
-        half_year_content = half_year_content.replace(
-            "{{total_epics}}", f"{total_epics}"
-        )
-        half_year_content = half_year_content.replace(
-            "{{github_contributions}}", f"{github_contributions}"
-        )
-
-        half_year_content = half_year_content.replace(
-            "{{tasks}}", "\n".join(f"{task}" for task in tasks)
-        )
-
-        half_year_content = half_year_content.replace(
-            "{{epics}}", "\n".join(f"{epic}" for epic in epics)
+        half_year_content = _apply_replacements(
+            half_year_content,
+            {
+                "{{total_tasks}}": str(total_tasks),
+                "{{total_epics}}": str(total_epics),
+                "{{github_contributions}}": str(github_contributions),
+                "{{tasks}}": "\n".join(f"{task}" for task in tasks),
+                "{{epics}}": "\n".join(f"{epic}" for epic in epics),
+            },
         )
 
         write_to_file(half_year_review_file, half_year_content)
@@ -359,9 +348,7 @@ class CommandManager:
             period="monthly",
         )
 
-        # Format total time
-        total_hours, remainder = divmod(stats["total_time_seconds"], 3600)
-        total_minutes, _ = divmod(remainder, 60)
+        total_hours, total_minutes = _to_hours_minutes(stats["total_time_seconds"])
         total_time_str = f"{total_hours}h {total_minutes}m"
 
         # Replace placeholders in template
