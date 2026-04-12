@@ -30,6 +30,7 @@ from taskjournal.services.github import GithubService
 from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
 from taskjournal.services.openai import OpenAIService
+from taskjournal.services.parser import DailyParserService
 from taskjournal.services.task_manager import (
     get_default_tasks,
     get_previous_pending_tasks,
@@ -52,12 +53,21 @@ from taskjournal.services.working_days import WorkingDaysService
 @dataclass
 class CommandManager:
 
-    def __init__(self, debug: bool = False) -> None:
+    def __init__(
+        self,
+        jira: JiraService,
+        github: GithubService,
+        task_formatter: TaskFormatter,
+        openai: OpenAIService,
+        parser: DailyParserService,
+        debug: bool = False,
+    ) -> None:
         self.debug = debug
-        self.jira = JiraService()
-        self.github = GithubService()
-        self.task_formatter = TaskFormatter()
-        self.openai = OpenAIService()
+        self.jira = jira
+        self.github = github
+        self.task_formatter = task_formatter
+        self.openai = openai
+        self.parser = parser
 
     @staticmethod
     def _get_week_folder(date: datetime) -> str:
@@ -105,12 +115,12 @@ class CommandManager:
             one_week_ago = create_datetime - timedelta(weeks=1)
             week_folder = self._get_week_folder(one_week_ago)
             last_week_pending_tasks = get_previous_pending_tasks(
-                week_folder, current_file
+                week_folder, current_file, parser=self.parser
             )
         else:
             last_week_pending_tasks = []
 
-        previous_pending_tasks = get_previous_pending_tasks(folder_path, current_file)
+        previous_pending_tasks = get_previous_pending_tasks(folder_path, current_file, parser=self.parser)
         pending = await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
         code_review = await self.jira.get_current_sprint_tasks_in_code_review()
 
@@ -208,7 +218,7 @@ class CommandManager:
         week_summary_content = load_template(WEEK_SUMMARY_TEMPLATE)
 
         # Get statistics
-        working_days_service = WorkingDaysService(year=custom_date.year)
+        working_days_service = WorkingDaysService(year=custom_date.year, parser=self.parser)
         stats = working_days_service.get_week_stats(custom_date, week_folder)
 
         # Get fireman status
@@ -329,7 +339,7 @@ class CommandManager:
         month_content = load_template(MONTH_REVIEW_TEMPLATE)
 
         # Get month statistics and daily summaries
-        working_days_service = WorkingDaysService(custom_date.year, self.debug)
+        working_days_service = WorkingDaysService(year=custom_date.year, parser=self.parser, debug=self.debug)
         stats = working_days_service.get_month_stats(custom_date, BASE_DIR)
 
         # JIRA tasks and epics for the last month

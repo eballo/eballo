@@ -17,9 +17,9 @@ from taskjournal.services.parser import DailyParserService
 from taskjournal.services.wifi import WifiService
 
 
-def get_tasks_from_daily_notes(file_path: str) -> list[Task]:
+def get_tasks_from_daily_notes(file_path: str, parser: DailyParserService | None = None) -> list[Task]:
     try:
-        daily_parser = DailyParserService()
+        daily_parser = parser or DailyParserService()
         data = daily_parser.parse(file_path)
         if data is None:
             logger.error(f"Error reading file {file_path}")
@@ -89,7 +89,11 @@ def get_default_tasks() -> list[Task]:
     return tasks
 
 
-def get_previous_pending_tasks(folder_path: str, current_file: str) -> list[Task]:
+def get_previous_pending_tasks(
+    folder_path: str,
+    current_file: str,
+    parser: DailyParserService | None = None,
+) -> list[Task]:
     """Retrieve unfinished tasks from the most recent daily notes file."""
     if not os.path.exists(folder_path):
         return []
@@ -102,7 +106,7 @@ def get_previous_pending_tasks(folder_path: str, current_file: str) -> list[Task
         return []
     latest_file = os.path.join(folder_path, sorted(daily_files, reverse=True)[0])
     try:
-        daily_parser = DailyParserService()
+        daily_parser = parser or DailyParserService()
         data = daily_parser.parse(latest_file)
         if data is None:
             return []
