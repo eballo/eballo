@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.33.0
+
+- #95 update readme
+
 ## 0.32.0
 
 - #93 Improve month command
