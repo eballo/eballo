@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.36.0
+
+- #108 transform all code into classes
+
 ## 0.35.0
 
 - #98 Improve code
