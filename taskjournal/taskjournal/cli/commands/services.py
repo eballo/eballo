@@ -1,10 +1,10 @@
 import asyncio
-from datetime import datetime
 from typing import Optional
 
 from click.exceptions import Exit
 from typer import Typer, Context, Option
 
+from taskjournal.cli.context import get_manager, get_debug, parse_date
 from taskjournal.config import GIT_HUB_ORGANIZATION_NAME
 from taskjournal.services.logger import logger
 
@@ -43,11 +43,8 @@ def build_app() -> Typer:
             False, "--month", help="Get ALL tasks performed by me in the last month"
         ),
     ) -> None:
-        debug = ctx.obj.get("debug", False)
-        m = ctx.obj.get("manager")
-        logger.debug(f" debug={debug},")
-
-        service = m.jira
+        logger.debug(f"debug={get_debug(ctx)}")
+        service = get_manager(ctx).jira
 
         if all:
             logger.info("📝 All Tasks:")
@@ -97,9 +94,9 @@ def build_app() -> Typer:
             help="GitHub organization name", default=GIT_HUB_ORGANIZATION_NAME
         ),
     ) -> None:
-        debug = ctx.obj.get("debug", False)
-        m = ctx.obj.get("manager")
-        logger.debug(f"debug={debug}")
+        logger.debug(f"debug={get_debug(ctx)}")
+        service = get_manager(ctx).github
+        service.org_name = organization
 
         if (date or contributed is not None) and not stats:
             logger.info(
@@ -107,28 +104,16 @@ def build_app() -> Typer:
             )
             raise Exit(code=1)
 
-        service = m.github
-        service.org_name = organization
-
         if stats:
-            if date:
-                try:
-                    custom_date = datetime.strptime(date, "%Y-%m-%d")
-                    commit_stats = asyncio.run(
-                        service.get_org_commit_stats(
-                            since_date=custom_date,
-                            only_contributed=contributed,
-                        )
-                    )
-
-                except ValueError:
-                    logger.error("❌ Invalid date format. Use 'YYYY-MM-DD'.")
-                    raise Exit(code=1)
-
-            else:
-                commit_stats = asyncio.run(
-                    service.get_org_commit_stats(only_contributed=contributed)
+            custom_date = parse_date(date) if date else None
+            commit_stats = asyncio.run(
+                service.get_org_commit_stats(
+                    since_date=custom_date,
+                    only_contributed=contributed,
                 )
+                if custom_date
+                else service.get_org_commit_stats(only_contributed=contributed)
+            )
             service.print_commit_stats(commit_stats)
 
     return app

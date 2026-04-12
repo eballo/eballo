@@ -200,8 +200,6 @@ class TestCommands:
         mocker.patch("taskjournal.commands.commands.unique_tasks", return_value=[])
         write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
 
-        cmd.task_formatter.format_tasks.call_count == 2
-
         # when
         await cmd.create_daily_notes(fixed_datetime)
 

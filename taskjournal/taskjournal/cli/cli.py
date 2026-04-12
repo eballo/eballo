@@ -29,7 +29,7 @@ def _version_callback(value: bool) -> None:
         raise Exit()
 
 
-def create_app() -> Typer:
+def create_app(container: AppContainer | None = None) -> Typer:
     app = Typer(
         cls=GroupedHelpOrder,
         name=APP_NAME,
@@ -55,7 +55,8 @@ def create_app() -> Typer:
     app.add_typer(build_statistics(), name="statistics")
     app.add_typer(build_info(), name="info")
 
-    container = AppContainer()
+    if container is None:
+        container = AppContainer()
 
     # Root callback (global flags)
     @app.callback()
