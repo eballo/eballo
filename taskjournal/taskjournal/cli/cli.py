@@ -33,6 +33,7 @@ def create_app(container: AppContainer | None = None) -> Typer:
     app = Typer(
         cls=GroupedHelpOrder,
         name=APP_NAME,
+        rich_markup_mode="rich",
         help=(
             "Task Journal CLI.\n\n"
             "A CLI tool to organize your work by managing notes, summaries, reports. \n\n"
@@ -42,18 +43,18 @@ def create_app(container: AppContainer | None = None) -> Typer:
         no_args_is_help=True,
     )
 
-    app.add_typer(build_daily(), name="daily")
-    app.add_typer(build_week(), name="week")
-    app.add_typer(build_one_on_one(), name="1on1")
-    app.add_typer(build_retro(), name="retro")
-    app.add_typer(build_month(), name="month")
-    app.add_typer(build_half_year(), name="half-year")
+    app.add_typer(build_daily(), name="daily", rich_help_panel="📋 Daily workflow")
+    app.add_typer(build_week(), name="week", rich_help_panel="📊 Reports")
+    app.add_typer(build_month(), name="month", rich_help_panel="📊 Reports")
+    app.add_typer(build_half_year(), name="half-year", rich_help_panel="📊 Reports")
+    app.add_typer(build_retro(), name="retro", rich_help_panel="📊 Reports")
+    app.add_typer(build_one_on_one(), name="1on1", rich_help_panel="📊 Reports")
     app.add_typer(build_services(), name="services", hidden=True)
     app.add_typer(build_backup(), name="backup", hidden=True)
     app.add_typer(build_migrate(), name="migrate", hidden=True)
-    app.add_typer(build_holidays(), name="holidays")
-    app.add_typer(build_statistics(), name="statistics")
-    app.add_typer(build_info(), name="info")
+    app.add_typer(build_holidays(), name="holidays", rich_help_panel="🗂️ Tools")
+    app.add_typer(build_statistics(), name="statistics", rich_help_panel="🗂️ Tools")
+    app.add_typer(build_info(), name="info", rich_help_panel="🗂️ Tools")
 
     if container is None:
         container = AppContainer()
