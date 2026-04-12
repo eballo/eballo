@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.34.0
+
+- #80 - add Depenency Injection
+
 ## 0.33.0
 
 - #95 update readme
