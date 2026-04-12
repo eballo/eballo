@@ -20,7 +20,7 @@ class TestCommands:
     ) -> None:
         # given
         get_week_folder = mocker.patch(
-            "taskjournal.commands.commands.get_week_folder",
+            "taskjournal.services.file.FileService.get_week_folder",
             return_value=temp_week_folder,
         )
         makedirs = mocker.patch("taskjournal.commands.commands.os.makedirs")
@@ -43,7 +43,7 @@ class TestCommands:
         # given
         mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
         get_daily_notes_name = mocker.patch(
-            "taskjournal.commands.commands.get_daily_notes_name",
+            "taskjournal.services.time.TimeService.get_daily_notes_name",
             return_value="2025-01-15-DailyNotes.md",
         )
 
@@ -69,7 +69,7 @@ class TestCommands:
             return_value=join(temp_week_folder, "2025-01-15-DailyNotes.md"),
         )
         mocker.patch(
-            "taskjournal.commands.commands.load_template",
+            "taskjournal.services.file.FileService.load_template",
             return_value="date={{date}}, time={{time}}, sprint={{sprint_name}}",
         )
         mocker.patch("taskjournal.commands.commands.os.path.exists", return_value=True)
@@ -101,14 +101,11 @@ class TestCommands:
         path = join(temp_week_folder, "2025-01-15-DailyNotes.md")
         mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value=path)
         mocker.patch(
-            "taskjournal.commands.commands.load_template",
+            "taskjournal.services.file.FileService.load_template",
             return_value="date={{date}}, time={{time}}, sprint={{sprint_name}}\n{{tasks}}\n{{code_review_tasks}}",
         )
         mocker.patch("taskjournal.commands.commands.os.path.exists", return_value=True)
-        mocker.patch(
-            "taskjournal.commands.commands.get_default_tasks",
-            return_value=["task-default"],
-        )
+        cmd.task_manager.get_default_tasks.return_value = ["task-default"]
         mocker.patch.object(
             cmd.jira,
             "get_current_sprint_tasks_not_done_assigned_to_me",
@@ -121,15 +118,12 @@ class TestCommands:
             new_callable=AsyncMock,
             return_value=["task-code-review"],
         )
+        cmd.task_manager.get_previous_pending_tasks.return_value = ["task-prev"]
         mocker.patch(
-            "taskjournal.commands.commands.get_previous_pending_tasks",
-            return_value=["task-prev"],
-        )
-        mocker.patch(
-            "taskjournal.commands.commands.unique_tasks",
+            "taskjournal.services.task_manager.TaskManager.unique_tasks",
             return_value=["task-default", "task-prev", "task-jira-pending"],
         )
-        write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
+        write_to_file = mocker.patch("taskjournal.services.file.FileService.write_to_file")
         # Use SimpleNamespace to provide a .name attribute without conflicting with MagicMock's 'name' kwarg
         mocker.patch.object(
             cmd.jira,
@@ -170,12 +164,12 @@ class TestCommands:
             return_value=join(temp_week_folder, "2025-01-15-DailyNotes.md"),
         )
         mocker.patch(
-            "taskjournal.commands.commands.load_template",
+            "taskjournal.services.file.FileService.load_template",
             return_value="sprint={{sprint_name}}\n{{tasks}}\n{{code_review_tasks}}",
         )
         mocker.patch("taskjournal.commands.commands.os.path.exists", return_value=False)
         mocker.patch.object(cmd.jira, "get_active_sprint", return_value=None)
-        mocker.patch("taskjournal.commands.commands.get_default_tasks", return_value=[])
+        cmd.task_manager.get_default_tasks.return_value = []
         mocker.patch.object(
             cmd.jira,
             "get_current_sprint_tasks_not_done_assigned_to_me",
@@ -194,11 +188,12 @@ class TestCommands:
             new_callable=AsyncMock,
             return_value=[],
         )
+        cmd.task_manager.get_previous_pending_tasks.return_value = []
         mocker.patch(
-            "taskjournal.commands.commands.get_previous_pending_tasks", return_value=[]
+            "taskjournal.services.task_manager.TaskManager.unique_tasks",
+            return_value=[],
         )
-        mocker.patch("taskjournal.commands.commands.unique_tasks", return_value=[])
-        write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
+        write_to_file = mocker.patch("taskjournal.services.file.FileService.write_to_file")
 
         # when
         await cmd.create_daily_notes(fixed_datetime)
@@ -242,21 +237,23 @@ class TestCommands:
         mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value=path)
         mocker.patch("taskjournal.commands.commands.os.path.exists", return_value=True)
         mocker.patch(
-            "taskjournal.commands.commands.check_finalized_in_file", return_value=False
+            "taskjournal.services.file.FileService.check_finalized_in_file",
+            return_value=False,
         )
         content = ["## 2025-01-15 09:30\n", "Other line\n"]
         mocker.patch(
-            "taskjournal.commands.commands.get_lines", return_value=list(content)
+            "taskjournal.services.file.FileService.get_lines",
+            return_value=list(content),
         )
         mocker.patch(
-            "taskjournal.commands.commands.get_start_time",
+            "taskjournal.services.time.TimeService.get_start_time",
             return_value=(0, fixed_datetime),
         )
         wrap = mocker.patch(
-            "taskjournal.commands.commands.wrap_with_format",
+            "taskjournal.services.utils.FormatUtils.wrap_with_format",
             side_effect=lambda s: f"**{s}**",
         )
-        write_lines = mocker.patch("taskjournal.commands.commands.write_lines_to_file")
+        write_lines = mocker.patch("taskjournal.services.file.FileService.write_lines_to_file")
         info = mocker.patch("taskjournal.commands.commands.logger.info")
         custom_end = fixed_datetime + timedelta(hours=2, minutes=15)
 
@@ -283,20 +280,22 @@ class TestCommands:
         mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value=path)
         mocker.patch("taskjournal.commands.commands.os.path.exists", return_value=True)
         mocker.patch(
-            "taskjournal.commands.commands.check_finalized_in_file", return_value=False
+            "taskjournal.services.file.FileService.check_finalized_in_file",
+            return_value=False,
         )
         mocker.patch(
-            "taskjournal.commands.commands.get_lines", return_value=["start\n"]
+            "taskjournal.services.file.FileService.get_lines",
+            return_value=["start\n"],
         )
         mocker.patch(
-            "taskjournal.commands.commands.get_start_time",
+            "taskjournal.services.time.TimeService.get_start_time",
             return_value=(0, fixed_datetime),
         )
         mocker.patch(
-            "taskjournal.commands.commands.wrap_with_format",
+            "taskjournal.services.utils.FormatUtils.wrap_with_format",
             side_effect=lambda s: f"[{s}]",
         )
-        mocker.patch("taskjournal.commands.commands.write_lines_to_file")
+        mocker.patch("taskjournal.services.file.FileService.write_lines_to_file")
         # Assumption: patch datetime.now via module-level reference
         mocker.patch(
             "taskjournal.commands.commands.datetime",
@@ -351,30 +350,15 @@ class TestCommands:
         # given
         mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
         mocker.patch(
-            "taskjournal.commands.commands.load_template",
+            "taskjournal.services.file.FileService.load_template",
             return_value="start={{start_date}}\nend={{end_date}}\nt={{total_time}}\nworked={{total_worked_days}}\nvacation={{vacation_days}}\noffice={{days_at_office}}\nhome={{days_at_home}}\nfireman={{is_fireman_week}}\n{{summary}}",
-        )
-
-        # Mock os.path.exists to return True for Mon/Tue, False otherwise
-        # start_of_week (Mon) is 2025-01-13
-        # Tue is 2025-01-14
-        def mock_exists(path):
-            return "2025-01-13" in path or "2025-01-14" in path
-
-        mocker.patch(
-            "taskjournal.commands.commands.os.path.exists", side_effect=mock_exists
-        )
-
-        mocker.patch(
-            "taskjournal.commands.commands.get_daily_notes_name",
-            side_effect=lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md",
         )
 
         files = ["2025-01-13-DailyNotes.md", "2025-01-14-DailyNotes.md"]
         mocker.patch("taskjournal.commands.commands.os.listdir", return_value=files)
 
         mocker.patch(
-            "taskjournal.commands.commands.get_summary_from_daily_notes",
+            "taskjournal.services.file.FileService.get_summary_from_daily_notes",
             side_effect=["Summary 1", "Summary 2"],
         )
 
@@ -408,7 +392,7 @@ class TestCommands:
 
         mocker.patch.object(cmd.openai, "summarize", side_effect=fake_summarize)
 
-        write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
+        write_to_file = mocker.patch("taskjournal.services.file.FileService.write_to_file")
 
         await cmd.create_week_summary(fixed_datetime)
 
@@ -471,7 +455,7 @@ class TestCommands:
         # given
         mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
         mocker.patch(
-            "taskjournal.commands.commands.load_template",
+            "taskjournal.services.file.FileService.load_template",
             return_value="tasks={{total_tasks}}, epics={{total_epics}}, gh={{github_contributions}}\n{{tasks}}\n{{epics}}",
         )
         # when
@@ -484,7 +468,7 @@ class TestCommands:
         )
 
         mocker.patch(
-            "taskjournal.commands.commands.get_unique_epics",
+            "taskjournal.services.task_manager.TaskManager.get_unique_epics",
             return_value=["E-1", "E-2"],
         )
         mocker.patch.object(
@@ -498,7 +482,7 @@ class TestCommands:
             "close",
             new_callable=AsyncMock,
         )
-        write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
+        write_to_file = mocker.patch("taskjournal.services.file.FileService.write_to_file")
 
         await cmd.create_half_year_review(fixed_datetime)
 
@@ -517,7 +501,7 @@ class TestCommands:
         # given
         mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
         mocker.patch(
-            "taskjournal.commands.commands.load_template",
+            "taskjournal.services.file.FileService.load_template",
             return_value="tasks={{total_tasks}}, epics={{total_epics}}, gh={{github_contributions}}, summary={{summary}}, time={{total_time}}",
         )
         mocker.patch.object(
@@ -527,7 +511,8 @@ class TestCommands:
             return_value=["M-1"],
         )
         mocker.patch(
-            "taskjournal.commands.commands.get_unique_epics", return_value=["ME-1"]
+            "taskjournal.services.task_manager.TaskManager.get_unique_epics",
+            return_value=["ME-1"],
         )
         mocker.patch.object(
             cmd.github,
@@ -563,7 +548,7 @@ class TestCommands:
             return_value="AI Month Summary",
         )
 
-        write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
+        write_to_file = mocker.patch("taskjournal.services.file.FileService.write_to_file")
 
         # when
         await cmd.create_month_review(fixed_datetime)
@@ -589,14 +574,14 @@ class TestCommands:
         mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
         mocker.patch("taskjournal.commands.commands.os.path.exists", return_value=False)
         mocker.patch(
-            "taskjournal.commands.commands.load_template",
+            "taskjournal.services.file.FileService.load_template",
             return_value="retro {{sprint_name}}",
         )
         # Use SimpleNamespace here too to avoid MagicMock 'name' kwarg conflict
         mocker.patch.object(
             cmd.jira, "get_active_sprint", return_value=SimpleNamespace(name="Alpha")
         )
-        write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
+        write_to_file = mocker.patch("taskjournal.services.file.FileService.write_to_file")
 
         cmd.create_retro(fixed_datetime)
 
@@ -615,7 +600,7 @@ class TestCommands:
         # given
         mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
         mocker.patch("taskjournal.commands.commands.os.path.exists", return_value=True)
-        write_to_file = mocker.patch("taskjournal.commands.commands.write_to_file")
+        write_to_file = mocker.patch("taskjournal.services.file.FileService.write_to_file")
 
         # when
         cmd.create_retro(fixed_datetime)
@@ -628,7 +613,7 @@ class TestCommands:
     ) -> None:
         # given
         mocker.patch(
-            "taskjournal.commands.commands.create_backup",
+            "taskjournal.services.backup.BackupService.create",
             return_value="/tmp/backup.zip",
         )
         info = mocker.patch("taskjournal.commands.commands.logger.info")
@@ -647,7 +632,7 @@ class TestCommands:
     ) -> None:
         # given
         mocker.patch(
-            "taskjournal.commands.commands.calculate_working_hours",
+            "taskjournal.services.time.TimeService.calculate_working_hours",
             return_value=("09:00", 3.5, datetime(2025, 1, 15, 12, 30)),
         )
         info = mocker.patch("taskjournal.commands.commands.logger.info")
@@ -663,7 +648,7 @@ class TestCommands:
     ) -> None:
         # given
         mocker.patch(
-            "taskjournal.commands.commands.calculate_working_hours",
+            "taskjournal.services.time.TimeService.calculate_working_hours",
             return_value=(None, None, None),
         )
         err = mocker.patch("taskjournal.commands.commands.logger.error")

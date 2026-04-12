@@ -5,14 +5,7 @@ from datetime import datetime
 
 from pytest import raises
 
-from taskjournal.services.file import (
-    get_week_folder,
-    write_to_file,
-    load_template,
-    check_finalized_in_file,
-    write_lines_to_file,
-    get_summary_from_daily_notes,
-)
+from taskjournal.services.file import FileService
 
 
 class TestFile:
@@ -25,7 +18,7 @@ class TestFile:
         date = mock_datetime.now()
         expected_folder = join(base_dir, "2025", "week3")
         # then
-        assert get_week_folder(base_dir, date) == expected_folder
+        assert FileService.get_week_folder(base_dir, date) == expected_folder
 
     def test_write_to_file(self, mocker: MockerFixture) -> None:
         # given
@@ -34,7 +27,7 @@ class TestFile:
         file_path = "test.txt"
         content = "Hello, world!"
         # when
-        write_to_file(file_path, content)
+        FileService.write_to_file(file_path, content)
         # then
         mock_file.assert_called_once_with(file_path, "w")
         mock_file().write.assert_called_once_with(content)
@@ -47,7 +40,7 @@ class TestFile:
         lines = ["Line 1\n", "Line 2\n"]
 
         # when
-        write_lines_to_file(file_path, lines)
+        FileService.write_lines_to_file(file_path, lines)
 
         # then
         mock_file.assert_called_once_with(file_path, "w")
@@ -60,7 +53,7 @@ class TestFile:
         mocker.patch("builtins.open", mock_open_file)
 
         # when
-        result = load_template("template.txt")
+        result = FileService.load_template("template.txt")
 
         # then
         assert result == "template content"
@@ -72,7 +65,7 @@ class TestFile:
 
         # then
         with raises(FileNotFoundError):
-            load_template("nonexistent.txt")
+            FileService.load_template("nonexistent.txt")
 
     def test_check_finalized_in_file_true(self, mocker: MockerFixture) -> None:
         # given
@@ -80,7 +73,7 @@ class TestFile:
         mocker.patch("builtins.open", mock_open)
 
         # when
-        result = check_finalized_in_file("test.txt")
+        result = FileService.check_finalized_in_file("test.txt")
 
         # then
         assert result is True
@@ -91,7 +84,7 @@ class TestFile:
         mocker.patch("builtins.open", mock_open)
 
         # when
-        result = check_finalized_in_file("test.txt")
+        result = FileService.check_finalized_in_file("test.txt")
         # then
         assert result is False
 
@@ -103,7 +96,7 @@ class TestFile:
         mock_logger = mocker.patch("taskjournal.services.file.logger")
 
         # when
-        result = check_finalized_in_file("missing.txt")
+        result = FileService.check_finalized_in_file("missing.txt")
         # then
         assert result is False
         mock_logger.error.assert_called_once_with(
@@ -118,7 +111,7 @@ class TestFile:
         mock_logger = mocker.patch("taskjournal.services.file.logger")
 
         # when
-        result = check_finalized_in_file("test.txt")
+        result = FileService.check_finalized_in_file("test.txt")
         # then
         assert result is False
         mock_logger.error.assert_called_once()
@@ -134,7 +127,7 @@ class TestFile:
         mocker.patch("builtins.open", mock_open)
 
         # when
-        result = get_summary_from_daily_notes("file.md")
+        result = FileService.get_summary_from_daily_notes("file.md")
 
         # then
         assert result == "Line 1\nLine 2"
@@ -148,7 +141,7 @@ class TestFile:
         mocker.patch("builtins.open", mock_open)
 
         # when
-        result = get_summary_from_daily_notes("file.md")
+        result = FileService.get_summary_from_daily_notes("file.md")
 
         # then
         assert result == "Only line"
@@ -162,7 +155,7 @@ class TestFile:
         mocker.patch("builtins.open", mock_open)
 
         # when
-        result = get_summary_from_daily_notes("file.md")
+        result = FileService.get_summary_from_daily_notes("file.md")
 
         # then
         assert result == ""

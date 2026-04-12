@@ -14,7 +14,7 @@ from typer.testing import CliRunner, Result
 from taskjournal.cli.cli import create_app
 from taskjournal.commands.commands import CommandManager
 from taskjournal.container import AppContainer
-from taskjournal.services.file import get_week_folder
+from taskjournal.services.file import FileService
 from taskjournal.services.fireman import FiremanService
 from taskjournal.services.github import GithubService
 from taskjournal.services.holidays import HolidayService
@@ -104,7 +104,7 @@ def today() -> datetime:
 
 @fixture
 def week_folder(base_dir: str, today: datetime) -> str:
-    return get_week_folder(base_dir, today)
+    return FileService.get_week_folder(base_dir, today)
 
 
 @fixture
@@ -161,6 +161,7 @@ def cmd(mocker: MockerFixture) -> CommandManager:
         task_formatter=mocker.MagicMock(name="TaskFormatterMock"),
         openai=mocker.MagicMock(name="OpenAIServiceMock"),
         parser=mocker.MagicMock(name="DailyParserServiceMock"),
+        task_manager=mocker.MagicMock(name="TaskManagerMock"),
     )
 
 

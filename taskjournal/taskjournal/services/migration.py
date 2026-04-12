@@ -8,11 +8,12 @@ from jinja2 import Template
 from taskjournal.config import DAILY_NOTES_TEMPLATE
 from taskjournal.models.task import Task, Status
 from taskjournal.repositories.task_formatter import TaskFormatter
-from taskjournal.services.file import load_template
+from taskjournal.services.file import FileService
 from taskjournal.services.logger import logger
 from taskjournal.services.parser import DailyParserService
-from taskjournal.services.task_manager import get_work_from_location
-from taskjournal.services.time import get_total_time_spent
+from taskjournal.services.task_manager import TaskManager
+from taskjournal.services.time import TimeService
+from taskjournal.services.wifi import WifiService
 
 
 class MigrationService:
@@ -20,9 +21,14 @@ class MigrationService:
         self,
         task_formatter: TaskFormatter | None = None,
         parser: DailyParserService | None = None,
+        task_manager: TaskManager | None = None,
     ) -> None:
         self.task_formatter: TaskFormatter = task_formatter or TaskFormatter()
         self.daily_parser_service: DailyParserService = parser or DailyParserService()
+        self.task_manager: TaskManager = task_manager or TaskManager(
+            parser=self.daily_parser_service,
+            wifi_service=WifiService(),
+        )
         self.statistics = {
             "migrated_files": 0,
             "skipped_files": 0,
@@ -81,8 +87,8 @@ class MigrationService:
         return None
 
     def _generate_md_content(self, data: dict[str, Any], date: datetime) -> str:
-        work_from = get_work_from_location(date)
-        template_content = load_template(DAILY_NOTES_TEMPLATE)
+        work_from = self.task_manager.get_work_from_location(date)
+        template_content = FileService.load_template(DAILY_NOTES_TEMPLATE)
 
         start_date_time = data["start_time"] if data["start_time"] else "09:00:00"
         end_date_time = (
@@ -155,7 +161,7 @@ class MigrationService:
 
             start_dt = _parse_time(start_date_time)
             end_dt = _parse_time(end_date_time)
-            hours, minutes = get_total_time_spent(start_dt, end_dt)
+            hours, minutes = TimeService.get_total_time_spent(start_dt, end_dt)
             return f"{hours:02}:{minutes:02}"
         except Exception as e:
             logger.warning(f"Failed to calculate time spent: {e}")

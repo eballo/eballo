@@ -5,13 +5,11 @@ from typing import Any
 
 from taskjournal.config import BASE_DIR, HOLIDAYS_FILE
 from taskjournal.constants import WORK_LOCATION_HOME, WORK_LOCATION_OFFICE
+from taskjournal.services.file import FileService
 from taskjournal.services.holidays import HolidayService
 from taskjournal.services.logger import logger
 from taskjournal.services.parser import DailyParserService
-from taskjournal.services.time import (
-    get_daily_notes_name,
-    get_total_time_from_daily_notes,
-)
+from taskjournal.services.time import TimeService
 
 
 class WorkingDaysService:
@@ -189,12 +187,12 @@ class WorkingDaysService:
 
         for i in range(5):  # Monday to Friday
             day = start_of_week + timedelta(days=i)
-            daily_notes_name = get_daily_notes_name(day)
+            daily_notes_name = TimeService.get_daily_notes_name(day)
             daily_file_path = os.path.join(week_folder, daily_notes_name)
 
             if os.path.exists(daily_file_path):
                 total_worked_days += 1
-                daily_time = get_total_time_from_daily_notes(daily_file_path)
+                daily_time = TimeService.get_total_time_from_daily_notes(daily_file_path)
                 total_time_seconds += daily_time
 
                 # Extract statistics
@@ -225,8 +223,6 @@ class WorkingDaysService:
         """
         import calendar
 
-        from taskjournal.services.file import get_week_folder as g_week_folder
-
         year = custom_date.year
         month = custom_date.month
 
@@ -249,13 +245,13 @@ class WorkingDaysService:
             # Skip weekends for stats, but we still check if notes exist
             is_weekend = current_day.weekday() >= 5
 
-            week_folder = g_week_folder(base_dir, current_day)
-            daily_notes_name = get_daily_notes_name(current_day)
+            week_folder = FileService.get_week_folder(base_dir, current_day)
+            daily_notes_name = TimeService.get_daily_notes_name(current_day)
             daily_file_path = os.path.join(week_folder, daily_notes_name)
 
             if os.path.exists(daily_file_path):
                 total_worked_days += 1
-                daily_time = get_total_time_from_daily_notes(daily_file_path)
+                daily_time = TimeService.get_total_time_from_daily_notes(daily_file_path)
                 total_time_seconds += daily_time
 
                 # Extract statistics

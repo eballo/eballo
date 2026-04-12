@@ -4,7 +4,7 @@ from datetime import date as datetime
 from re import compile
 
 from taskjournal.config import BASE_DIR
-from taskjournal.services.file import get_week_folder
+from taskjournal.services.file import FileService
 from taskjournal.services.logger import logger
 
 
@@ -179,7 +179,7 @@ class HolidayService:
 
         count = 0
         for date_obj, info in self.holidays.items():
-            week_folder = get_week_folder(BASE_DIR, date_obj)
+            week_folder = FileService.get_week_folder(BASE_DIR, date_obj)
             if not os.path.exists(week_folder):
                 os.makedirs(week_folder)
                 logger.info(f"Created directory: {week_folder}")
