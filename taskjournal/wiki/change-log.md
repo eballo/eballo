@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.35.0
+
+- #98 Improve code
+
 ## 0.34.0
 
 - #80 - add Depenency Injection
