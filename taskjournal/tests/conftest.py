@@ -6,7 +6,7 @@ from textwrap import dedent
 from unittest.mock import MagicMock
 
 from dependency_injector import providers
-from pytest import MonkeyPatch, fixture
+from pytest import fixture
 from pytest_mock import MockerFixture
 from typer import Typer
 from typer.testing import CliRunner, Result
@@ -14,6 +14,7 @@ from typer.testing import CliRunner, Result
 from taskjournal.cli.cli import create_app
 from taskjournal.commands.commands import CommandManager
 from taskjournal.container import AppContainer
+from taskjournal.services.base import HealthCheckResult, ServiceStatus
 from taskjournal.services.file import FileService
 from taskjournal.services.fireman import FiremanService
 from taskjournal.services.github import GithubService
@@ -29,10 +30,18 @@ from taskjournal.services.working_days import WorkingDaysService
 @fixture
 def cli_container(mocker: MockerFixture) -> AppContainer:
     """Real AppContainer with all external services overridden by mocks."""
+    _ok = HealthCheckResult(status=ServiceStatus.OK, message="Mocked")
+
+    def _mock_svc(name: str) -> MagicMock:
+        m = mocker.MagicMock(name=name)
+        m.health_check.return_value = _ok
+        return m
+
     container = AppContainer()
-    container.jira.override(providers.Object(mocker.MagicMock(name="JiraServiceMock")))
-    container.github.override(providers.Object(mocker.MagicMock(name="GithubServiceMock")))
-    container.openai.override(providers.Object(mocker.MagicMock(name="OpenAIServiceMock")))
+    container.jira.override(providers.Object(_mock_svc("JiraServiceMock")))
+    container.github.override(providers.Object(_mock_svc("GithubServiceMock")))
+    container.openai.override(providers.Object(_mock_svc("OpenAIServiceMock")))
+    container.wifi_service.override(providers.Object(_mock_svc("WifiServiceMock")))
     container.task_formatter.override(providers.Object(mocker.MagicMock(name="TaskFormatterMock")))
     container.daily_parser.override(providers.Object(mocker.MagicMock(name="DailyParserMock")))
     yield container
@@ -110,6 +119,7 @@ def week_folder(base_dir: str, today: datetime) -> str:
 @fixture
 def cli_manager(cli_container: AppContainer, mocker: MockerFixture) -> MagicMock:
     manager = mocker.MagicMock(name="CommandManagerMock")
+    manager.get_previous_day_issues.return_value = None
     cli_container.command_manager.override(providers.Object(manager))
     return manager
 
@@ -155,6 +165,9 @@ def fixed_datetime() -> datetime:
 
 @fixture
 def cmd(mocker: MockerFixture) -> CommandManager:
+    time_service = mocker.MagicMock(name="TimeServiceMock")
+    time_service.get_accumulated_week_seconds.return_value = 0
+    time_service.estimated_finish_time.return_value = datetime(2025, 1, 15, 18, 0, 0)
     return CommandManager(
         jira=mocker.MagicMock(name="JiraServiceMock"),
         github=mocker.MagicMock(name="GithubServiceMock"),
@@ -162,6 +175,9 @@ def cmd(mocker: MockerFixture) -> CommandManager:
         openai=mocker.MagicMock(name="OpenAIServiceMock"),
         parser=mocker.MagicMock(name="DailyParserServiceMock"),
         task_manager=mocker.MagicMock(name="TaskManagerMock"),
+        backup_service=mocker.MagicMock(name="BackupServiceMock"),
+        file_service=mocker.MagicMock(name="FileServiceMock"),
+        time_service=time_service,
     )
 
 
@@ -191,20 +207,22 @@ def temp_holiday_file(tmp_path: Path) -> str:
 
 
 @fixture
-def backup_source_dir(tmp_path: Path, monkeypatch: MonkeyPatch) -> Path:
+def backup_source_dir(tmp_path: Path) -> Path:
     (tmp_path / "note1.txt").write_text("Note 1")
     (tmp_path / "subfolder").mkdir()
     (tmp_path / "subfolder" / "note2.txt").write_text("Note 2")
-    monkeypatch.setattr("taskjournal.services.backup.BASE_DIR", tmp_path)
     return tmp_path
 
 
 @fixture
-def backup_output_dir(tmp_path: Path, monkeypatch: MonkeyPatch) -> Path:
-    backup_path = tmp_path / "backups"
-    monkeypatch.setenv("BACKUP_DIR", str(backup_path))
-    monkeypatch.setattr("taskjournal.services.backup.BACKUP_DIR", backup_path)
-    return backup_path
+def backup_output_dir(tmp_path: Path) -> Path:
+    return tmp_path / "backups"
+
+
+@fixture
+def backup_service_instance(backup_source_dir: Path, backup_output_dir: Path) -> "BackupService":
+    from taskjournal.services.backup import BackupService as _BS
+    return _BS(backup_dir=str(backup_output_dir), base_dir=str(backup_source_dir))
 
 
 @fixture
@@ -245,12 +263,12 @@ def mock_today(mocker: MockerFixture) -> date:
 @fixture
 def jira_service(mocker: MockerFixture) -> JiraService:
     mocker.patch("taskjournal.services.jira.JIRA", return_value=mocker.MagicMock())
-    return JiraService()
+    return JiraService(api_token="test-token", email="test@test.com", board_id="TEST", organization="testorg")
 
 
 @fixture
 def github_service() -> GithubService:
-    return GithubService()
+    return GithubService(token="fake-token", org_name="test-org")
 
 
 @fixture
@@ -260,17 +278,17 @@ def openai_chat_completions_url() -> str:
 
 @fixture
 def openai_service() -> OpenAIService:
-    return OpenAIService()
+    return OpenAIService(api_key="test-key")
 
 
 @fixture
 def wifi_service() -> WifiService:
-    return WifiService()
+    return WifiService(home_wifi="CodePI", office_wifi="TSH")
 
 
 @fixture
 def wifi_subprocess_run(mocker: MockerFixture) -> MagicMock:
-    return mocker.patch("taskjournal.services.wifi.subprocess.run")
+    return mocker.patch("taskjournal.services.wifi.run")
 
 
 @fixture
@@ -284,8 +302,12 @@ def wifi_result_factory() -> Callable[[str], MagicMock]:
 
 
 @fixture
-def migration_service() -> MigrationService:
-    return MigrationService()
+def migration_service(mocker: MockerFixture) -> MigrationService:
+    return MigrationService(
+        task_formatter=mocker.MagicMock(),
+        parser=mocker.MagicMock(),
+        task_manager=mocker.MagicMock(),
+    )
 
 
 @fixture

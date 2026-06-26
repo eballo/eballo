@@ -5,7 +5,7 @@ from typer.core import TyperGroup
 class GroupedHelpOrder(TyperGroup):
     desired_order = ["daily", "week", "month", "half-year", "retro", "1on1", "holidays", "statistics", "info"]
 
-    def list_commands(self, ctx: Context) -> list[str]:
+    def list_commands(self, ctx: Context) -> list[str]:  # type: ignore[override]
         cmds = list(self.commands.keys())
         ordered = [c for c in self.desired_order if c in self.commands]
         ordered += [c for c in cmds if c not in ordered]

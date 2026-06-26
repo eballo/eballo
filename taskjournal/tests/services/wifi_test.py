@@ -1,10 +1,43 @@
 from collections.abc import Callable
 from unittest.mock import MagicMock
 
+from taskjournal.constants import PLACEHOLDER_HOME_WIFI, PLACEHOLDER_OFFICE_WIFI
+from taskjournal.services.base import ServiceStatus
 from taskjournal.services.wifi import WifiService
 
 
 class TestWifiService:
+    def test_name_property(self, wifi_service: WifiService) -> None:
+        assert wifi_service.name == "WiFi"
+
+    def test_health_check_ok_when_both_custom(self) -> None:
+        svc = WifiService(home_wifi="MyHome", office_wifi="MyOffice")
+        result = svc.health_check()
+        assert result.status == ServiceStatus.OK
+
+    def test_health_check_unconfigured_when_home_is_default(self) -> None:
+        svc = WifiService(home_wifi=PLACEHOLDER_HOME_WIFI, office_wifi="MyOffice")
+        result = svc.health_check()
+        assert result.status == ServiceStatus.UNCONFIGURED
+        assert any("HOME_WIFI" in d for d in result.details)
+
+    def test_health_check_unconfigured_when_office_is_default(self) -> None:
+        svc = WifiService(home_wifi="MyHome", office_wifi=PLACEHOLDER_OFFICE_WIFI)
+        result = svc.health_check()
+        assert result.status == ServiceStatus.UNCONFIGURED
+        assert any("OFFICE_WIFI" in d for d in result.details)
+
+    def test_health_check_unconfigured_with_two_details_when_both_default(self) -> None:
+        svc = WifiService(home_wifi=PLACEHOLDER_HOME_WIFI, office_wifi=PLACEHOLDER_OFFICE_WIFI)
+        result = svc.health_check()
+        assert result.status == ServiceStatus.UNCONFIGURED
+        assert len(result.details) == 2
+
+    def test_sentinel_strings_come_from_constants(self) -> None:
+        from taskjournal.services.setup import _DEFAULTS
+        assert _DEFAULTS["HOME_WIFI"] == PLACEHOLDER_HOME_WIFI
+        assert _DEFAULTS["OFFICE_WIFI"] == PLACEHOLDER_OFFICE_WIFI
+
     def test_get_name_success(
         self,
         wifi_service: WifiService,

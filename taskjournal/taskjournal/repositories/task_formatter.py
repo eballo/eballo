@@ -2,6 +2,13 @@ from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.models.task import Task, Status
 from taskjournal.services.logger import logger
 
+_STATUS_CHECKBOX: dict[Status, str] = {
+    Status.DONE: "[x]",
+    Status.BLOCKED: "[-]",
+    Status.IN_PROGRESS: "[>]",
+    Status.CODE_REVIEW: "[~]",
+}
+
 
 class TaskFormatter:
 
@@ -15,11 +22,7 @@ class TaskFormatter:
         with_name: bool,
         with_status: bool,
     ) -> str:
-        checkbox = self.prefix + "[ ]"
-        if task.status == Status.DONE:
-            checkbox = self.prefix + "[x]"
-        elif task.status == Status.BLOCKED:
-            checkbox = self.prefix + "[-]"
+        checkbox = self.prefix + _STATUS_CHECKBOX.get(task.status, "[ ]")
 
         key = f"[{task.key}]" if task.key else ""
         link = f"({task.link})" if task.link else ""

@@ -1,4 +1,4 @@
-import asyncio
+from asyncio import run
 
 from typer import Typer, Context
 
@@ -20,6 +20,6 @@ def build_app() -> Typer:
         ctx: Context,
     ) -> None:
         logger.debug(f"debug={get_debug(ctx)}")
-        asyncio.run(get_manager(ctx).create_half_year_review(get_today(ctx)))
+        run(get_manager(ctx).create_half_year_review(get_today(ctx)))
 
     return app

@@ -67,7 +67,7 @@ class TestJira:
         )
 
         # when
-        service = JiraService()
+        service = JiraService(api_token="tok", email="e@e.com", board_id="BD", organization="org")
 
         # then
         assert service.jira is jira_client
@@ -80,9 +80,19 @@ class TestJira:
         mocker.patch("taskjournal.services.jira.JIRA", side_effect=RuntimeError("boom"))
 
         # when
-        service = JiraService()
+        service = JiraService(api_token="tok", email="e@e.com", board_id="BD", organization="org")
 
         # then
+        assert service.jira is None
+
+    def test_init_skips_connection_when_unconfigured(self, mocker: MockerFixture) -> None:
+        jira_ctor = mocker.patch("taskjournal.services.jira.JIRA")
+
+        service = JiraService(
+            api_token="your-jira-key", email="e@e.com", board_id="BD", organization="org"
+        )
+
+        jira_ctor.assert_not_called()
         assert service.jira is None
 
     def test_get_active_sprint_returns_none_when_unavailable(

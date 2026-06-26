@@ -48,7 +48,7 @@ class TestFile:
 
     def test_load_template_success(self, mocker: MockerFixture) -> None:
         # given
-        mocker.patch("os.path.exists", return_value=True)
+        mocker.patch("taskjournal.services.file.exists", return_value=True)
         mock_open_file = mocker.mock_open(read_data="template content")
         mocker.patch("builtins.open", mock_open_file)
 
@@ -61,7 +61,7 @@ class TestFile:
 
     def test_load_template_file_not_found(self, mocker: MockerFixture) -> None:
         # when
-        mocker.patch("os.path.exists", return_value=False)
+        mocker.patch("taskjournal.services.file.exists", return_value=False)
 
         # then
         with raises(FileNotFoundError):
@@ -100,7 +100,7 @@ class TestFile:
         # then
         assert result is False
         mock_logger.error.assert_called_once_with(
-            "Error: The file 'missing.txt' was not found."
+            "File 'missing.txt' was not found."
         )
 
     def test_check_finalized_in_file_generic_exception(
@@ -116,6 +116,28 @@ class TestFile:
         assert result is False
         mock_logger.error.assert_called_once()
         assert "disk error" in mock_logger.error.call_args[0][0]
+
+    def test_check_finalized_in_file_end_time_with_value(self, mocker: MockerFixture) -> None:
+        # given
+        mock_open = mocker.mock_open(read_data="**End Time:** 20:00:00\n")
+        mocker.patch("builtins.open", mock_open)
+
+        # when
+        result = FileService.check_finalized_in_file("test.txt")
+
+        # then
+        assert result is True
+
+    def test_check_finalized_in_file_end_time_empty(self, mocker: MockerFixture) -> None:
+        # given
+        mock_open = mocker.mock_open(read_data="**End Time:** \n")
+        mocker.patch("builtins.open", mock_open)
+
+        # when
+        result = FileService.check_finalized_in_file("test.txt")
+
+        # then
+        assert result is False
 
     def test_get_summary_from_daily_notes_markdown_heading(
         self,

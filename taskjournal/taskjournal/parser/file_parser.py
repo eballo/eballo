@@ -1,5 +1,5 @@
-import uuid
 from typing import Literal, TypedDict
+from uuid import uuid4
 
 from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.constants import NORMAL_TASKS
@@ -35,7 +35,7 @@ class ParseFile:
                     # Skip tasks that are not in the normal task list
                     continue
                 task = Task(
-                    id=str(uuid.uuid4()),
+                    id=str(uuid4()),
                     description=description,
                     status=self.get_task_status(line),
                 )

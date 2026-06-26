@@ -1,23 +1,42 @@
-from typing import List
+from typing import Any
 
 import httpx
 
-from taskjournal.config import OPENAI_API_KEY
+from taskjournal.services.base import BaseService, HealthCheckResult, ServiceStatus
 from taskjournal.services.logger import logger
+from taskjournal.services.time import TimeService
+
+_UNCONFIGURED_KEY = "your-openai-api-key"
 
 
-class OpenAIService:
-    def __init__(self) -> None:
+class OpenAIService(BaseService):
+    @property
+    def name(self) -> str:
+        return "OpenAI"
+
+    def health_check(self) -> HealthCheckResult:
+        if not self.api_key or self.api_key == _UNCONFIGURED_KEY:
+            return HealthCheckResult(
+                ServiceStatus.UNCONFIGURED,
+                "OPENAI_API_KEY not configured — AI summaries disabled",
+            )
+        return HealthCheckResult(
+            ServiceStatus.OK,
+            "API key configured",
+        )
+
+    def __init__(self, api_key: str) -> None:
+        self.api_key = api_key
         self.base_url = "https://api.openai.com/v1/chat/completions"
         self.headers = {
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
 
     async def summarize(
         self,
-        daily_summaries: List[str],
-        stats: dict = None,
+        daily_summaries: list[str],
+        stats: dict[str, Any] | None = None,
         is_fireman_week: bool = False,
         period: str = "weekly",
     ) -> str:
@@ -60,8 +79,9 @@ class OpenAIService:
         )
 
         if stats:
-            total_hours, remainder = divmod(stats.get("total_time_seconds", 0), 3600)
-            total_minutes, _ = divmod(remainder, 60)
+            total_hours, total_minutes = TimeService.seconds_to_hours_minutes(
+                stats.get("total_time_seconds", 0)
+            )
             user_content += f"### {period.capitalize()} Statistics (FOR CONTEXT ONLY - DO NOT REPEAT):\n"
             user_content += f"- Total Time Worked: {total_hours}h {total_minutes}m\n"
             user_content += f"- Days at Office: {stats.get('days_at_office', 0)}\n"

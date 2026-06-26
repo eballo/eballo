@@ -1,3 +1,10 @@
+# Section header keywords — single source of truth for parser and templates
+SECTION_PLANNED_TASKS = "Planned Tasks"
+SECTION_CODE_REVIEW_TASKS = "Code Review Tasks"
+SECTION_NOTES = "Notes"
+SECTION_SUMMARY = "Summary"
+SECTION_FIREFIGHTER = "Firefighter"
+
 BASE_TASKS = [
     "Check emails",
     "Check Calendar",
@@ -19,3 +26,7 @@ NORMAL_TASKS = BASE_TASKS + EXTENDED_TASKS
 # Work locations
 WORK_LOCATION_HOME = "Home"
 WORK_LOCATION_OFFICE = "Office"
+
+# Placeholder sentinel values used to detect unconfigured state
+PLACEHOLDER_HOME_WIFI = "CodePI"
+PLACEHOLDER_OFFICE_WIFI = "TSH"

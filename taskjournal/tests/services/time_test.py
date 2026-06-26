@@ -122,24 +122,50 @@ class TestTime:
         # then
         assert total == 3600
 
-    def test_estimated_finish_time(self) -> None:
-        # given
-        created = datetime(2025, 1, 19, 9, 0, 0)
-        # when
-        result = TimeService.estimated_finish_time(created)
-        # then
+    def test_estimated_finish_time__monday_no_accumulated(self) -> None:
+        # Monday, 0 days before → expected=0, extra=0, today=8h work + 1h lunch
+        created = datetime(2025, 1, 20, 9, 0, 0)
+        result = TimeService.estimated_finish_time(created, accumulated_seconds=0, days_before_today=0)
         assert result == created + timedelta(hours=9)
 
-    def test_get_total_time_spent_returns_hours_and_minutes(self) -> None:
-        # given
-        start = datetime(2025, 1, 19, 9, 0, 0)
-        end = datetime(2025, 1, 19, 10, 15, 0)
+    def test_estimated_finish_time__ahead_of_schedule(self) -> None:
+        # Friday, 4 days before → expected=32h, accumulated=36h, extra=+4h → today=4h + 1h lunch
+        created = datetime(2025, 1, 24, 9, 0, 0)
+        accumulated = 36 * 3600
+        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated, days_before_today=4)
+        assert result == created + timedelta(hours=5)
 
-        # when
+    def test_estimated_finish_time__behind_schedule(self) -> None:
+        # Friday, 4 days before → expected=32h, accumulated=28h, extra=-4h → today=12h + 1h lunch
+        created = datetime(2025, 1, 24, 9, 0, 0)
+        accumulated = 28 * 3600
+        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated, days_before_today=4)
+        assert result == created + timedelta(hours=13)
+
+    def test_estimated_finish_time__over_target_clamps_to_lunch(self) -> None:
+        # So far ahead that today's work = 0, only 1h lunch remains
+        created = datetime(2025, 1, 24, 9, 0, 0)
+        accumulated = 42 * 3600  # 10h extra over expected 32h
+        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated, days_before_today=4)
+        assert result == created + timedelta(hours=1)
+
+    def test_get_total_time_spent_deducts_lunch(self) -> None:
+        # 9h elapsed - 1h lunch = 8h worked
+        start = datetime(2025, 1, 19, 9, 0, 0)
+        end = datetime(2025, 1, 19, 18, 0, 0)
+
         hours, minutes = TimeService.get_total_time_spent(start, end)
 
-        # then
-        assert (hours, minutes) == (1, 15)
+        assert (hours, minutes) == (8, 0)
+
+    def test_get_total_time_spent_clamps_to_zero(self) -> None:
+        # Less than 1h elapsed → 0h worked (lunch already consumed the time)
+        start = datetime(2025, 1, 19, 9, 0, 0)
+        end = datetime(2025, 1, 19, 9, 30, 0)
+
+        hours, minutes = TimeService.get_total_time_spent(start, end)
+
+        assert (hours, minutes) == (0, 0)
 
     def test_get_start_time_success(self) -> None:
         # given
@@ -179,10 +205,29 @@ class TestTime:
             "taskjournal.services.time.FileService.get_week_folder",
             return_value="/tmp/base/2025/week3",
         )
-        makedirs = mocker.patch("taskjournal.services.time.os.makedirs")
+        makedirs = mocker.patch("taskjournal.services.time.makedirs")
 
         daily_file, week_folder = TimeService.get_week_folder_and_daily_notes_file(target)
 
         assert week_folder == "/tmp/base/2025/week3"
         assert daily_file == "/tmp/base/2025/week3/2025-01-19-DailyNotes.md"
         makedirs.assert_called_once_with("/tmp/base/2025/week3", exist_ok=True)
+
+    def test_resolve_daily_notes_file_does_not_create_directory(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        mocker.patch("taskjournal.services.time.TEMPLATE_FORMAT", "md")
+        mocker.patch("taskjournal.services.time.BASE_DIR", "/tmp/base")
+        mocker.patch(
+            "taskjournal.services.time.FileService.get_week_folder",
+            return_value="/tmp/base/2025/week3",
+        )
+        makedirs = mocker.patch("taskjournal.services.time.makedirs")
+        target = datetime(2025, 1, 19, 9, 0, 0)
+
+        daily_file, week_folder = TimeService.resolve_daily_notes_file(target)
+
+        assert week_folder == "/tmp/base/2025/week3"
+        assert daily_file == "/tmp/base/2025/week3/2025-01-19-DailyNotes.md"
+        makedirs.assert_not_called()

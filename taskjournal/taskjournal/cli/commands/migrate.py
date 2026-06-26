@@ -1,4 +1,5 @@
-import os
+from os import walk
+from os.path import isdir, isfile, join
 
 from typer import Typer, Context, Argument
 
@@ -25,14 +26,14 @@ def build_app() -> Typer:
         container = ctx.obj.get("container")
         service = container.migration()
 
-        if os.path.isfile(path):
+        if isfile(path):
             service.migrate_file(path)
-        elif os.path.isdir(path):
+        elif isdir(path):
             logger.info(f"Scanning directory: {path}")
-            for root, _, files in os.walk(path):
+            for root, _, files in walk(path):
                 for file in files:
                     if file.endswith("DailyNotes.txt"):
-                        full_path = os.path.join(root, file)
+                        full_path = join(root, file)
                         service.migrate_file(full_path)
         else:
             logger.error(f"Path not found: {path}")

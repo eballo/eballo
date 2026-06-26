@@ -1,10 +1,12 @@
-import os
-from datetime import date as datetime  # Keeping your alias convention
+from calendar import monthrange
+from datetime import date as datetime
+from os.path import exists, join  # Keeping your alias convention
 from datetime import timedelta
 from typing import Any
 
 from taskjournal.config import BASE_DIR, HOLIDAYS_FILE
 from taskjournal.constants import WORK_LOCATION_HOME, WORK_LOCATION_OFFICE
+from taskjournal.services.base import BaseService
 from taskjournal.services.file import FileService
 from taskjournal.services.holidays import HolidayService
 from taskjournal.services.logger import logger
@@ -12,7 +14,7 @@ from taskjournal.services.parser import DailyParserService
 from taskjournal.services.time import TimeService
 
 
-class WorkingDaysService:
+class WorkingDaysService(BaseService):
     def __init__(
         self,
         year: str | int,
@@ -23,33 +25,58 @@ class WorkingDaysService:
         self.year = year
         self.debug = debug
         if holiday_service is None:
-            holidays_path = os.path.join(BASE_DIR, f"{year}/{HOLIDAYS_FILE}")
+            holidays_path = join(BASE_DIR, f"{year}/{HOLIDAYS_FILE}")
             holiday_service = HolidayService(filepath=holidays_path)
         self.holiday_service = holiday_service
         self.parser = parser or DailyParserService()
 
+    # --- private helpers ---
+
+    @staticmethod
+    def _classify_work_location(data: dict[str, Any]) -> tuple[bool, bool]:
+        """Returns (is_office, is_home) for a parsed daily note."""
+        work_from = data.get("work_from", "").strip().capitalize()
+        is_office = WORK_LOCATION_OFFICE.lower() in work_from.lower()
+        is_home = WORK_LOCATION_HOME.lower() in work_from.lower()
+        return is_office, is_home
+
+    def _process_daily_file(self, daily_file_path: str) -> dict[str, Any]:
+        """
+        Parse a single daily note file and return its stats contribution.
+        Returns zeros when the file cannot be parsed.
+        """
+        time_seconds = TimeService.get_total_time_from_daily_notes(daily_file_path)
+        is_office = is_home = False
+        summary_lines: list[str] = []
+
+        data = self.parser.parse(daily_file_path)
+        if data:
+            is_office, is_home = self._classify_work_location(data)
+            raw_summary = data.get("summary", [])
+            if raw_summary:
+                text = " ".join(line for line in raw_summary if line.strip())
+                if text:
+                    summary_lines.append(text)
+
+        return {
+            "time_seconds": time_seconds,
+            "is_office": is_office,
+            "is_home": is_home,
+            "summary_lines": summary_lines,
+        }
+
     def _analyze_year(self, year: str | int) -> list[dict[str, Any]]:
-        """
-        Internal helper: Generates a day-by-day classification for the entire year.
-        Returns a list of dicts: {'date': date_obj, 'type': 'weekend'|'holiday'|'workday'}
-        """
         start_date = datetime(int(year), 1, 1)
         end_date = datetime(int(year), 12, 31)
-
-        # Calculate total days in year
         total_days = (end_date - start_date).days + 1
 
         analysis = []
-
         for i in range(total_days):
             current_day = start_date + timedelta(days=i)
             day_type = "workday"
 
-            # 1. Check Weekend (Saturday=5, Sunday=6)
             if current_day.weekday() >= 5:
                 day_type = "weekend"
-
-            # 2. Check Holiday (Only if it's not already a weekend to avoid double counting)
             elif self.holiday_service and self.holiday_service.is_holiday(current_day):
                 day_type = "holiday"
 
@@ -57,10 +84,9 @@ class WorkingDaysService:
 
         return analysis
 
+    # --- public methods ---
+
     def summary(self) -> dict[str, Any]:
-        """
-        Returns an overview of the theoretical capacity of the year.
-        """
         data = self._analyze_year(self.year)
 
         total_days = len(data)
@@ -73,8 +99,8 @@ class WorkingDaysService:
             "total_calendar_days": total_days,
             "total_weekends": weekends,
             "holidays_on_weekdays": holidays,
-            "theoretical_working_days": workdays + holidays,  # Mon-Fri count
-            "real_working_days": workdays,  # Mon-Fri minus Holidays
+            "theoretical_working_days": workdays + holidays,
+            "real_working_days": workdays,
         }
 
         logger.info(f"--- Summary for {self.year} ---")
@@ -84,21 +110,12 @@ class WorkingDaysService:
         return summary_data
 
     def get_progress(self) -> dict[str, Any]:
-        """
-        Calculates days already worked vs days missing based on today's date.
-        Tracks holidays, weekends (taken/total), and percentage completion.
-        """
         today = datetime.today()
         data = self._analyze_year(self.year)
 
-        worked_count = 0
-        missing_count = 0
-        holidays_taken = 0
-        holidays_remaining = 0
-        total_weekends = 0
-        weekends_taken = 0
-
-        # Calendar counters
+        worked_count = missing_count = 0
+        holidays_taken = holidays_remaining = 0
+        total_weekends = weekends_taken = 0
         days_elapsed = 0
         total_calendar_days = len(data)
 
@@ -106,25 +123,19 @@ class WorkingDaysService:
             entry_date = entry["date"]
             entry_type = entry["type"]
 
-            # Count calendar days elapsed (includes today)
             if entry_date <= today:
                 days_elapsed += 1
 
-            # Workday logic
             if entry_type == "workday":
                 if entry_date <= today:
                     worked_count += 1
-                else:  # entry_date >= today
+                else:
                     missing_count += 1
-
-            # Holiday logic
             elif entry_type == "holiday":
                 if entry_date <= today:
                     holidays_taken += 1
-                else:  # entry_date >= today
+                else:
                     holidays_remaining += 1
-
-            # Weekend logic
             elif entry_type == "weekend":
                 total_weekends += 1
                 if entry_date <= today:
@@ -132,12 +143,7 @@ class WorkingDaysService:
 
         weekends_remaining = total_weekends - weekends_taken
         total_workdays = worked_count + missing_count
-
-        # Calculate percentage
-        if total_workdays > 0:
-            progress_percent = (worked_count / total_workdays) * 100
-        else:
-            progress_percent = 0.0
+        progress_percent = (worked_count / total_workdays * 100) if total_workdays > 0 else 0.0
 
         logger.info(f"--- Progress for {self.year} ---")
         logger.info(f"Work Progress: {progress_percent:.2f}%")
@@ -162,49 +168,32 @@ class WorkingDaysService:
         }
 
     def get_real_working_days(self) -> int:
-        """
-        Returns the exact number of working days taking holidays into account.
-        """
         data = self._analyze_year(self.year)
         real_days = sum(1 for d in data if d["type"] == "workday")
-
         logger.info(f"Real working days in {self.year}: {real_days}")
         return real_days
 
     def get_week_stats(self, custom_date: datetime, week_folder: str) -> dict[str, Any]:
-        """
-        Calculates weekly statistics based on daily notes in the week folder.
-        """
-        total_time_seconds = 0
-        days_at_office = 0
-        days_at_home = 0
-        total_worked_days = 0
-        vacation_days = 0
+        total_time_seconds = days_at_office = days_at_home = 0
+        total_worked_days = vacation_days = 0
 
-        # Get start of week (Monday) and end of week (Friday)
         start_of_week = custom_date - timedelta(days=custom_date.weekday())
         end_of_week = start_of_week + timedelta(days=4)
 
         for i in range(5):  # Monday to Friday
             day = start_of_week + timedelta(days=i)
             daily_notes_name = TimeService.get_daily_notes_name(day)
-            daily_file_path = os.path.join(week_folder, daily_notes_name)
+            daily_file_path = join(week_folder, daily_notes_name)
 
-            if os.path.exists(daily_file_path):
+            if exists(daily_file_path):
                 total_worked_days += 1
-                daily_time = TimeService.get_total_time_from_daily_notes(daily_file_path)
-                total_time_seconds += daily_time
-
-                # Extract statistics
-                data = self.parser.parse(daily_file_path)
-                if data:
-                    work_from = data.get("work_from", "").strip().capitalize()
-                    if WORK_LOCATION_OFFICE.lower() in work_from.lower():
-                        days_at_office += 1
-                    elif WORK_LOCATION_HOME.lower() in work_from.lower():
-                        days_at_home += 1
+                stats = self._process_daily_file(daily_file_path)
+                total_time_seconds += stats["time_seconds"]
+                if stats["is_office"]:
+                    days_at_office += 1
+                elif stats["is_home"]:
+                    days_at_home += 1
             else:
-                # If no daily note, it's a vacation day or a holiday
                 vacation_days += 1
 
         return {
@@ -218,61 +207,35 @@ class WorkingDaysService:
         }
 
     def get_month_stats(self, custom_date: datetime, base_dir: str) -> dict[str, Any]:
-        """
-        Calculates monthly statistics by iterating through all weeks of the month.
-        """
-        import calendar
-
         year = custom_date.year
         month = custom_date.month
 
-        # Get first and last day of the month
-        _, last_day = calendar.monthrange(year, month)
+        _, last_day = monthrange(year, month)
         start_date = datetime(year, month, 1)
         end_date = datetime(year, month, last_day)
 
-        total_time_seconds = 0
-        days_at_office = 0
-        days_at_home = 0
-        total_worked_days = 0
-        vacation_days = 0
-        all_daily_summaries = []
+        total_time_seconds = days_at_office = days_at_home = 0
+        total_worked_days = vacation_days = 0
+        all_daily_summaries: list[str] = []
 
-        # Iterate through every day of the month
         for day_num in range(1, last_day + 1):
             current_day = datetime(year, month, day_num)
-
-            # Skip weekends for stats, but we still check if notes exist
             is_weekend = current_day.weekday() >= 5
 
             week_folder = FileService.get_week_folder(base_dir, current_day)
             daily_notes_name = TimeService.get_daily_notes_name(current_day)
-            daily_file_path = os.path.join(week_folder, daily_notes_name)
+            daily_file_path = join(week_folder, daily_notes_name)
 
-            if os.path.exists(daily_file_path):
+            if exists(daily_file_path):
                 total_worked_days += 1
-                daily_time = TimeService.get_total_time_from_daily_notes(daily_file_path)
-                total_time_seconds += daily_time
-
-                # Extract statistics
-                data = self.parser.parse(daily_file_path)
-                if data:
-                    work_from = data.get("work_from", "").strip().capitalize()
-                    if WORK_LOCATION_OFFICE.lower() in work_from.lower():
-                        days_at_office += 1
-                    elif WORK_LOCATION_HOME.lower() in work_from.lower():
-                        days_at_home += 1
-
-                    # Collect summaries for AI
-                    summary_lines = data.get("summary", [])
-                    if summary_lines:
-                        summary_text = " ".join(
-                            line for line in summary_lines if line.strip()
-                        )
-                        if summary_text:
-                            all_daily_summaries.append(summary_text)
+                stats = self._process_daily_file(daily_file_path)
+                total_time_seconds += stats["time_seconds"]
+                if stats["is_office"]:
+                    days_at_office += 1
+                elif stats["is_home"]:
+                    days_at_home += 1
+                all_daily_summaries.extend(stats["summary_lines"])
             elif not is_weekend:
-                # If no daily note on a weekday, it's a vacation day or a holiday
                 vacation_days += 1
 
         return {

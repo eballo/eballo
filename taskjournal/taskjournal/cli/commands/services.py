@@ -1,7 +1,6 @@
-import asyncio
-from typing import Optional
+from asyncio import run
 
-from click.exceptions import Exit
+from sys import exit as sys_exit
 from typer import Typer, Context, Option
 
 from taskjournal.cli.context import get_manager, get_debug, parse_date
@@ -13,6 +12,7 @@ def build_app() -> Typer:
     app = Typer(
         help="Create a Retrospective",
         no_args_is_help=True,
+        pretty_exceptions_enable=False,
     )
 
     @app.command(
@@ -48,24 +48,24 @@ def build_app() -> Typer:
 
         if all:
             logger.info("📝 All Tasks:")
-            tasks = asyncio.run(service.get_current_sprint_tasks())
+            tasks = run(service.get_current_sprint_tasks())
         elif mine:
             logger.info("📝 Current Sprint Tasks ALL assigned to me:")
-            tasks = asyncio.run(service.get_current_sprint_tasks_all_assigned_to_me())
+            tasks = run(service.get_current_sprint_tasks_all_assigned_to_me())
         elif code:
             logger.info("📝 Current Sprint Tasks in Code Review:")
-            tasks = asyncio.run(service.get_current_sprint_tasks_in_code_review())
+            tasks = run(service.get_current_sprint_tasks_in_code_review())
         elif midreview:
             logger.info("📝 Current Tasks assigned to me in the last 6 months:")
-            tasks = asyncio.run(
+            tasks = run(
                 service.get_current_tasks_assigned_to_me_last_6_months()
             )
         elif month:
             logger.info("📝 Current Tasks assigned to me in the last month:")
-            tasks = asyncio.run(service.get_current_tasks_assigned_to_me_last_month())
+            tasks = run(service.get_current_tasks_assigned_to_me_last_month())
         else:
             logger.info("📝 Current Sprint Tasks assigned to me (not finished):")
-            tasks = asyncio.run(
+            tasks = run(
                 service.get_current_sprint_tasks_not_done_assigned_to_me()
             )
 
@@ -86,7 +86,7 @@ def build_app() -> Typer:
     def git(
         ctx: Context,
         stats: bool = Option(False, help="Get commit stats for the organization"),
-        date: Optional[str] = Option(
+        date: str | None = Option(
             None, help="Override the date (format: 'YYYY-MM-DD')"
         ),
         contributed: bool = Option(True, help="only show contributed commits"),
@@ -102,11 +102,11 @@ def build_app() -> Typer:
             logger.info(
                 "❌ The '--date' and '--contributed' options can only be used together with '--stats'."
             )
-            raise Exit(code=1)
+            sys_exit(1)
 
         if stats:
             custom_date = parse_date(date) if date else None
-            commit_stats = asyncio.run(
+            commit_stats = run(
                 service.get_org_commit_stats(
                     since_date=custom_date,
                     only_contributed=contributed,

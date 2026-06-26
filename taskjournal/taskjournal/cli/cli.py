@@ -7,12 +7,16 @@ from taskjournal.container import AppContainer
 from taskjournal.cli.commands.backup import build_app as build_backup
 from taskjournal.cli.commands.daily import build_app as build_daily
 from taskjournal.cli.commands.half_year import build_app as build_half_year
+from taskjournal.cli.commands.fireman import build_app as build_fireman
 from taskjournal.cli.commands.holidays import build_app as build_holidays
+from taskjournal.cli.commands.doctor import build_app as build_doctor
 from taskjournal.cli.commands.info import build_app as build_info
 from taskjournal.cli.commands.migrate import build_app as build_migrate
+from taskjournal.cli.commands.setup import build_app as build_setup
 from taskjournal.cli.commands.month import build_app as build_month
 from taskjournal.cli.commands.one_on_one import build_app as build_one_on_one
 from taskjournal.cli.commands.retro import build_app as build_retro
+from taskjournal.cli.commands.search import build_app as build_search
 from taskjournal.cli.commands.services import build_app as build_services
 from taskjournal.cli.commands.statistics import build_app as build_statistics
 from taskjournal.cli.commands.week import build_app as build_week
@@ -34,6 +38,7 @@ def create_app(container: AppContainer | None = None) -> Typer:
         cls=GroupedHelpOrder,
         name=APP_NAME,
         rich_markup_mode="rich",
+        pretty_exceptions_enable=False,
         help=(
             "Task Journal CLI.\n\n"
             "A CLI tool to organize your work by managing notes, summaries, reports. \n\n"
@@ -52,9 +57,13 @@ def create_app(container: AppContainer | None = None) -> Typer:
     app.add_typer(build_services(), name="services", hidden=True)
     app.add_typer(build_backup(), name="backup", hidden=True)
     app.add_typer(build_migrate(), name="migrate", hidden=True)
+    app.add_typer(build_fireman(), name="fireman", rich_help_panel="🗂️ Tools")
     app.add_typer(build_holidays(), name="holidays", rich_help_panel="🗂️ Tools")
     app.add_typer(build_statistics(), name="statistics", rich_help_panel="🗂️ Tools")
     app.add_typer(build_info(), name="info", rich_help_panel="🗂️ Tools")
+    app.add_typer(build_setup(), name="setup", rich_help_panel="🗂️ Tools")
+    app.add_typer(build_doctor(), name="doctor", rich_help_panel="🗂️ Tools")
+    app.add_typer(build_search(), name="search", rich_help_panel="🗂️ Tools")
 
     if container is None:
         container = AppContainer()

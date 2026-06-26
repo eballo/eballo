@@ -14,7 +14,7 @@ class TestTaskManager:
         # given
         mocker.patch("taskjournal.parser.file_parser.TEMPLATE_FORMAT", "txt")
         mock_file = mocker.mock_open(
-            read_data="Planned Tasks \n [x] Done Task\n[ ] Pending Task\n[ ] Another Pending\n"
+            read_data="## Planned Tasks\n[x] Done Task\n[ ] Pending Task\n[ ] Another Pending\n"
         )
         mocker.patch("builtins.open", mock_file)
         task_manager = TaskManager(
@@ -103,7 +103,7 @@ class TestTaskManager:
 
     def test_get_previous_tasks_folder_not_exist(self, mocker: MockerFixture) -> None:
         # given
-        mocker.patch("os.path.exists", return_value=False)
+        mocker.patch("taskjournal.services.task_manager.exists", return_value=False)
         task_manager = TaskManager(parser=mocker.MagicMock(), wifi_service=mocker.MagicMock())
         # when
         result = task_manager.get_previous_pending_tasks("fake_folder", "current.txt")
@@ -112,8 +112,8 @@ class TestTaskManager:
 
     def test_get_previous_tasks_no_txt_files(self, mocker: MockerFixture) -> None:
         # given
-        mocker.patch("os.path.exists", return_value=True)
-        mocker.patch("os.listdir", return_value=["current.txt", "image.png"])
+        mocker.patch("taskjournal.services.task_manager.exists", return_value=True)
+        mocker.patch("taskjournal.services.task_manager.listdir", return_value=["current.txt", "image.png"])
         task_manager = TaskManager(parser=mocker.MagicMock(), wifi_service=mocker.MagicMock())
         # when
         result = task_manager.get_previous_pending_tasks("some_folder", "current.txt")
@@ -124,12 +124,12 @@ class TestTaskManager:
         # given
         mocker.patch("taskjournal.services.task_manager.TEMPLATE_FORMAT", "txt")
         mocker.patch("taskjournal.parser.file_parser.TEMPLATE_FORMAT", "txt")
-        mocker.patch("os.path.exists", return_value=True)
+        mocker.patch("taskjournal.services.task_manager.exists", return_value=True)
         mocker.patch(
-            "os.listdir", return_value=["2025-01-18-DailyNotes.txt", "current.txt"]
+            "taskjournal.services.task_manager.listdir", return_value=["2025-01-18-DailyNotes.txt", "current.txt"]
         )
         mock_file = mocker.mock_open(
-            read_data="Planned Tasks \n [ ] Task 1\n[x] Task 2\n[ ] Task 3\n"
+            read_data="## Planned Tasks\n[ ] Task 1\n[x] Task 2\n[ ] Task 3\n"
         )
         mocker.patch("builtins.open", mock_file)
         from taskjournal.services.parser import DailyParserService
@@ -154,7 +154,7 @@ class TestTaskManager:
         # given — wifi returns a known network (Office)
         mock_wifi = mocker.MagicMock()
         mock_wifi.get_name.return_value = "TSH"  # OFFICE_WIFI value
-        mocker.patch("taskjournal.services.task_manager.OFFICE_WIFI", "TSH")
+        mock_wifi.office_wifi = "TSH"
         task_manager = TaskManager(parser=mocker.MagicMock(), wifi_service=mock_wifi)
 
         # when
@@ -173,8 +173,8 @@ class TestTaskManager:
     ) -> None:
         # given
         mock_wifi = mocker.MagicMock()
-        mocker.patch("taskjournal.services.task_manager.HOME_WIFI", "CodePI")
-        mocker.patch("taskjournal.services.task_manager.OFFICE_WIFI", "TSH")
+        mock_wifi.home_wifi = "CodePI"
+        mock_wifi.office_wifi = "TSH"
         task_manager = TaskManager(parser=mocker.MagicMock(), wifi_service=mock_wifi)
 
         # when / then
@@ -192,9 +192,9 @@ class TestTaskManager:
         mocker: MockerFixture,
     ) -> None:
         # given
-        mocker.patch("os.path.exists", return_value=True)
+        mocker.patch("taskjournal.services.task_manager.exists", return_value=True)
         mocker.patch(
-            "os.listdir", return_value=["2025-01-18-DailyNotes.md", "current.md"]
+            "taskjournal.services.task_manager.listdir", return_value=["2025-01-18-DailyNotes.md", "current.md"]
         )
         mock_parser = mocker.MagicMock()
         mock_parser.parse.side_effect = RuntimeError("boom")
@@ -222,6 +222,13 @@ class TestTaskManager:
 
         uniques = TaskManager.unique_tasks([todo, todo_dup, done])
         assert len(uniques) == 2
+
+        # keyed Jira task replaces keyless default with same (case-insensitive) description
+        default = Task(id="d1", description="Check Emails", status=Status.TODO)
+        jira = Task(id="j1", description="check emails", status=Status.TODO, key="PROJ-42")
+        merged = TaskManager.unique_tasks([default, jira])
+        assert len(merged) == 1
+        assert merged[0].key == "PROJ-42"
 
         epics = TaskManager.get_unique_epics([with_epic, with_same_epic, todo])
         assert len(epics) == 1

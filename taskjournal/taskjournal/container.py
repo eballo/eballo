@@ -1,32 +1,66 @@
 from dependency_injector import containers, providers
 
+import taskjournal.config as config
 from taskjournal.commands.commands import CommandManager
 from taskjournal.repositories.task_formatter import TaskFormatter
+from taskjournal.services.backup import BackupService
+from taskjournal.services.file import FileService
+from taskjournal.services.fireman import FiremanService
 from taskjournal.services.github import GithubService
 from taskjournal.services.holidays import HolidayService
 from taskjournal.services.jira import JiraService
 from taskjournal.services.migration import MigrationService
 from taskjournal.services.openai import OpenAIService
 from taskjournal.services.parser import DailyParserService
+from taskjournal.services.setup import SetupService
 from taskjournal.services.task_manager import TaskManager
+from taskjournal.services.time import TimeService
 from taskjournal.services.wifi import WifiService
 from taskjournal.services.working_days import WorkingDaysService
 
 
 class AppContainer(containers.DeclarativeContainer):
-    # Core services — shared singletons (created once per container instance)
-    jira = providers.Singleton(JiraService)
-    github = providers.Singleton(GithubService)
-    openai = providers.Singleton(OpenAIService)
+    # Stateless utilities — singletons with no dependencies
+    file_service = providers.Singleton(FileService)
+    time_service = providers.Singleton(TimeService)
+
+    # Core services — all config values injected here, not in the service files
+    jira = providers.Singleton(
+        JiraService,
+        api_token=config.JIRA_API_TOKEN,
+        email=config.JIRA_EMAIL,
+        board_id=config.JIRA_BOARD_ID,
+        organization=config.JIRA_ORGANIZATION,
+    )
+    github = providers.Singleton(
+        GithubService,
+        token=config.GIT_HUB_TOKEN,
+        org_name=config.GIT_HUB_ORGANIZATION_NAME,
+    )
+    openai = providers.Singleton(
+        OpenAIService,
+        api_key=config.OPENAI_API_KEY,
+    )
+    backup_service = providers.Singleton(
+        BackupService,
+        backup_dir=config.BACKUP_DIR,
+        base_dir=config.BASE_DIR,
+    )
+    wifi_service = providers.Singleton(
+        WifiService,
+        home_wifi=config.HOME_WIFI,
+        office_wifi=config.OFFICE_WIFI,
+    )
+
+    setup_service = providers.Singleton(SetupService)
     task_formatter = providers.Singleton(TaskFormatter)
     daily_parser = providers.Singleton(DailyParserService)
-    wifi_service = providers.Singleton(WifiService)
 
-    # Services with runtime dependencies — factories (created per invocation)
-    # filepath is passed at call time: container.holiday_service(filepath=...)
+    # Services with runtime dependencies — factories (args passed at call time)
     holiday_service = providers.Factory(HolidayService)
+    fireman_service = providers.Factory(FiremanService)
 
-    # year (and optionally debug) are passed at call time; parser is injected
+    # year passed at call time; parser is injected
     working_days_service = providers.Factory(
         WorkingDaysService,
         parser=daily_parser,
@@ -55,4 +89,7 @@ class AppContainer(containers.DeclarativeContainer):
         openai=openai,
         parser=daily_parser,
         task_manager=task_manager,
+        backup_service=backup_service,
+        file_service=file_service,
+        time_service=time_service,
     )
