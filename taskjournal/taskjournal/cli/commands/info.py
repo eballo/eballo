@@ -79,7 +79,7 @@ def build_app() -> Typer:
         integrations: list[tuple[str, BaseService]] = [
             ("Jira", container.jira()),
             ("GitHub", container.github()),
-            ("OpenAI", container.openai()),
+            ("AI", container.ai_service()),
             ("WiFi", container.wifi_service()),
         ]
 

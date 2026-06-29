@@ -26,7 +26,7 @@ from taskjournal.services.github import GithubService
 from taskjournal.services.holidays import HolidayService
 from taskjournal.services.jira import JiraService
 from taskjournal.services.logger import logger
-from taskjournal.services.openai import OpenAIService
+from taskjournal.services.ai_service import AIService
 from taskjournal.services.parser import DailyParserService, _SECTION_RULES
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
@@ -47,7 +47,7 @@ class CommandManager:
         jira: JiraService,
         github: GithubService,
         task_formatter: TaskFormatter,
-        openai: OpenAIService,
+        ai_service: AIService,
         parser: DailyParserService,
         task_manager: TaskManager,
         backup_service: BackupService,
@@ -59,7 +59,7 @@ class CommandManager:
         self.jira = jira
         self.github = github
         self.task_formatter = task_formatter
-        self.openai = openai
+        self.ai_service = ai_service
         self.parser = parser
         self.task_manager = task_manager
         self.backup_service = backup_service
@@ -532,7 +532,7 @@ class CommandManager:
                 daily_file_path = join(week_folder, file_name)
                 summary.append(self.file_service.get_summary_from_daily_notes(daily_file_path))
 
-        summary_ai = await self.openai.summarize(
+        summary_ai = await self.ai_service.summarize(
             summary, stats=stats, is_fireman_week=is_fireman_week
         )
 
@@ -606,7 +606,7 @@ class CommandManager:
 
         github_contributions = await self.github.get_contributions_last_month()
 
-        summary = await self.openai.summarize(
+        summary = await self.ai_service.summarize(
             stats["daily_summaries"],
             stats=stats,
             is_fireman_week=False,

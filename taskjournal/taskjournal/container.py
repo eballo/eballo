@@ -4,6 +4,7 @@ import taskjournal.config as config
 from taskjournal.commands.commands import CommandManager
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.backup import BackupService
+from taskjournal.services.claude_code import ClaudeCodeService
 from taskjournal.services.file import FileService
 from taskjournal.services.fireman import FiremanService
 from taskjournal.services.github import GithubService
@@ -41,6 +42,16 @@ class AppContainer(containers.DeclarativeContainer):
         OpenAIService,
         api_key=config.OPENAI_API_KEY,
     )
+    claude_code = providers.Singleton(ClaudeCodeService)
+
+    # Selects the active AI service based on AI_PROVIDER config value
+    # Accepted values: "openai", "claude_code"
+    ai_service = providers.Selector(
+        lambda: config.AI_PROVIDER,
+        openai=openai,
+        claude_code=claude_code,
+    )
+
     backup_service = providers.Singleton(
         BackupService,
         backup_dir=config.BACKUP_DIR,
@@ -86,7 +97,7 @@ class AppContainer(containers.DeclarativeContainer):
         jira=jira,
         github=github,
         task_formatter=task_formatter,
-        openai=openai,
+        ai_service=ai_service,
         parser=daily_parser,
         task_manager=task_manager,
         backup_service=backup_service,

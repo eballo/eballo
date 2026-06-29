@@ -116,4 +116,24 @@ def build_app() -> Typer:
             )
             service.print_commit_stats(commit_stats)
 
+    @app.command(
+        "claude",
+        help=(
+            "Quick test for the active AI service.\n\n"
+            "Examples:\n"
+            "  wk services claude\n"
+            "  wk services claude --prompt 'Summarize: fixed a bug'\n"
+        ),
+    )
+    def claude(
+        ctx: Context,
+        prompt: str = Option(
+            "Say hello and tell me which model you are in one sentence.",
+            "--prompt",
+            help="Custom prompt to send to the AI service.",
+        ),
+    ) -> None:
+        result = run(get_manager(ctx).ai_service.summarize([prompt]))
+        logger.info(result)
+
     return app

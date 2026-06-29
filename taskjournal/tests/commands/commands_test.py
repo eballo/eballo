@@ -352,7 +352,7 @@ class TestCommands:
                 return "AI Weekly Summary"
             return "Failed summary"
 
-        mocker.patch.object(cmd.openai, "summarize", side_effect=fake_summarize)
+        mocker.patch.object(cmd.ai_service, "summarize", side_effect=fake_summarize)
 
         cmd.time_service.seconds_to_hours_minutes.return_value = (1, 30)
 
@@ -496,7 +496,7 @@ class TestCommands:
         )
 
         mocker.patch.object(
-            cmd.openai,
+            cmd.ai_service,
             "summarize",
             new_callable=AsyncMock,
             return_value="AI Month Summary",

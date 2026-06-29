@@ -56,10 +56,14 @@ class TestSetupCLI:
         cli_container: AppContainer,
         invoke_cli: Callable[[list[str]], Result],
     ) -> None:
-        # all confirms: paths, jira, github, openai, wifi, data_files
-        confirms = [True, True, True, True, True, True]
-        prompts = ["md", "/notes", "/backup", "org", "email@x.com", "token", "123",
-                   "gh-token", "org-name", "sk-key", "HomeWifi", "OfficeWifi", "Obsidian"]
+        # confirms: paths, jira, github, wifi, data_files (AI is now a prompt, not a confirm)
+        confirms = [True, True, True, True, True]
+        prompts = ["md", "/notes", "/backup",               # paths
+                   "org", "email@x.com", "token", "123",   # jira
+                   "gh-token", "org-name",                  # github
+                   "claude_code",                          # AI provider (no key needed)
+                   "HomeWifi", "OfficeWifi",                # wifi
+                   "Obsidian"]                              # editor
         service_mock, _ = self._mock_wizard(mocker, cli_container, env_exists=False, confirm_values=confirms, prompt_side_effect=prompts)
 
         result = invoke_cli(["setup"])
@@ -73,10 +77,11 @@ class TestSetupCLI:
         cli_container: AppContainer,
         invoke_cli: Callable[[list[str]], Result],
     ) -> None:
-        # existing config → yes to update, no to all sections, yes to data files
-        confirms = [True, False, False, False, False, False, True]
+        # existing config → yes to update, no to paths/jira/github/wifi, yes to data files
+        # AI section is always a prompt (no confirm for it)
+        confirms = [True, False, False, False, False, True]
         service_mock, _ = self._mock_wizard(mocker, cli_container, env_exists=True, confirm_values=confirms,
-                                            prompt_side_effect=["Obsidian"])
+                                            prompt_side_effect=["claude_code", "Obsidian"])
 
         result = invoke_cli(["setup"])
 
@@ -90,9 +95,10 @@ class TestSetupCLI:
         cli_container: AppContainer,
         invoke_cli: Callable[[list[str]], Result],
     ) -> None:
-        confirms = [True, False, False, False, False, False]
+        # confirms: paths, no-jira, no-github, no-wifi, no-data_files
+        confirms = [True, False, False, False, False]
         # First prompt (format) returns invalid then valid, then the rest
-        prompts = ["xml", "md", "/notes", "/backup", "Obsidian"]
+        prompts = ["xml", "md", "/notes", "/backup", "claude_code", "Obsidian"]
         service_mock, _ = self._mock_wizard(mocker, cli_container, env_exists=False, confirm_values=confirms,
                                             prompt_side_effect=prompts)
 

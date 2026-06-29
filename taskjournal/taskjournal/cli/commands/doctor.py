@@ -48,7 +48,7 @@ def build_app() -> Typer:
         checks.append(("WiFi detection", container.wifi_service().health_check()))
         checks.append(("Jira", container.jira().health_check()))
         checks.append(("GitHub", container.github().health_check()))
-        checks.append(("OpenAI", container.openai().health_check()))
+        checks.append(("AI", container.ai_service().health_check()))
 
         _print_report(checks)
 

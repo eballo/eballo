@@ -2,14 +2,15 @@ from typing import Any
 
 import httpx
 
-from taskjournal.services.base import BaseService, HealthCheckResult, ServiceStatus
+from taskjournal.services.ai_service import AIService
+from taskjournal.services.base import HealthCheckResult, ServiceStatus
 from taskjournal.services.logger import logger
 from taskjournal.services.time import TimeService
 
 _UNCONFIGURED_KEY = "your-openai-api-key"
 
 
-class OpenAIService(BaseService):
+class OpenAIService(AIService):
     @property
     def name(self) -> str:
         return "OpenAI"
