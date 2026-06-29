@@ -93,13 +93,25 @@ def build_app() -> Typer:
         else:
             values["GIT_HUB_TOKEN"] = existing.get("GIT_HUB_TOKEN", "your-github-token")
 
-        # ── OpenAI ────────────────────────────────────────────────────────
-        console.print(Panel("[bold]OpenAI (AI summaries)[/bold]", expand=False))
-        ai_current = service.is_configured("OPENAI_API_KEY", existing)
-        if typer.confirm("Configure OpenAI for AI-generated summaries?", default=ai_current):
+        # ── AI provider ───────────────────────────────────────────────────
+        console.print(Panel("[bold]AI summaries[/bold]", expand=False))
+        _ai_options = ["claude_code", "openai"]
+        _current_provider = existing.get("AI_PROVIDER", "claude_code")
+        console.print(
+            f"Current AI provider: [bold]{_current_provider}[/bold]\n"
+            "Options: [bold]claude_code[/bold] (Claude Code CLI, no API key needed) | "
+            "[bold]openai[/bold] (OpenAI API)"
+        )
+        _chosen_provider = typer.prompt(
+            "AI provider",
+            default=_current_provider,
+        )
+        values["AI_PROVIDER"] = _chosen_provider if _chosen_provider in _ai_options else _current_provider
+
+        if values["AI_PROVIDER"] == "openai":
             values["OPENAI_API_KEY"] = typer.prompt(
                 "OpenAI API key",
-                default=existing["OPENAI_API_KEY"] if ai_current else "",
+                default=existing.get("OPENAI_API_KEY", ""),
                 hide_input=True,
             )
         else:
@@ -185,6 +197,7 @@ def _print_summary(service: SetupService, values: dict[str, str]) -> None:
     _row("GitHub token", "GIT_HUB_TOKEN", secret=True)
     _row("GitHub organization", "GIT_HUB_ORGANIZATION_NAME")
     table.add_section()
+    _row("AI provider", "AI_PROVIDER")
     _row("OpenAI API key", "OPENAI_API_KEY", secret=True)
     table.add_section()
     _row("Home WiFi SSID", "HOME_WIFI")

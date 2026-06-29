@@ -21,7 +21,7 @@ from taskjournal.services.github import GithubService
 from taskjournal.services.holidays import HolidayService
 from taskjournal.services.jira import JiraService
 from taskjournal.services.migration import MigrationService
-from taskjournal.services.openai import OpenAIService
+from taskjournal.services.claude_code import ClaudeCodeService
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.wifi import WifiService
 from taskjournal.services.working_days import WorkingDaysService
@@ -40,7 +40,7 @@ def cli_container(mocker: MockerFixture) -> AppContainer:
     container = AppContainer()
     container.jira.override(providers.Object(_mock_svc("JiraServiceMock")))
     container.github.override(providers.Object(_mock_svc("GithubServiceMock")))
-    container.openai.override(providers.Object(_mock_svc("OpenAIServiceMock")))
+    container.ai_service.override(providers.Object(_mock_svc("AIServiceMock")))
     container.wifi_service.override(providers.Object(_mock_svc("WifiServiceMock")))
     container.task_formatter.override(providers.Object(mocker.MagicMock(name="TaskFormatterMock")))
     container.daily_parser.override(providers.Object(mocker.MagicMock(name="DailyParserMock")))
@@ -172,7 +172,7 @@ def cmd(mocker: MockerFixture) -> CommandManager:
         jira=mocker.MagicMock(name="JiraServiceMock"),
         github=mocker.MagicMock(name="GithubServiceMock"),
         task_formatter=mocker.MagicMock(name="TaskFormatterMock"),
-        openai=mocker.MagicMock(name="OpenAIServiceMock"),
+        ai_service=mocker.MagicMock(name="AIServiceMock"),
         parser=mocker.MagicMock(name="DailyParserServiceMock"),
         task_manager=mocker.MagicMock(name="TaskManagerMock"),
         backup_service=mocker.MagicMock(name="BackupServiceMock"),
@@ -272,13 +272,8 @@ def github_service() -> GithubService:
 
 
 @fixture
-def openai_chat_completions_url() -> str:
-    return "https://api.openai.com/v1/chat/completions"
-
-
-@fixture
-def openai_service() -> OpenAIService:
-    return OpenAIService(api_key="test-key")
+def claude_code_service() -> ClaudeCodeService:
+    return ClaudeCodeService()
 
 
 @fixture
