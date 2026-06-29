@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.45.0
+
+- Version 0 44 0
+
 ## 0.44.0
 
 - Fix CI bump workflow: YAML literal block parse error caused by unindented `--notes` content
