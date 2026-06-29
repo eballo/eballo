@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.40.0
+
+- Version 0 39 0
+
 ## 0.38.0
 
 - Migrate from Poetry to uv
