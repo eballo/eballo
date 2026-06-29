@@ -129,5 +129,18 @@ jobs:
           set -euo pipefail
           git add pyproject.toml taskjournal/cli/__init__.py README.md docs/change-log.md
           git commit -m "Bump version: ${{ steps.version.outputs.old_version }} -> ${{ steps.version.outputs.new_version }}"
-          git tag "v${{ steps.version.outputs.new_version }}"
+          git tag -a "v${{ steps.version.outputs.new_version }}" -m "Release v${{ steps.version.outputs.new_version }}"
           git push --follow-tags origin main
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ steps.version.outputs.new_version }}
+          PR_TITLE: ${{ steps.bump.outputs.pr_title }}
+        run: |
+          gh release create "v${NEW_VERSION}" \
+            --title "v${NEW_VERSION}" \
+            --notes "## v${NEW_VERSION}
+
+- ${PR_TITLE}" \
+            --latest
