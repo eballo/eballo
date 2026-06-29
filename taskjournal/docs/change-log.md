@@ -1,10 +1,15 @@
 # Changelog
 
+## 0.43.0
+
 ## 0.42.0
 
-- version 0.41.0
+- Fix CI bump workflow: use annotated tags so `--follow-tags` pushes them to the remote
+- Add GitHub Release creation step to bump workflow
 
 ## 0.41.0
+
+- Update changelog format and fix stale 0.40.0 entry
 
 ## 0.40.0
 
