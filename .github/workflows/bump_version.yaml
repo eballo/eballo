@@ -138,9 +138,8 @@ jobs:
           NEW_VERSION: ${{ steps.version.outputs.new_version }}
           PR_TITLE: ${{ steps.bump.outputs.pr_title }}
         run: |
+          printf '## v%s\n\n- %s\n' "${NEW_VERSION}" "${PR_TITLE}" > /tmp/release-notes.md
           gh release create "v${NEW_VERSION}" \
             --title "v${NEW_VERSION}" \
-            --notes "## v${NEW_VERSION}
-
-- ${PR_TITLE}" \
+            --notes-file /tmp/release-notes.md \
             --latest
