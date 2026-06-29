@@ -2,10 +2,10 @@
 
 ## 0.44.0
 
-## 0.43.0
-
 - Fix CI bump workflow: YAML literal block parse error caused by unindented `--notes` content
 - Use `printf` + `--notes-file` to safely pass multi-line release notes
+
+## 0.43.0
 
 ## 0.42.0
 
