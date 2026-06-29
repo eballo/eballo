@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.46.0
+
+- Add Claude Code CLI as AI provider with multi-provider selection
+
 ## 0.45.0
 
 - Version 0 44 0
