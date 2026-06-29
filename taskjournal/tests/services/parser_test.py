@@ -44,19 +44,19 @@ class TestParser:
             "End Time: 18:00:00\n",
             "Time Spent: 08:00\n",
             "Work from: Home\n",
-            "Planned Tasks\n",
+            "## Planned Tasks\n",
             "[ ] Task TODO\n",
             "[x] Task DONE\n",
             "[-] Task BLOCKED\n",
-            "Code Review Tasks\n",
+            "## Code Review Tasks\n",
             "[ ] CR TODO\n",
-            "Notes\n",
+            "## Notes\n",
             "\n",
             "Note line 1\n",
             "\n",
-            "Summary\n",
+            "## Summary\n",
             "Accomplished today\n",
-            "Firefighter\n",
+            "## Firefighter\n",
             "Incident one\n",
         ]
 
@@ -121,7 +121,7 @@ class TestParser:
         self, daily_parser_service: DailyParserService
     ) -> None:
         # given
-        lines = ["Unknown metadata: value\n", "Planned Tasks\n", "[ ] todo\n"]
+        lines = ["Unknown metadata: value\n", "## Planned Tasks\n", "[ ] todo\n"]
 
         # when
         data = daily_parser_service._parse_content(lines, ".txt")

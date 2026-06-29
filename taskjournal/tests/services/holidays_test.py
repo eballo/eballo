@@ -157,14 +157,14 @@ class TestHolidays:
         holiday_service_factory: Callable[[str], HolidayService],
     ) -> None:
         # given
-        mocked_print = mocker.patch("builtins.print")
+        mock_logger = mocker.patch("taskjournal.services.holidays.logger")
 
         # when
         service = holiday_service_factory("missing-file-path.md")
 
         # then
         assert service.holidays == {}
-        mocked_print.assert_called_once()
+        mock_logger.error.assert_called_once()
 
     def test_load_and_parse_invalid_date_value_error_prints_warning(
         self,
@@ -186,16 +186,14 @@ class TestHolidays:
                 return date(2026, 1, 1)
 
         mocker.patch("taskjournal.services.holidays.datetime", FakeDate)
-        mocked_print = mocker.patch("builtins.print")
+        mock_logger = mocker.patch("taskjournal.services.holidays.logger")
 
         # when
         service = holiday_service_factory(str(file_path))
 
         # then
         assert service.holidays == {}
-        mocked_print.assert_called_once_with(
-            "Warning: Invalid date format found: 2026-01-01"
-        )
+        mock_logger.warning.assert_called_once()
 
     def test_get_past_holidays_logic(
         self,
@@ -329,3 +327,196 @@ class TestHolidays:
 
         # then
         assert logger.error.call_count >= 1
+
+    def _make_holiday_file(self, tmp_path: Path, content: str) -> Path:
+        f = tmp_path / "holidays.md"
+        f.write_text(content, encoding="utf-8")
+        return f
+
+    def test_summary_upcoming_sort_by_category(
+        self,
+        temp_holiday_file: str,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        service = holiday_service_factory(temp_holiday_file)
+        mocker.patch("taskjournal.services.holidays.logger")
+        service.summary_upcoming(sort_by="category")  # must not raise
+
+    def test_summary_upcoming_invalid_sort_raises(
+        self,
+        temp_holiday_file: str,
+        holiday_service_factory: Callable[[str], HolidayService],
+    ) -> None:
+        service = holiday_service_factory(temp_holiday_file)
+        try:
+            service.summary_upcoming(sort_by="invalid")
+            assert False, "expected ValueError"
+        except ValueError:
+            pass
+
+    def test_summary_past_sort_by_category(
+        self,
+        temp_holiday_file: str,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        service = holiday_service_factory(temp_holiday_file)
+        mocker.patch("taskjournal.services.holidays.logger")
+        service.summary_past(sort_by="category")
+
+    def test_summary_past_sort_by_date(
+        self,
+        temp_holiday_file: str,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        service = holiday_service_factory(temp_holiday_file)
+        mocker.patch("taskjournal.services.holidays.logger")
+        service.summary_past(sort_by="date")
+
+    def test_summary_past_invalid_sort_raises(
+        self,
+        temp_holiday_file: str,
+        holiday_service_factory: Callable[[str], HolidayService],
+    ) -> None:
+        service = holiday_service_factory(temp_holiday_file)
+        try:
+            service.summary_past(sort_by="bad")
+            assert False, "expected ValueError"
+        except ValueError:
+            pass
+
+    def test_summary_all_sort_by_category(
+        self,
+        temp_holiday_file: str,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        service = holiday_service_factory(temp_holiday_file)
+        mocker.patch("taskjournal.services.holidays.logger")
+        service.summary_all(sort_by="category")
+
+    def test_summary_all_invalid_sort_raises(
+        self,
+        temp_holiday_file: str,
+        holiday_service_factory: Callable[[str], HolidayService],
+    ) -> None:
+        service = holiday_service_factory(temp_holiday_file)
+        try:
+            service.summary_all(sort_by="nope")
+            assert False, "expected ValueError"
+        except ValueError:
+            pass
+
+    def test_get_days_until_next_holiday_no_upcoming(
+        self,
+        tmp_path: Path,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        f = self._make_holiday_file(tmp_path, "# Past\n2000-01-01 - Old\n")
+        mocker.patch("taskjournal.services.holidays.logger")
+        service = holiday_service_factory(str(f))
+        days, next_date, desc = service.get_days_until_next_holiday()
+        assert next_date is None
+        assert days == 0
+        assert desc == ""
+
+    def test_summary_empty(
+        self,
+        tmp_path: Path,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        f = self._make_holiday_file(tmp_path, "# Empty\n")
+        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        service = holiday_service_factory(str(f))
+        service.summary()
+        logger_mock.info.assert_called_with("No holidays found.")
+
+    def test_summary_no_remaining(
+        self,
+        tmp_path: Path,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        f = self._make_holiday_file(tmp_path, "# Past\n2000-01-01 - Old\n")
+        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        service = holiday_service_factory(str(f))
+        service.summary()
+        calls = [str(c) for c in logger_mock.info.call_args_list]
+        assert any("No more holidays" in c for c in calls)
+
+    def test_add_holiday_appends_under_existing_category(
+        self,
+        tmp_path: Path,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        content = "## Personal days\n# placeholder\n"
+        f = self._make_holiday_file(tmp_path, content)
+        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        service = holiday_service_factory(str(f))
+
+        service.add_holiday(str(f), "2026-08-15", "Summer day", "Personal days")
+
+        assert "2026-08-15 - Summer day" in f.read_text()
+        logger_mock.info.assert_called_once()
+
+    def test_add_holiday_creates_new_category(
+        self,
+        tmp_path: Path,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        f = self._make_holiday_file(tmp_path, "## Public holidays\n")
+        mocker.patch("taskjournal.services.holidays.logger")
+        service = holiday_service_factory(str(f))
+
+        service.add_holiday(str(f), "2026-09-11", "New day", "New Category")
+
+        text = f.read_text()
+        assert "## New Category" in text
+        assert "2026-09-11 - New day" in text
+
+    def test_add_holiday_invalid_date_logs_error(
+        self,
+        tmp_path: Path,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        f = self._make_holiday_file(tmp_path, "")
+        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        service = holiday_service_factory(str(f))
+
+        service.add_holiday(str(f), "not-a-date", "desc")
+
+        logger_mock.error.assert_called_once()
+
+    def test_add_holiday_duplicate_logs_warning(
+        self,
+        temp_holiday_file: str,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        service = holiday_service_factory(temp_holiday_file)
+
+        service.add_holiday(temp_holiday_file, "2026-12-25", "Dup Christmas")
+
+        logger_mock.warning.assert_called_once()
+
+    def test_add_holiday_missing_file_logs_error(
+        self,
+        tmp_path: Path,
+        holiday_service_factory: Callable[[str], HolidayService],
+        mocker: MockerFixture,
+    ) -> None:
+        f = self._make_holiday_file(tmp_path, "")
+        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        service = holiday_service_factory(str(f))
+
+        service.add_holiday("/nonexistent/path/holidays.md", "2026-07-04", "Test")
+
+        logger_mock.error.assert_called_once()

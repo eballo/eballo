@@ -1,24 +1,25 @@
 from datetime import datetime
+from sys import exit as sys_exit
+from typing import Any
 
-from click.exceptions import Exit
 from typer import Context
 
 from taskjournal.services.logger import logger
 
 
-def get_manager(ctx: Context):
+def get_manager(ctx: Context) -> Any:
     return ctx.obj["manager"]
 
 
 def get_today(ctx: Context) -> datetime:
-    return ctx.obj["today"]
+    return ctx.obj["today"]  # type: ignore[no-any-return]
 
 
 def get_debug(ctx: Context) -> bool:
-    return ctx.obj.get("debug", False)
+    return ctx.obj.get("debug", False)  # type: ignore[no-any-return]
 
 
-def get_container(ctx: Context):
+def get_container(ctx: Context) -> Any:
     return ctx.obj["container"]
 
 
@@ -37,4 +38,4 @@ def parse_date(date_str: str, fmt: str = "%Y-%m-%d") -> datetime:
         return datetime.strptime(date_str, fmt)
     except ValueError:
         logger.error(f"❌ Invalid date format. Use '{_display_fmt(fmt)}'.")
-        raise Exit(code=1)
+        sys_exit(1)

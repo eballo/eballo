@@ -1,11 +1,15 @@
-import os
 from datetime import datetime, date
+from os.path import exists, join
 from pathlib import Path
 
+from taskjournal.services.base import BaseService
 from taskjournal.services.logger import logger
 
 
-class FileService:
+class FileService(BaseService):
+
+    def __init__(self) -> None:
+        pass
 
     @staticmethod
     def get_lines(file_path: str) -> list[str]:
@@ -25,7 +29,7 @@ class FileService:
 
     @staticmethod
     def load_template(template_path: str) -> str:
-        if not os.path.exists(template_path):
+        if not exists(template_path):
             raise FileNotFoundError(f"Template file not found at {template_path}")
         with open(template_path, "r") as template_file:
             return template_file.read()
@@ -37,9 +41,13 @@ class FileService:
                 for line in file:
                     if "Finalized:" in line:
                         return True
+                    if "End Time:" in line:
+                        value = line.split("End Time:", 1)[-1].strip().strip("*").strip()
+                        if value:
+                            return True
             return False
         except FileNotFoundError:
-            logger.error(f"Error: The file '{file_path}' was not found.")
+            logger.error(f"File '{file_path}' was not found.")
             return False
         except Exception as e:
             logger.error(f"An error occurred: {e}")
@@ -47,10 +55,9 @@ class FileService:
 
     @staticmethod
     def get_week_folder(base_dir: str | Path, date_obj: datetime | date) -> str:
-        """Calculate the folder path for the given date."""
         year = date_obj.year
         week_num = date_obj.isocalendar()[1]
-        week_folder = os.path.join(base_dir, f"{year}", f"week{week_num}")
+        week_folder = join(str(base_dir), f"{year}", f"week{week_num}")
         return week_folder
 
     @staticmethod
@@ -61,6 +68,6 @@ class FileService:
         for i, line in enumerate(lines):
             stripped = line.strip()
             if stripped.startswith("## 📋 Summary") or stripped == "📋 Summary":
-                return "".join(lines[i + 1 :]).strip()
+                return "".join(lines[i + 1:]).strip()
 
         return ""

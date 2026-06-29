@@ -15,10 +15,10 @@ class TestMigrate:
     ) -> None:
         # given
         mocker.patch(
-            "taskjournal.cli.commands.migrate.os.path.isfile", return_value=True
+            "taskjournal.cli.commands.migrate.isfile", return_value=True
         )
         mocker.patch(
-            "taskjournal.cli.commands.migrate.os.path.isdir", return_value=False
+            "taskjournal.cli.commands.migrate.isdir", return_value=False
         )
 
         # when
@@ -37,13 +37,13 @@ class TestMigrate:
     ) -> None:
         # given
         mocker.patch(
-            "taskjournal.cli.commands.migrate.os.path.isfile", return_value=False
+            "taskjournal.cli.commands.migrate.isfile", return_value=False
         )
         mocker.patch(
-            "taskjournal.cli.commands.migrate.os.path.isdir", return_value=True
+            "taskjournal.cli.commands.migrate.isdir", return_value=True
         )
         mocker.patch(
-            "taskjournal.cli.commands.migrate.os.walk",
+            "taskjournal.cli.commands.migrate.walk",
             return_value=[
                 ("root", [], ["2025-01-01-DailyNotes.txt", "README.md"]),
                 ("root/sub", [], ["2025-01-02-DailyNotes.txt"]),
@@ -70,10 +70,10 @@ class TestMigrate:
     ) -> None:
         # given
         mocker.patch(
-            "taskjournal.cli.commands.migrate.os.path.isfile", return_value=False
+            "taskjournal.cli.commands.migrate.isfile", return_value=False
         )
         mocker.patch(
-            "taskjournal.cli.commands.migrate.os.path.isdir", return_value=False
+            "taskjournal.cli.commands.migrate.isdir", return_value=False
         )
         logger = mocker.patch("taskjournal.cli.commands.migrate.logger")
 

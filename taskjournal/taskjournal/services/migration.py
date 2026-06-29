@@ -1,5 +1,5 @@
-import re
 from datetime import datetime
+from re import search
 from json import dumps
 from typing import Any
 
@@ -8,27 +8,22 @@ from jinja2 import Template
 from taskjournal.config import DAILY_NOTES_TEMPLATE
 from taskjournal.models.task import Task, Status
 from taskjournal.repositories.task_formatter import TaskFormatter
+from taskjournal.services.base import BaseService
 from taskjournal.services.file import FileService
 from taskjournal.services.logger import logger
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
-from taskjournal.services.wifi import WifiService
-
-
-class MigrationService:
+class MigrationService(BaseService):
     def __init__(
         self,
-        task_formatter: TaskFormatter | None = None,
-        parser: DailyParserService | None = None,
-        task_manager: TaskManager | None = None,
+        task_formatter: TaskFormatter,
+        parser: DailyParserService,
+        task_manager: TaskManager,
     ) -> None:
-        self.task_formatter: TaskFormatter = task_formatter or TaskFormatter()
-        self.daily_parser_service: DailyParserService = parser or DailyParserService()
-        self.task_manager: TaskManager = task_manager or TaskManager(
-            parser=self.daily_parser_service,
-            wifi_service=WifiService(),
-        )
+        self.task_formatter = task_formatter
+        self.daily_parser_service = parser
+        self.task_manager = task_manager
         self.statistics = {
             "migrated_files": 0,
             "skipped_files": 0,
@@ -75,7 +70,7 @@ class MigrationService:
     @staticmethod
     def _extract_datetime_object(file_path: str) -> datetime | None:
         # 1. Find the date pattern (YYYY-MM-DD)
-        match = re.search(r"(\d{4}-\d{2}-\d{2})", file_path)
+        match = search(r"(\d{4}-\d{2}-\d{2})", file_path)
 
         if match:
             date_string = match.group(1)  # Extracts "2025-01-10"
@@ -161,7 +156,8 @@ class MigrationService:
 
             start_dt = _parse_time(start_date_time)
             end_dt = _parse_time(end_date_time)
-            hours, minutes = TimeService.get_total_time_spent(start_dt, end_dt)
+            total_seconds = int((end_dt - start_dt).total_seconds())
+            hours, minutes = TimeService.seconds_to_hours_minutes(total_seconds)
             return f"{hours:02}:{minutes:02}"
         except Exception as e:
             logger.warning(f"Failed to calculate time spent: {e}")

@@ -223,7 +223,7 @@ class TestWorkingDays:
         )
         # Mock os.path.exists to return True for Jan 1st and Jan 2nd
         mocker.patch(
-            "taskjournal.services.working_days.os.path.exists",
+            "taskjournal.services.working_days.exists",
             side_effect=lambda p: "2025-01-01" in p or "2025-01-02" in p,
         )
         # Mock TimeService.get_total_time_from_daily_notes
@@ -277,7 +277,7 @@ class TestWorkingDays:
 
         # Mock os.path.exists to return True for Mon and Tue
         mocker.patch(
-            "taskjournal.services.working_days.os.path.exists",
+            "taskjournal.services.working_days.exists",
             side_effect=lambda p: "2025-01-13" in p or "2025-01-14" in p,
         )
 

@@ -1,9 +1,10 @@
-import os
-import uuid
 from datetime import datetime
-from typing import List, Dict, Any
+from os import listdir
+from os.path import exists, join
+from typing import Any
+from uuid import uuid4
 
-from taskjournal.config import TEMPLATE_FORMAT, HOME_WIFI, OFFICE_WIFI
+from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.constants import (
     BASE_TASKS,
     EXTENDED_TASKS,
@@ -12,12 +13,13 @@ from taskjournal.constants import (
     WORK_LOCATION_OFFICE,
 )
 from taskjournal.models.task import Task, Status, Epic
+from taskjournal.services.base import BaseService
 from taskjournal.services.logger import logger
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.wifi import WifiService
 
 
-class TaskManager:
+class TaskManager(BaseService):
 
     def __init__(
         self,
@@ -44,7 +46,7 @@ class TaskManager:
     @staticmethod
     def create_task(description: str) -> Task:
         return Task(
-            id=str(uuid.uuid4()), key=None, description=description, status=Status.TODO
+            id=str(uuid4()), key=None, description=description, status=Status.TODO
         )
 
     def get_work_from_location(self, date: datetime) -> str:
@@ -66,18 +68,17 @@ class TaskManager:
 
     def _get_location_from_wifi(self) -> str | None:
         wifi_name = self.wifi_service.get_name()
-        working_from_location = None
         logger.debug(f"WiFi name: {wifi_name}")
-        if wifi_name == HOME_WIFI:
-            working_from_location = WORK_LOCATION_HOME
-        elif wifi_name == OFFICE_WIFI:
-            working_from_location = WORK_LOCATION_OFFICE
-        return working_from_location
+        if wifi_name == self.wifi_service.home_wifi:
+            return WORK_LOCATION_HOME
+        if wifi_name == self.wifi_service.office_wifi:
+            return WORK_LOCATION_OFFICE
+        return None
 
     @staticmethod
     def get_default_tasks() -> list[Task]:
         """Return the default tasks based on the day of the week."""
-        tasks: List[Task] = [TaskManager.create_task(desc) for desc in BASE_TASKS]
+        tasks: list[Task] = [TaskManager.create_task(desc) for desc in BASE_TASKS]
 
         now = datetime.now()
         day_of_week = now.strftime("%A")
@@ -100,16 +101,16 @@ class TaskManager:
         current_file: str,
     ) -> list[Task]:
         """Retrieve unfinished tasks from the most recent daily notes file."""
-        if not os.path.exists(folder_path):
+        if not exists(folder_path):
             return []
         daily_files = [
             f
-            for f in os.listdir(folder_path)
+            for f in listdir(folder_path)
             if f.endswith(f"DailyNotes.{TEMPLATE_FORMAT}") and f != current_file
         ]
         if not daily_files:
             return []
-        latest_file = os.path.join(folder_path, sorted(daily_files, reverse=True)[0])
+        latest_file = join(folder_path, sorted(daily_files, reverse=True)[0])
         try:
             data = self.parser.parse(latest_file)
             if data is None:
@@ -126,17 +127,29 @@ class TaskManager:
 
     @staticmethod
     def unique_tasks(tasks: list[Task]) -> list[Task]:
-        seen = set()
-        result = []
+        seen_keys: set[str] = set()
+        seen_descs: set[str] = set()
+        result: list[Task] = []
         for task in tasks:
-            if task.description not in seen:
-                seen.add(task.description)
-                result.append(task)
+            if task.key and task.key in seen_keys:
+                continue
+            normalized = task.description.strip().lower()
+            if normalized in seen_descs:
+                # Replace a keyless placeholder with the keyed Jira version.
+                if task.key:
+                    result = [t for t in result if t.description.strip().lower() != normalized]
+                    seen_keys.add(task.key)
+                    result.append(task)
+                continue
+            if task.key:
+                seen_keys.add(task.key)
+            seen_descs.add(normalized)
+            result.append(task)
         return result
 
     @staticmethod
-    def get_unique_epics(tasks: List[Task]) -> List[Epic]:
-        seen: Dict[str, Epic] = {}
+    def get_unique_epics(tasks: list[Task]) -> list[Epic]:
+        seen: dict[str, Epic] = {}
         for task in tasks:
             if task.epic and task.epic.key not in seen:
                 seen[task.epic.key] = task.epic

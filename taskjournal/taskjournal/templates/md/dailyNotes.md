@@ -5,6 +5,7 @@
 **Date:** {{date}}
 **Start Time:** {{start_time}}
 **End Time:** {{end_time}}
+**Break:** {{break_time}} lunch
 **Time Spent:** {{time_spent}}
 
 **Work from:** {% if work_from|lower in ["home","remote","wfh"] %}🏠 Home{% elif work_from|lower in ["office","onsite"]

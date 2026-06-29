@@ -13,10 +13,8 @@ load_dotenv(dotenv_path)
 
 # Constants loaded from .env
 BASE_DIR = os.getenv("BASE_DIR", Path.home() / "Documents/DailyNotes/")
-BASE_PROJECT = os.getenv(
-    "BASE_PROJECT",
-    Path.home() / "Documents/work/personal/eballo/taskjournal/taskjournal/",
-)
+_bp_env = os.getenv("BASE_PROJECT", "")
+BASE_PROJECT = Path(_bp_env) if _bp_env else Path(__file__).parent
 BACKUP_DIR = os.getenv("BACKUP_DIR", Path.home() / "Documents/Backup/")
 HOLIDAYS_FILE = "holidays/holidays.md"
 FIREMAN_WEEKS_FILE = "fireman/fireman_weeks.md"
@@ -60,3 +58,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-api-key")
 # Wifi
 HOME_WIFI = os.getenv("HOME_WIFI", "CodePI")
 OFFICE_WIFI = os.getenv("OFFICE_WIFI", "TSH")
+
+# Editor
+EDITOR_APP = os.getenv("EDITOR_APP", "Obsidian")

@@ -1,14 +1,16 @@
-import os
 from collections import defaultdict
+from os import makedirs
+from os.path import exists, join
 from datetime import date as datetime
 from re import compile
 
 from taskjournal.config import BASE_DIR
+from taskjournal.services.base import BaseService
 from taskjournal.services.file import FileService
 from taskjournal.services.logger import logger
 
 
-class HolidayService:
+class HolidayService(BaseService):
     def __init__(
         self,
         filepath: str,
@@ -31,7 +33,7 @@ class HolidayService:
             with open(filepath, "r", encoding="utf-8") as f:
                 lines = f.readlines()
         except FileNotFoundError:
-            print(f"Error: File '{filepath}' not found.")
+            logger.error(f"File '{filepath}' not found.")
             return
 
         # Regex pattern for YYYY-MM-DD
@@ -67,7 +69,7 @@ class HolidayService:
                     self.categories[current_category].append(date_obj)
 
                 except ValueError:
-                    print(f"Warning: Invalid date format found: {date_str}")
+                    logger.warning(f"Invalid date format: {date_str}")
 
     def is_holiday(self, date_obj: datetime) -> dict[str, str] | None:
         """Returns the holiday info if the date is a holiday, else None."""
@@ -180,12 +182,12 @@ class HolidayService:
         count = 0
         for date_obj, info in self.holidays.items():
             week_folder = FileService.get_week_folder(BASE_DIR, date_obj)
-            if not os.path.exists(week_folder):
-                os.makedirs(week_folder)
+            if not exists(week_folder):
+                makedirs(week_folder, exist_ok=True)
                 logger.info(f"Created directory: {week_folder}")
             # Format: 2025-01-06-DailyNotes-Holidays.md
             filename = f"{date_obj}-DailyNotes-Holidays.md"
-            file_path = os.path.join(week_folder, filename)
+            file_path = join(week_folder, filename)
 
             content = (
                 f"Category: {info['category']}\n"
@@ -212,6 +214,47 @@ class HolidayService:
         next_holiday_description = upcoming_holidays[0][1]["description"]
         days_until_holiday = (next_holiday_date - today).days
         return max(days_until_holiday, 0), next_holiday_date, next_holiday_description
+
+    def add_holiday(self, filepath: str, date_str: str, description: str, category: str = "Personal days") -> None:
+        try:
+            date_obj = datetime.fromisoformat(date_str)
+        except ValueError:
+            logger.error(f"Invalid date format: {date_str}. Use YYYY-MM-DD.")
+            return
+
+        if date_obj in self.holidays:
+            logger.warning(f"{date_str} is already registered: {self.holidays[date_obj]['description']}")
+            return
+
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            logger.error(f"File '{filepath}' not found. Run 'wk setup' first.")
+            return
+
+        new_line = f"{date_str} - {description}\n"
+        target_header = f"## {category}"
+        insert_at = None
+
+        for i, line in enumerate(lines):
+            if line.strip() == target_header:
+                j = i + 1
+                while j < len(lines) and (not lines[j].strip() or not lines[j].startswith("##")):
+                    j += 1
+                insert_at = j
+                break
+
+        if insert_at is None:
+            lines.append(f"\n{target_header}\n")
+            lines.append(new_line)
+        else:
+            lines.insert(insert_at, new_line)
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+
+        logger.info(f"Holiday added: {date_str} - {description} [{category}]")
 
     def summary(self) -> None:
         """Prints a general summary of holidays."""

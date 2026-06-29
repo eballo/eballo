@@ -1,4 +1,4 @@
-import asyncio
+from asyncio import run
 
 from typer import Typer, Context, Option
 
@@ -36,6 +36,6 @@ def build_app() -> Typer:
         if date:
             custom_date = parse_date(date)
 
-        asyncio.run(m.create_month_review(custom_date))
+        run(m.create_month_review(custom_date))
 
     return app

@@ -1,33 +1,31 @@
-import re
 from datetime import datetime, timedelta
-from typing import Optional
+from re import match as re_match
 from urllib.parse import urlparse
 
 import httpx
 from gidgethub.httpx import GitHubAPI
 
-from taskjournal.config import GIT_HUB_TOKEN, GIT_HUB_ORGANIZATION_NAME
 from taskjournal.models.github import RepoCommitStat
 from taskjournal.models.task import Status, Task
+from taskjournal.services.base import BaseService, HealthCheckResult, ServiceStatus
 from taskjournal.services.logger import logger
 
+_UNCONFIGURED_TOKEN = "your-github-token"
 
-class GithubService:
-    """
-    Async GitHub service using gidgethub + httpx.
-    Provides commit statistics for repositories in an organization.
-    """
+
+class GithubService(BaseService):
+    """Async GitHub service using gidgethub + httpx."""
 
     def __init__(
         self,
-        token: str = GIT_HUB_TOKEN,
-        org_name: str = GIT_HUB_ORGANIZATION_NAME,
-    ):
+        token: str,
+        org_name: str,
+    ) -> None:
         self.token = token
         self.org_name = org_name
         self.client: httpx.AsyncClient = httpx.AsyncClient()
         try:
-            self.gh: Optional[GitHubAPI] = GitHubAPI(
+            self.gh: GitHubAPI | None = GitHubAPI(
                 self.client, requester="taskjournal", oauth_token=self.token
             )
             logger.debug("Github successfully initialized")
@@ -35,8 +33,28 @@ class GithubService:
             logger.error(f"Failed to initialize GitHub client: {e}")
             self.gh = None
 
+    @property
+    def name(self) -> str:
+        return "GitHub"
+
+    def health_check(self) -> HealthCheckResult:
+        if self.token == _UNCONFIGURED_TOKEN:
+            return HealthCheckResult(
+                ServiceStatus.UNCONFIGURED,
+                "GIT_HUB_TOKEN not configured — GitHub integration disabled",
+            )
+        if self.gh is None:
+            return HealthCheckResult(
+                ServiceStatus.ERROR,
+                "Failed to initialize GitHub client",
+            )
+        return HealthCheckResult(
+            ServiceStatus.OK,
+            f"Configured (org: {self.org_name})",
+        )
+
     # --- GitHub API helpers ---
-    async def get_user(self) -> Optional[str]:
+    async def get_user(self) -> str | None:
         if not self.gh:
             logger.error("GitHub client not initialized.")
             return None
@@ -54,9 +72,9 @@ class GithubService:
 
     async def get_org_commit_stats(
         self,
-        since_date: Optional[datetime] = None,
+        since_date: datetime | None = None,
         only_contributed: bool = False,
-    ) -> Optional[list[RepoCommitStat]]:
+    ) -> list[RepoCommitStat] | None:
         if not self.gh:
             logger.error("GitHub client not initialized.")
             return None
@@ -137,7 +155,7 @@ class GithubService:
         try:
             path = urlparse(pr_url).path.strip("/")
             # path => owner/repo/pull/123[/...]
-            m = re.match(r"^([^/]+)/([^/]+)/pull/(\d+)", path)
+            m = re_match(r"^([^/]+)/([^/]+)/pull/(\d+)", path)
             if not m:
                 raise ValueError("Not a valid GitHub PR URL.")
             owner, repo, number_str = m.groups()
@@ -148,7 +166,7 @@ class GithubService:
     async def has_user_approved_pr(
         self,
         pr_url: str | None = None,
-    ) -> Optional[bool]:
+    ) -> bool | None:
         """
         Return True if the (latest) review by 'user_login' on the given PR is APPROVED.
         Return False if they haven't approved (or later changed to CHANGES_REQUESTED/DISMISSED).
@@ -222,7 +240,7 @@ class GithubService:
         return self.get_commit_stats_summary(stats)
 
     @staticmethod
-    def get_commit_stats_summary(commit_stats: Optional[list[RepoCommitStat]]) -> str:
+    def get_commit_stats_summary(commit_stats: list[RepoCommitStat] | None) -> str:
         if not commit_stats:
             return "No commit stats to display."
 
@@ -247,7 +265,7 @@ class GithubService:
         return "\n".join(lines)
 
     @staticmethod
-    def print_commit_stats(commit_stats: Optional[list[RepoCommitStat]]) -> None:
+    def print_commit_stats(commit_stats: list[RepoCommitStat] | None) -> None:
         """Print commit statistics in a formatted table using the logger."""
         if not commit_stats:
             logger.info("No commit stats to display.")
