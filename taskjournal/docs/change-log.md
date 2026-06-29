@@ -1,8 +1,20 @@
 # Changelog
 
+## 0.41.0
+
 ## 0.40.0
 
-- Version 0 39 0
+- Fix `write_env` to preserve extra user-defined keys in `.env` (no data loss on re-write)
+- Fix `create_one_on_one` to create parent directory before writing the file
+- Fix task deduplication: keyless task now replaced by a matching keyed Jira task
+- Fix `daily_status` / `daily_check` to not create week folder unnecessarily (use `resolve_daily_notes_file`)
+- Fix WiFi placeholder constants unified in `constants.py` (`PLACEHOLDER_HOME_WIFI`, `PLACEHOLDER_OFFICE_WIFI`)
+- Fix Jira service gracefully skips connection when token is unconfigured
+- Fix backup service to accept `Path` objects in addition to `str`
+- Fix `get_previous_day_issues` to walk up to 14 calendar days back to find last existing note
+- Register `SetupService` in DI container — `wk setup` no longer bypasses DI
+- Fix CI bump workflow for Poetry→uv migration (`[project]` table) and `wiki/` → `docs/` path
+- Add GitHub Release creation step to bump workflow
 
 ## 0.38.0
 
