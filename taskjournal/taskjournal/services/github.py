@@ -296,6 +296,18 @@ class GithubService(BaseService):
             if has_been_reviewed:
                 task.status = Status.DONE
 
+    async def __aenter__(self) -> "GithubService":
+        self.client = httpx.AsyncClient()
+        try:
+            self.gh = GitHubAPI(self.client, requester="taskjournal", oauth_token=self.token)
+        except Exception as e:
+            logger.error(f"Failed to initialize GitHub client: {e}")
+            self.gh = None
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        await self.close()
+
     async def close(self) -> None:
         """Gracefully close the underlying httpx client."""
         if self.client:

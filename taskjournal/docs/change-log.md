@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.47.0
+
+- Migrate week/month/half-year/retro templates from `str.replace` to Jinja2 — removes `_apply_replacements` helper
+- Add `GithubService` async context manager (`__aenter__`/`__aexit__`) — client lifecycle managed automatically with `async with`
+- Add macOS alarm on `wk daily start` — schedules `osascript` notification via `at` at estimated end-of-workday time; silent on non-macOS or when `at` is unavailable
+- Cancel macOS alarm on `wk daily finish` — reads job number from `.alarm_job` and runs `atrm` to cancel before end-of-day notification fires
+
 ## 0.46.0
 
 - Add Claude Code CLI as AI provider with multi-provider selection

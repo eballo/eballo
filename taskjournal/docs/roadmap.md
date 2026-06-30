@@ -1,6 +1,6 @@
 # Task Journal — Roadmap
 
-> Based on analysis of the current codebase (v0.37.0). Organised into three horizons: foundational technical improvements, new features, and long-term ideas.
+> Based on analysis of the current codebase (v0.37.0). Organised into four horizons: foundational technical improvements, new features, extended features, and long-term ideas.
 
 ---
 
@@ -283,6 +283,200 @@ A `--fix` flag can open the `.env` file in `$EDITOR` to resolve missing variable
 
 ---
 
+## Horizon 2B — Extended features
+
+Features that extend and deepen the existing workflow.
+
+### 2B.1 `wk standup`
+
+Generate standup text automatically from yesterday's completed tasks and today's planned ones.
+
+```bash
+wk standup
+# Yesterday: Fixed login timeout (PROJ-101), reviewed Maria's PR
+# Today: Deploy hotfix, start Q3 planning
+# Blockers: None
+
+wk standup --post   # post directly to Slack
+```
+
+---
+
+### 2B.2 `wk note add`
+
+Append a quick note to today's Notes section without opening the file.
+
+```bash
+wk note add "Discussed caching strategy with Alex — use Redis"
+wk note add "Prod deploy delayed to Thursday"
+```
+
+---
+
+### 2B.3 `wk daily open`
+
+Open today's daily note in `$EDITOR` directly.
+
+```bash
+wk daily open
+wk daily open --date 2026-06-28
+```
+
+---
+
+### 2B.4 `wk quarter report`
+
+Generate a quarterly summary (Q1–Q4) analogous to the half-year report: total hours, tasks, epics, GitHub contributions, and an AI-generated summary.
+
+```bash
+wk quarter report
+wk quarter report --quarter 2 --year 2026
+```
+
+---
+
+### 2B.5 `wk year report`
+
+Annual summary: hours per month, tasks completed, epics contributed, GitHub contributions, streak record, and a full AI-generated narrative for the year.
+
+```bash
+wk year report
+wk year report --year 2025
+```
+
+---
+
+### 2B.6 `wk report compare`
+
+Compare two periods side by side to detect workload trends.
+
+```bash
+wk report compare --period month   # this month vs last month
+wk report compare --period quarter # Q2 vs Q1
+wk report compare --from 2026-01 --to 2026-06
+```
+
+---
+
+### 2B.7 `wk statistics completion`
+
+Show daily task completion rate over time: how many tasks are planned vs completed each day, best/worst days, and weekly average.
+
+```bash
+wk statistics completion
+# Average completion rate: 72%
+# Best day: Friday (84%)
+# Worst day: Monday (61%)
+# Last 30 days: ████████░░ 72%
+```
+
+---
+
+### 2B.8 `wk statistics workload`
+
+Show hours worked per week over time. Detects overload patterns and prints a warning if multiple consecutive weeks exceed a configurable threshold (default 45h).
+
+```bash
+wk statistics workload
+wk statistics workload --year 2026
+# Week 23: 38h ████████░░
+# Week 24: 41h ████████░░
+# Week 25: 47h ██████████ ⚠ overload
+```
+
+---
+
+### 2B.9 `wk statistics patterns`
+
+Identify productivity patterns: best day of the week, most productive time of day, average tasks per day, carry-over rate (tasks that repeat across multiple days without being completed).
+
+```bash
+wk statistics patterns
+# Most productive day: Thursday
+# Average tasks completed/day: 4.2
+# Carry-over rate: 28% of tasks repeat 2+ days
+```
+
+---
+
+### 2B.10 Mood / energy tracking
+
+Add an optional Energy field (1–5) to the daily notes. Surface it in reports to correlate workload with energy levels.
+
+```bash
+wk daily start
+# ⚡ Energy today (1–5, Enter to skip): 4
+```
+
+Visible in `wk statistics workload` and month/quarter reports.
+
+---
+
+### 2B.11 Recurring tasks
+
+Mark a task as recurring so it is automatically included every day (or on specific weekdays) without needing to carry it forward manually.
+
+```bash
+wk task recurring add "Check monitoring alerts" --every day
+wk task recurring add "Update sprint board" --every monday,wednesday,friday
+wk task recurring list
+wk task recurring remove "Check monitoring alerts"
+```
+
+---
+
+### 2B.12 Time tracking per task
+
+Track time spent on individual tasks. `wk task start` / `wk task stop` log elapsed time against a task description or Jira key, and the data appears in daily and weekly reports.
+
+```bash
+wk task start PROJ-101
+wk task stop
+# PROJ-101: 1h 23m logged
+
+wk task start "Write architecture doc"
+wk task stop
+```
+
+---
+
+### 2B.13 Jira bidirectional sync
+
+When a task is marked as done in `wk`, optionally update its status in Jira automatically.
+
+```bash
+wk daily task done PROJ-101          # marks done locally
+# Jira: PROJ-101 moved → Done ✓
+```
+
+Controlled by a config flag `JIRA_SYNC_ON_DONE=true` to avoid accidental updates.
+
+---
+
+### 2B.14 `wk pr review`
+
+List open pull requests from your GitHub org that are waiting for your review, directly in the terminal.
+
+```bash
+wk pr review
+# REPO-A  #142  Fix auth middleware         opened 2 days ago
+# REPO-B  #98   Update API rate limits      opened 5 hours ago
+```
+
+---
+
+### 2B.15 `wk backup schedule`
+
+Set up an automated periodic backup using `launchd` (macOS) or `cron`.
+
+```bash
+wk backup schedule --every day --time 18:00
+# LaunchAgent installed: backup runs daily at 18:00
+wk backup schedule --disable
+```
+
+---
+
 ## Horizon 3 — Long-term ideas
 
 Broader ideas that require more planning or depend on new infrastructure.
@@ -325,19 +519,15 @@ Read the calendar (Google Calendar / Outlook via API) to automatically populate 
 
 ---
 
-### 3.5 Claude Code integration
+### 3.6 Slack summary
 
-Expose `wk` context to Claude Code so the AI assistant can read the current day's note, query pending tasks, and help write or update journal entries directly from the editor.
+Pull a summary of Slack activity (mentions, threads, DMs) for the day and include it in the daily notes or week report. Useful for capturing context that lives in Slack but never makes it into the journal.
 
 Possible entry points:
-- An MCP server (`wk mcp`) that exposes tools such as `get_today`, `list_pending_tasks`, `add_task`, and `finish_day`.
-- A `CLAUDE.md` snippet that instructs Claude Code how to interact with `wk` commands during a coding session.
-- A `wk daily summarise` command that sends the day's raw notes to Claude and appends an AI-generated summary section.
+- `wk daily slack` — fetch today's Slack highlights and append them to the current daily note
+- Automatic inclusion on `wk daily start` if the Slack integration is configured
 
-```bash
-wk mcp          # start the MCP server for Claude Code
-wk daily summarise   # AI-generated end-of-day summary via Claude
-```
+Requires a Slack app with `channels:history`, `im:history`, and `users:read` OAuth scopes.
 
 ---
 
@@ -367,8 +557,23 @@ wk daily summarise   # AI-generated end-of-day summary via Claude
 | 2.3 | `wk search` | Medium | High |
 | 2.4 | `wk statistics streak` | Low | Low |
 | 1.6 | AI service abstraction | High | Medium |
+| 2B.1 | `wk standup` | Low | High |
+| 2B.2 | `wk note add` | Low | High |
+| 2B.3 | `wk daily open` | Low | Medium |
+| 2B.4 | `wk quarter report` | Medium | High |
+| 2B.5 | `wk year report` | Medium | High |
+| 2B.6 | `wk report compare` | Medium | Medium |
+| 2B.7 | `wk statistics completion` | Low | High |
+| 2B.8 | `wk statistics workload` | Low | High |
+| 2B.9 | `wk statistics patterns` | Medium | Medium |
+| 2B.10 | Mood / energy tracking | Low | Medium |
+| 2B.11 | Recurring tasks | Medium | High |
+| 2B.12 | Time tracking per task | High | High |
+| 2B.13 | Jira bidirectional sync | Medium | Medium |
+| 2B.14 | `wk pr review` | Low | Medium |
+| 2B.15 | `wk backup schedule` | Medium | Low |
 | 3.1 | `wk export` | High | Medium |
 | 3.2 | TUI dashboard | High | High |
-| 3.5 | Claude Code integration (MCP server) | High | High |
 | 3.3 | Multi-profile | High | Low |
 | 3.4 | Calendar sync | Very High | Low |
+| 3.6 | Slack summary | High | Medium |
