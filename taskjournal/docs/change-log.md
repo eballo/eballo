@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.47.0
+
+- Remove manual changelog entry — CI adds it automatically on merge
+
 ## 0.46.0
 
 - Add Claude Code CLI as AI provider with multi-provider selection
