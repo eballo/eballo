@@ -3,6 +3,8 @@ from os import makedirs, listdir, walk
 from os.path import basename, dirname, exists, isdir, join
 from pathlib import Path
 from re import compile as re_compile, escape as re_escape, IGNORECASE, Pattern
+from subprocess import run as subprocess_run
+from sys import platform
 
 from jinja2 import Template
 
@@ -33,11 +35,6 @@ from taskjournal.services.time import TimeService
 from taskjournal.services.utils import FormatUtils
 from taskjournal.services.working_days import WorkingDaysService
 
-
-def _apply_replacements(template: str, replacements: dict[str, str]) -> str:
-    for placeholder, value in replacements.items():
-        template = template.replace(placeholder, value)
-    return template
 
 
 class CommandManager:
@@ -253,7 +250,45 @@ class CommandManager:
             f"Today: {today_h}h {today_m:02d}m work + 1h lunch"
             f"  →  estimated finish {finish.strftime('%H:%M')}"
         )
+        alarm_file = join(week_folder, f".alarm_job_{create_datetime.strftime('%Y-%m-%d')}")
+        self._schedule_macos_alarm(finish, alarm_file)
         return None
+
+    def _schedule_macos_alarm(self, finish_time: datetime, alarm_file: str) -> None:
+        if platform != "darwin":
+            return
+        finish_str = finish_time.strftime("%H:%M")
+        script = 'osascript -e \'display notification "Time to wrap up!" with title "wk journal"\''
+        try:
+            result = subprocess_run(
+                ["at", finish_str], input=script.encode(), capture_output=True
+            )
+            if result.returncode == 0:
+                logger.info(f"Alarm set for {finish_str} — end of scheduled workday")
+                m = re_compile(r"job\s+(\d+)").search(result.stderr.decode())
+                if m:
+                    Path(alarm_file).write_text(m.group(1))
+            else:
+                logger.debug(f"Could not schedule alarm: {result.stderr.decode().strip()}")
+        except Exception as e:
+            logger.debug(f"Could not schedule alarm: {e}")
+
+    def _cancel_macos_alarm(self, alarm_file: str) -> None:
+        if platform != "darwin":
+            return
+        alarm_path = Path(alarm_file)
+        if not alarm_path.exists():
+            return
+        try:
+            job_id = alarm_path.read_text().strip()
+            result = subprocess_run(["atrm", job_id], capture_output=True)
+            alarm_path.unlink()
+            if result.returncode == 0:
+                logger.info(f"Alarm cancelled (job {job_id})")
+            else:
+                logger.debug(f"Could not cancel alarm job {job_id}: {result.stderr.decode().strip()}")
+        except Exception as e:
+            logger.debug(f"Could not cancel alarm: {e}")
 
     def list_tasks_in_daily(self, date: datetime) -> list[Task]:
         file_path = self._get_daily_notes_file_path(date)
@@ -410,6 +445,9 @@ class CommandManager:
 
         logger.info(f"Daily notes finalized {daily_notes_file}")
 
+        alarm_file = join(dirname(daily_notes_file), f".alarm_job_{final_time.strftime('%Y-%m-%d')}")
+        self._cancel_macos_alarm(alarm_file)
+
     def _read_breaks_seconds(self, content: list[str]) -> int:
         break_marker = FormatUtils.wrap_with_format("Break:")
         total = 0
@@ -512,19 +550,6 @@ class CommandManager:
         is_fireman_week = FiremanService(custom_date).is_fireman_week()
 
         total_hours, total_minutes = self.time_service.seconds_to_hours_minutes(stats["total_time_seconds"])
-        week_summary_content = _apply_replacements(
-            week_summary_content,
-            {
-                "{{start_date}}": stats["start_date"].strftime("%Y-%m-%d"),
-                "{{end_date}}": stats["end_date"].strftime("%Y-%m-%d"),
-                "{{total_time}}": f" {total_hours} hours and {total_minutes} minutes",
-                "{{total_worked_days}}": str(stats["total_worked_days"]),
-                "{{vacation_days}}": str(stats["vacation_days"]),
-                "{{days_at_office}}": str(stats["days_at_office"]),
-                "{{days_at_home}}": str(stats["days_at_home"]),
-                "{{is_fireman_week}}": "Yes" if is_fireman_week else "No",
-            },
-        )
 
         summary = []
         for file_name in sorted(listdir(week_folder)):
@@ -536,7 +561,17 @@ class CommandManager:
             summary, stats=stats, is_fireman_week=is_fireman_week
         )
 
-        week_summary_content = week_summary_content.replace("{{summary}}", summary_ai)
+        week_summary_content = Template(week_summary_content).render(
+            start_date=stats["start_date"].strftime("%Y-%m-%d"),
+            end_date=stats["end_date"].strftime("%Y-%m-%d"),
+            total_time=f" {total_hours} hours and {total_minutes} minutes",
+            total_worked_days=str(stats["total_worked_days"]),
+            vacation_days=str(stats["vacation_days"]),
+            days_at_office=str(stats["days_at_office"]),
+            days_at_home=str(stats["days_at_home"]),
+            is_fireman_week="Yes" if is_fireman_week else "No",
+            summary=summary_ai,
+        )
 
         self.file_service.write_to_file(summary_file, week_summary_content)
 
@@ -571,23 +606,20 @@ class CommandManager:
         total_tasks = len(tasks)
         total_epics = len(epics)
 
-        github_contributions = await self.github.get_contributions_last_6_months()
+        async with self.github:
+            github_contributions = await self.github.get_contributions_last_6_months()
 
-        half_year_content = _apply_replacements(
-            half_year_content,
-            {
-                "{{total_tasks}}": str(total_tasks),
-                "{{total_epics}}": str(total_epics),
-                "{{github_contributions}}": str(github_contributions),
-                "{{tasks}}": "\n".join(f"{task}" for task in tasks),
-                "{{epics}}": "\n".join(f"{epic}" for epic in epics),
-            },
+        half_year_content = Template(half_year_content).render(
+            total_tasks=str(total_tasks),
+            total_epics=str(total_epics),
+            github_contributions=str(github_contributions),
+            tasks="\n".join(f"{task}" for task in tasks),
+            epics="\n".join(f"{epic}" for epic in epics),
         )
 
         self.file_service.write_to_file(half_year_review_file, half_year_content)
 
         logger.info(f"Half year review file created: {half_year_review_file}")
-        await self.github.close()
 
         return None
 
@@ -604,7 +636,8 @@ class CommandManager:
         total_tasks = len(tasks)
         total_epics = len(epics)
 
-        github_contributions = await self.github.get_contributions_last_month()
+        async with self.github:
+            github_contributions = await self.github.get_contributions_last_month()
 
         summary = await self.ai_service.summarize(
             stats["daily_summaries"],
@@ -616,27 +649,24 @@ class CommandManager:
         total_hours, total_minutes = self.time_service.seconds_to_hours_minutes(stats["total_time_seconds"])
         total_time_str = f"{total_hours}h {total_minutes}m"
 
-        replacements = {
-            "{{start_date}}": stats["start_date"].strftime("%Y-%m-%d"),
-            "{{end_date}}": stats["end_date"].strftime("%Y-%m-%d"),
-            "{{total_time}}": total_time_str,
-            "{{total_worked_days}}": str(stats["total_worked_days"]),
-            "{{vacation_days}}": str(stats["vacation_days"]),
-            "{{days_at_office}}": str(stats["days_at_office"]),
-            "{{days_at_home}}": str(stats["days_at_home"]),
-            "{{total_tasks}}": str(total_tasks),
-            "{{total_epics}}": str(total_epics),
-            "{{github_contributions}}": str(github_contributions),
-            "{{epics}}": "\n".join(f"{epic}" for epic in epics),
-            "{{summary}}": summary,
-        }
-
-        month_content = _apply_replacements(month_content, replacements)
+        month_content = Template(month_content).render(
+            start_date=stats["start_date"].strftime("%Y-%m-%d"),
+            end_date=stats["end_date"].strftime("%Y-%m-%d"),
+            total_time=total_time_str,
+            total_worked_days=str(stats["total_worked_days"]),
+            vacation_days=str(stats["vacation_days"]),
+            days_at_office=str(stats["days_at_office"]),
+            days_at_home=str(stats["days_at_home"]),
+            total_tasks=str(total_tasks),
+            total_epics=str(total_epics),
+            github_contributions=str(github_contributions),
+            epics="\n".join(f"{epic}" for epic in epics),
+            summary=summary,
+        )
 
         self.file_service.write_to_file(month_review_file, month_content)
         logger.info(f"Month review file created: {month_review_file}")
 
-        await self.github.close()
         return None
 
     def create_retro(self, custom_date: datetime) -> None:
@@ -648,7 +678,7 @@ class CommandManager:
 
             sprint = self.jira.get_active_sprint()
             sprint_name = sprint.name if sprint else "No active sprint"
-            template_content = template_content.replace("{{sprint_name}}", sprint_name)
+            template_content = Template(template_content).render(sprint_name=sprint_name)
 
             self.file_service.write_to_file(retro_file, template_content)
             logger.info(f"Retro file ensured: {retro_file}")

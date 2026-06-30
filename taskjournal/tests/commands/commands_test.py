@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from os.path import join
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -124,6 +125,7 @@ class TestCommands:
             new_callable=AsyncMock,
             return_value=["task-code-review"],
         )
+        mocker.patch.object(cmd, "_schedule_macos_alarm")
         info = mocker.patch("taskjournal.commands.commands.logger.info")
 
         # when
@@ -178,6 +180,7 @@ class TestCommands:
             "taskjournal.services.task_manager.TaskManager.unique_tasks",
             return_value=[],
         )
+        mocker.patch.object(cmd, "_schedule_macos_alarm")
 
         # when
         await cmd.create_daily_notes(fixed_datetime)
@@ -230,6 +233,7 @@ class TestCommands:
             side_effect=lambda s: f"**{s}**",
         )
         info = mocker.patch("taskjournal.commands.commands.logger.info")
+        mocker.patch.object(cmd, "_cancel_macos_alarm")
         custom_end = fixed_datetime + timedelta(hours=2, minutes=15)
 
         # when
@@ -272,6 +276,7 @@ class TestCommands:
                 "strftime": datetime.strftime,
             },
         )
+        mocker.patch.object(cmd, "_cancel_macos_alarm")
 
         # when
         cmd.finalize_daily_notes(custom_date=None)  # type: ignore[arg-type]
@@ -436,11 +441,6 @@ class TestCommands:
             new_callable=AsyncMock,
             return_value=123,
         )
-        mocker.patch.object(
-            cmd.github,
-            "close",
-            new_callable=AsyncMock,
-        )
         await cmd.create_half_year_review(fixed_datetime)
 
         content: str = cmd.file_service.write_to_file.call_args[0][1]
@@ -473,11 +473,6 @@ class TestCommands:
             "get_contributions_last_month",
             new_callable=AsyncMock,
             return_value=7,
-        )
-        mocker.patch.object(
-            cmd.github,
-            "close",
-            new_callable=AsyncMock,
         )
 
         mock_stats = {
@@ -1062,3 +1057,116 @@ class TestCommands:
         await cmd.sync_daily_notes(fixed_datetime)
 
         cmd.file_service.write_lines_to_file.assert_not_called()
+
+    # ── _schedule_macos_alarm ─────────────────────────────────────────────────
+
+    def test__schedule_macos_alarm__skips_on_non_darwin(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime, tmp_path: Path
+    ) -> None:
+        mocker.patch("taskjournal.commands.commands.platform", "linux")
+        run = mocker.patch("taskjournal.commands.commands.subprocess_run")
+
+        cmd._schedule_macos_alarm(fixed_datetime, str(tmp_path / ".alarm_job"))
+
+        run.assert_not_called()
+
+    def test__schedule_macos_alarm__logs_info_and_saves_job_on_success(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime, tmp_path: Path
+    ) -> None:
+        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        fake_result = mocker.MagicMock()
+        fake_result.returncode = 0
+        fake_result.stderr = b"job 42 at Tue Jun 30 12:57:00 2026"
+        mocker.patch("taskjournal.commands.commands.subprocess_run", return_value=fake_result)
+        info = mocker.patch("taskjournal.commands.commands.logger.info")
+        alarm_file = str(tmp_path / ".alarm_job")
+
+        cmd._schedule_macos_alarm(fixed_datetime, alarm_file)
+
+        assert any("Alarm set for" in str(c.args) for c in info.mock_calls)
+        assert Path(alarm_file).read_text() == "42"
+
+    def test__schedule_macos_alarm__logs_debug_on_failure(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime, tmp_path: Path
+    ) -> None:
+        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        fake_result = mocker.MagicMock()
+        fake_result.returncode = 1
+        fake_result.stderr = b"atd not running"
+        mocker.patch("taskjournal.commands.commands.subprocess_run", return_value=fake_result)
+        debug = mocker.patch("taskjournal.commands.commands.logger.debug")
+
+        cmd._schedule_macos_alarm(fixed_datetime, str(tmp_path / ".alarm_job"))
+
+        assert any("Could not schedule alarm" in str(c.args) for c in debug.mock_calls)
+
+    def test__schedule_macos_alarm__logs_debug_on_exception(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime, tmp_path: Path
+    ) -> None:
+        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        mocker.patch(
+            "taskjournal.commands.commands.subprocess_run",
+            side_effect=FileNotFoundError("at not found"),
+        )
+        debug = mocker.patch("taskjournal.commands.commands.logger.debug")
+
+        cmd._schedule_macos_alarm(fixed_datetime, str(tmp_path / ".alarm_job"))
+
+        assert any("Could not schedule alarm" in str(c.args) for c in debug.mock_calls)
+
+    # ── _cancel_macos_alarm ───────────────────────────────────────────────────
+
+    def test__cancel_macos_alarm__skips_on_non_darwin(
+        self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
+    ) -> None:
+        mocker.patch("taskjournal.commands.commands.platform", "linux")
+        run = mocker.patch("taskjournal.commands.commands.subprocess_run")
+        alarm_file = tmp_path / ".alarm_job"
+        alarm_file.write_text("42")
+
+        cmd._cancel_macos_alarm(str(alarm_file))
+
+        run.assert_not_called()
+
+    def test__cancel_macos_alarm__skips_when_no_alarm_file(
+        self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
+    ) -> None:
+        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        run = mocker.patch("taskjournal.commands.commands.subprocess_run")
+
+        cmd._cancel_macos_alarm(str(tmp_path / ".alarm_job"))
+
+        run.assert_not_called()
+
+    def test__cancel_macos_alarm__cancels_job_and_removes_file(
+        self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
+    ) -> None:
+        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        fake_result = mocker.MagicMock()
+        fake_result.returncode = 0
+        run = mocker.patch("taskjournal.commands.commands.subprocess_run", return_value=fake_result)
+        info = mocker.patch("taskjournal.commands.commands.logger.info")
+        alarm_file = tmp_path / ".alarm_job"
+        alarm_file.write_text("42")
+
+        cmd._cancel_macos_alarm(str(alarm_file))
+
+        run.assert_called_once_with(["atrm", "42"], capture_output=True)
+        assert not alarm_file.exists()
+        assert any("Alarm cancelled" in str(c.args) for c in info.mock_calls)
+
+    def test__cancel_macos_alarm__logs_debug_when_atrm_fails(
+        self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
+    ) -> None:
+        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        fake_result = mocker.MagicMock()
+        fake_result.returncode = 1
+        fake_result.stderr = b"no such job"
+        mocker.patch("taskjournal.commands.commands.subprocess_run", return_value=fake_result)
+        debug = mocker.patch("taskjournal.commands.commands.logger.debug")
+        alarm_file = tmp_path / ".alarm_job"
+        alarm_file.write_text("99")
+
+        cmd._cancel_macos_alarm(str(alarm_file))
+
+        assert any("Could not cancel alarm" in str(c.args) for c in debug.mock_calls)

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from pytest import LogCaptureFixture, mark, raises
 from pytest_mock import MockerFixture
@@ -42,6 +42,28 @@ def make_fake_getiter(
 
 
 class TestGithub:
+
+    @mark.asyncio
+    async def test_aenter_creates_new_client_and_returns_self(
+        self, mocker: MockerFixture
+    ) -> None:
+        service = GithubService(token="t", org_name="o")
+        old_client = service.client
+
+        result = await service.__aenter__()
+
+        assert result is service
+        assert service.client is not old_client
+        assert service.gh is not None
+
+    @mark.asyncio
+    async def test_aexit_closes_client(self, mocker: MockerFixture) -> None:
+        service = GithubService(token="t", org_name="o")
+        close_spy = mocker.patch.object(service, "close", new_callable=AsyncMock)
+
+        await service.__aexit__(None, None, None)
+
+        close_spy.assert_awaited_once()
 
     @mark.asyncio
     async def test_close_closes_httpx_client(self, mocker: MockerFixture) -> None:

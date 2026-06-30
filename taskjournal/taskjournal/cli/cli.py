@@ -49,11 +49,13 @@ def create_app(container: AppContainer | None = None) -> Typer:
     )
 
     app.add_typer(build_daily(), name="daily", rich_help_panel="📋 Daily workflow")
+    # Reports
     app.add_typer(build_week(), name="week", rich_help_panel="📊 Reports")
     app.add_typer(build_month(), name="month", rich_help_panel="📊 Reports")
     app.add_typer(build_half_year(), name="half-year", rich_help_panel="📊 Reports")
     app.add_typer(build_retro(), name="retro", rich_help_panel="📊 Reports")
     app.add_typer(build_one_on_one(), name="1on1", rich_help_panel="📊 Reports")
+    # Tools
     app.add_typer(build_services(), name="services", rich_help_panel="🗂️ Tools")
     app.add_typer(build_backup(), name="backup", rich_help_panel="🗂️ Tools")
     app.add_typer(build_migrate(), name="migrate", rich_help_panel="🗂️ Tools")
