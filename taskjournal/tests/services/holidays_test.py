@@ -4,6 +4,7 @@ from pathlib import Path
 
 from pytest_mock import MockerFixture
 
+from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.services.holidays import HolidayService
 
 
@@ -139,7 +140,7 @@ class TestHolidays:
         assert fake_week_dir.exists()
 
         # 2. Verify a specific file was created (2026-01-01 from temp_holiday_file)
-        expected_file = fake_week_dir / "2026-01-01-DailyNotes-Holidays.md"
+        expected_file = fake_week_dir / f"2026-01-01-DailyNotes-Holidays.{TEMPLATE_FORMAT}"
         assert expected_file.exists()
 
         # 3. Verify the file content matches the service logic
@@ -148,8 +149,28 @@ class TestHolidays:
         assert "Description: New Year's Day" in content
 
         # 4. Verify correct number of files (3 valid dates in temp_holiday_file)
-        generated_files = list(fake_week_dir.glob("*.md"))
+        generated_files = list(fake_week_dir.glob(f"*.{TEMPLATE_FORMAT}"))
         assert len(generated_files) == 3
+
+    def test_populate_files_uses_txt_extension_when_format_is_txt(
+        self,
+        temp_holiday_file: str,
+        tmp_path: Path,
+        mocker: MockerFixture,
+        holiday_service_factory: Callable[[str], HolidayService],
+    ) -> None:
+        mocker.patch("taskjournal.services.holidays.TEMPLATE_FORMAT", "txt")
+        service = holiday_service_factory(temp_holiday_file)
+        fake_week_dir = tmp_path / "mock_week_folder"
+        mocker.patch(
+            "taskjournal.services.file.FileService.get_week_folder",
+            return_value=str(fake_week_dir),
+        )
+
+        service.populate_files()
+
+        assert (fake_week_dir / "2026-01-01-DailyNotes-Holidays.txt").exists()
+        assert not (fake_week_dir / "2026-01-01-DailyNotes-Holidays.md").exists()
 
     def test_load_and_parse_missing_file_logs_with_print(
         self,

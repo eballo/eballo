@@ -4,6 +4,7 @@ from collections.abc import Callable
 
 from datetime import datetime, date
 
+from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.services.fireman import FiremanService
 
 
@@ -18,8 +19,8 @@ class TestFireman:
         # given
         base_dir = tmp_path
         target_year = "2025"
-        fireman_rel_file = "fireman/fireman_weeks.md"
-        fireman_file = base_dir / target_year / "fireman" / "fireman_weeks.md"
+        fireman_rel_file = f"fireman/fireman_weeks.{TEMPLATE_FORMAT}"
+        fireman_file = base_dir / target_year / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text(
             "\n".join(
@@ -75,7 +76,7 @@ class TestFireman:
         fireman_service_factory: Callable[[datetime], FiremanService],
     ) -> None:
         # given
-        fireman_file = tmp_path / "2025" / "fireman" / "fireman_weeks.md"
+        fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n", encoding="utf-8")
 
@@ -98,7 +99,7 @@ class TestFireman:
         fireman_service_factory: Callable[[datetime], FiremanService],
         weeks: list[str],
     ) -> FiremanService:
-        fireman_file = tmp_path / "2025" / "fireman" / "fireman_weeks.md"
+        fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("\n".join(weeks) + "\n", encoding="utf-8")
         mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
@@ -170,7 +171,7 @@ class TestFireman:
         mocker: MockerFixture,
         fireman_service_factory: Callable[[datetime], FiremanService],
     ) -> None:
-        fireman_file = tmp_path / "2025" / "fireman" / "fireman_weeks.md"
+        fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n", encoding="utf-8")
         mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
@@ -188,7 +189,7 @@ class TestFireman:
         mocker: MockerFixture,
         fireman_service_factory: Callable[[datetime], FiremanService],
     ) -> None:
-        fireman_file = tmp_path / "2025" / "fireman" / "fireman_weeks.md"
+        fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n", encoding="utf-8")
         mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
@@ -206,7 +207,7 @@ class TestFireman:
         mocker: MockerFixture,
         fireman_service_factory: Callable[[datetime], FiremanService],
     ) -> None:
-        fireman_file = tmp_path / "2025" / "fireman" / "fireman_weeks.md"
+        fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("", encoding="utf-8")
         mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
@@ -251,7 +252,7 @@ class TestFireman:
         mocker: MockerFixture,
         fireman_service_factory: Callable[[datetime], FiremanService],
     ) -> None:
-        fireman_file = tmp_path / "2025" / "fireman" / "fireman_weeks.md"
+        fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n2025-01-20\n2025-02-03\n", encoding="utf-8")
         mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
@@ -271,7 +272,7 @@ class TestFireman:
         mocker: MockerFixture,
         fireman_service_factory: Callable[[datetime], FiremanService],
     ) -> None:
-        fireman_file = tmp_path / "2025" / "fireman" / "fireman_weeks.md"
+        fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n", encoding="utf-8")
         mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))

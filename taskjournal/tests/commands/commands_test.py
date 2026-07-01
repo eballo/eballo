@@ -897,6 +897,61 @@ class TestCommands:
 
         assert result == []
 
+    def test_audit_weekly_coverage__reports_missing_days(
+        self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
+    ) -> None:
+        year_dir = tmp_path / "2025"
+        week_dir = year_dir / "week02"
+        week_dir.mkdir(parents=True)
+        (week_dir / "2025-01-06-DailyNotes.md").write_text("")
+
+        mocker.patch("taskjournal.commands.daily.BASE_DIR", str(tmp_path))
+        mocker.patch("taskjournal.commands.daily.TEMPLATE_FORMAT", "md")
+
+        result = cmd.audit_weekly_coverage(2025)
+
+        assert any("week02" == entry for entry, _ in result)
+        week02_missing = next(missing for entry, missing in result if entry == "week02")
+        assert "2025-01-07" in week02_missing
+
+    def test_audit_weekly_coverage__holiday_file_counts_as_present(
+        self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
+    ) -> None:
+        year_dir = tmp_path / "2025"
+        week_dir = year_dir / "week02"
+        week_dir.mkdir(parents=True)
+        (week_dir / "2025-01-06-DailyNotes.md").write_text("")
+        (week_dir / "2025-01-07-DailyNotes-Holidays.md").write_text("")
+        (week_dir / "2025-01-08-DailyNotes.md").write_text("")
+        (week_dir / "2025-01-09-DailyNotes.md").write_text("")
+        (week_dir / "2025-01-10-DailyNotes.md").write_text("")
+
+        mocker.patch("taskjournal.commands.daily.BASE_DIR", str(tmp_path))
+        mocker.patch("taskjournal.commands.daily.TEMPLATE_FORMAT", "md")
+
+        result = cmd.audit_weekly_coverage(2025)
+
+        assert all(entry != "week02" for entry, _ in result)
+
+    def test_audit_weekly_coverage__txt_format_respected(
+        self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
+    ) -> None:
+        year_dir = tmp_path / "2025"
+        week_dir = year_dir / "week02"
+        week_dir.mkdir(parents=True)
+        (week_dir / "2025-01-06-DailyNotes.txt").write_text("")
+        (week_dir / "2025-01-07-DailyNotes-Holidays.txt").write_text("")
+        (week_dir / "2025-01-08-DailyNotes.txt").write_text("")
+        (week_dir / "2025-01-09-DailyNotes.txt").write_text("")
+        (week_dir / "2025-01-10-DailyNotes.txt").write_text("")
+
+        mocker.patch("taskjournal.commands.daily.BASE_DIR", str(tmp_path))
+        mocker.patch("taskjournal.commands.daily.TEMPLATE_FORMAT", "txt")
+
+        result = cmd.audit_weekly_coverage(2025)
+
+        assert all(entry != "week02" for entry, _ in result)
+
     # ── search_notes ─────────────────────────────────────────────────────────
 
     def test_search_notes__returns_matching_lines(

@@ -4,6 +4,8 @@ from freezegun import freeze_time
 from pytest_mock import MockerFixture
 from typer.testing import Result
 
+from taskjournal.config import TEMPLATE_FORMAT
+
 
 class TestHolidays:
 
@@ -26,7 +28,7 @@ class TestHolidays:
         # then
         assert result.exit_code == 0
         service_cls.assert_called_once()
-        assert "2026/holidays/holidays.md" in service_cls.call_args.kwargs["filepath"]
+        assert f"2026/holidays/holidays.{TEMPLATE_FORMAT}" in service_cls.call_args.kwargs["filepath"]
         service_instance.summary_all.assert_called_once()
 
     def test_holidays_upcoming_uses_explicit_year(
@@ -47,7 +49,7 @@ class TestHolidays:
         # then
         assert result.exit_code == 0
         service_cls.assert_called_once()
-        assert "2030/holidays/holidays.md" in service_cls.call_args.kwargs["filepath"]
+        assert f"2030/holidays/holidays.{TEMPLATE_FORMAT}" in service_cls.call_args.kwargs["filepath"]
         service_instance.summary_upcoming.assert_called_once()
 
     @freeze_time("2026-02-20 10:00:00")

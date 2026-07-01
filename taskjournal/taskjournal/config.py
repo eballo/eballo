@@ -16,12 +16,11 @@ BASE_DIR = os.getenv("BASE_DIR", Path.home() / "Documents/DailyNotes/")
 _bp_env = os.getenv("BASE_PROJECT", "")
 BASE_PROJECT = Path(_bp_env) if _bp_env else Path(__file__).parent
 BACKUP_DIR = os.getenv("BACKUP_DIR", Path.home() / "Documents/Backup/")
-HOLIDAYS_FILE = "holidays/holidays.md"
-FIREMAN_WEEKS_FILE = "fireman/fireman_weeks.md"
-
 # Template paths
 TEMPLATE_FORMAT = os.getenv("TEMPLATE_FORMAT", "md")
 TEMPLATES_DIR = f"templates/{TEMPLATE_FORMAT}"
+HOLIDAYS_FILE = f"holidays/holidays.{TEMPLATE_FORMAT}"
+FIREMAN_WEEKS_FILE = f"fireman/fireman_weeks.{TEMPLATE_FORMAT}"
 DAILY_NOTES_TEMPLATE = os.path.join(
     BASE_PROJECT, f"{TEMPLATES_DIR}/dailyNotes.{TEMPLATE_FORMAT}"
 )
