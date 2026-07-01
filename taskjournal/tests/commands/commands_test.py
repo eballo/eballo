@@ -8,6 +8,7 @@ from pytest import mark, raises
 from pytest_mock import MockerFixture
 
 from taskjournal.commands.commands import CommandManager
+from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.models.task import Status, Task
 
 
@@ -626,7 +627,7 @@ class TestCommands:
         mocker.patch.object(cmd._tasks, "_get_daily_notes_file_path", return_value="/day.md")
         mocker.patch("taskjournal.commands.tasks.exists", return_value=True)
         task = Task(id="1", description="Do it", status=Status.TODO)
-        cmd.parser.parse.return_value = {"planned_tasks": [task]}
+        cmd.parser.parse.return_value = ParsedNote(planned_tasks=[task])
 
         result = cmd.list_tasks_in_daily(fixed_datetime)
 
@@ -756,7 +757,7 @@ class TestCommands:
         cmd.file_service.get_lines.return_value = ["line\n"]
         cmd.time_service.get_start_time.return_value = (0, fixed_datetime)
         cmd.file_service.check_finalized_in_file.return_value = True
-        cmd.parser.parse.return_value = {"time_spent": "2h 15m", "summary": ["Accomplished things"]}
+        cmd.parser.parse.return_value = ParsedNote(time_spent="2h 15m", summary=["Accomplished things"])
 
         issues = cmd._note_issues("/day.md")
 
@@ -768,7 +769,7 @@ class TestCommands:
         cmd.file_service.get_lines.return_value = []
         cmd.time_service.get_start_time.side_effect = ValueError("no start")
         cmd.file_service.check_finalized_in_file.return_value = True
-        cmd.parser.parse.return_value = {"time_spent": "1h", "summary": ["Done"]}
+        cmd.parser.parse.return_value = ParsedNote(time_spent="1h", summary=["Done"])
 
         issues = cmd._note_issues("/day.md")
 
@@ -780,7 +781,7 @@ class TestCommands:
         cmd.file_service.get_lines.return_value = ["line\n"]
         cmd.time_service.get_start_time.return_value = (0, datetime(2025, 1, 15))
         cmd.file_service.check_finalized_in_file.return_value = False
-        cmd.parser.parse.return_value = {"time_spent": "", "summary": []}
+        cmd.parser.parse.return_value = ParsedNote(time_spent="", summary=[])
 
         issues = cmd._note_issues("/day.md")
 
@@ -794,7 +795,7 @@ class TestCommands:
         cmd.file_service.get_lines.return_value = ["line\n"]
         cmd.time_service.get_start_time.return_value = (0, datetime(2025, 1, 15))
         cmd.file_service.check_finalized_in_file.return_value = True
-        cmd.parser.parse.return_value = {"time_spent": "", "summary": ["Done"]}
+        cmd.parser.parse.return_value = ParsedNote(time_spent="", summary=["Done"])
 
         issues = cmd._note_issues("/day.md")
 
@@ -1048,7 +1049,7 @@ class TestCommands:
         mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
         mocker.patch("taskjournal.commands.daily.exists", return_value=True)
         existing = Task(id="1", description="Fix bug", status=Status.TODO)
-        cmd.parser.parse.return_value = {"planned_tasks": [existing]}
+        cmd.parser.parse.return_value = ParsedNote(planned_tasks=[existing])
         pending = Task(id="1", description="Fix bug", status=Status.TODO)
         cmd.jira.get_current_sprint_tasks_not_done_assigned_to_me = AsyncMock(return_value=[pending])
         cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[])

@@ -4,6 +4,7 @@ from pytest_mock import MockerFixture
 
 from pytest import mark
 
+from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.models.task import Status, Task, Epic
 from taskjournal.services.task_manager import TaskManager
 
@@ -216,7 +217,7 @@ class TestTaskManager:
         with_same_epic = Task(id="5", description="b", status=Status.TODO, epic=epic)
 
         # when
-        pending = TaskManager.get_pending_tasks({"planned_tasks": [todo, done]})
+        pending = TaskManager.get_pending_tasks(ParsedNote(planned_tasks=[todo, done]))
         # then
         assert pending == [todo]
 

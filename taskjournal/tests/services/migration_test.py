@@ -1,29 +1,17 @@
-from typing import Any
+from dataclasses import replace
 
 from pytest_mock import MockerFixture
 
 from datetime import datetime
 
+from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.models.task import Status, Task
 from taskjournal.services.migration import MigrationService
 
 
-def _sample_data(**overrides: Any) -> dict[str, Any]:
-    data: dict[str, Any] = {
-        "sprint_name": "",
-        "date": None,
-        "start_time": None,
-        "end_time": None,
-        "time_spent": "",
-        "work_from": "",
-        "planned_tasks": [],
-        "code_review_tasks": [],
-        "notes": ["note 1", "note 2"],
-        "summary": ["summary 1"],
-        "firefighter": [],
-    }
-    data.update(overrides)
-    return data
+def _sample_data(**overrides: object) -> ParsedNote:
+    base = ParsedNote(notes=["note 1", "note 2"], summary=["summary 1"])
+    return replace(base, **overrides)
 
 
 class TestMigration:

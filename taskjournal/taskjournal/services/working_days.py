@@ -6,6 +6,7 @@ from typing import Any
 
 from taskjournal.config import BASE_DIR, HOLIDAYS_FILE
 from taskjournal.constants import WORK_LOCATION_HOME, WORK_LOCATION_OFFICE
+from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.services.base import BaseService
 from taskjournal.services.file import FileService
 from taskjournal.services.holidays import HolidayService
@@ -33,26 +34,21 @@ class WorkingDaysService(BaseService):
     # --- private helpers ---
 
     @staticmethod
-    def _classify_work_location(data: dict[str, Any]) -> tuple[bool, bool]:
-        """Returns (is_office, is_home) for a parsed daily note."""
-        work_from = data.get("work_from", "").strip().capitalize()
-        is_office = WORK_LOCATION_OFFICE.lower() in work_from.lower()
+    def _classify_work_location(note: ParsedNote) -> tuple[bool, bool]:
+        work_from = note.work_from.strip().capitalize()
+        is_office = WORK_LOCATION_HOME.lower() not in work_from.lower() and WORK_LOCATION_OFFICE.lower() in work_from.lower()
         is_home = WORK_LOCATION_HOME.lower() in work_from.lower()
         return is_office, is_home
 
     def _process_daily_file(self, daily_file_path: str) -> dict[str, Any]:
-        """
-        Parse a single daily note file and return its stats contribution.
-        Returns zeros when the file cannot be parsed.
-        """
         time_seconds = TimeService.get_total_time_from_daily_notes(daily_file_path)
         is_office = is_home = False
         summary_lines: list[str] = []
 
-        data = self.parser.parse(daily_file_path)
-        if data:
-            is_office, is_home = self._classify_work_location(data)
-            raw_summary = data.get("summary", [])
+        note = self.parser.parse(daily_file_path)
+        if note:
+            is_office, is_home = self._classify_work_location(note)
+            raw_summary = note.summary
             if raw_summary:
                 text = " ".join(line for line in raw_summary if line.strip())
                 if text:

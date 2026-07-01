@@ -3,6 +3,8 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 from freezegun import freeze_time
+
+from taskjournal.models.parsed_note import ParsedNote
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 from typer.testing import Result
@@ -29,7 +31,7 @@ class TestDailyStatus:
         mocker.patch("taskjournal.cli.commands.daily.FileService.check_finalized_in_file",
                      return_value=False)
         task = Task(id="1", description="Fix", status=Status.TODO)
-        cli_manager.parser.parse.return_value = {"planned_tasks": [task], "summary": []}
+        cli_manager.parser.parse.return_value = ParsedNote(planned_tasks=[task])
 
         result = invoke_cli(["daily", "status"])
 
@@ -74,7 +76,7 @@ class TestDailyCheck:
         mocker.patch("taskjournal.cli.commands.daily.FileService.check_finalized_in_file",
                      return_value=True)
         task = Task(id="1", description="Done", status=Status.DONE)
-        cli_manager.parser.parse.return_value = {"planned_tasks": [task], "summary": ["Summary"]}
+        cli_manager.parser.parse.return_value = ParsedNote(planned_tasks=[task], summary=["Summary"])
 
         result = invoke_cli(["daily", "check"])
 

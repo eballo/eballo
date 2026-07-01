@@ -68,10 +68,10 @@ class DailyCommands:
             issues.append("missing start time")
         if not self.file_service.check_finalized_in_file(file_path):
             issues.append("missing end time")
-        data = self.parser.parse(file_path)
-        if data and not str(data.get("time_spent", "")).strip():
+        note = self.parser.parse(file_path)
+        if note and not note.time_spent.strip():
             issues.append("missing time spent")
-        if data and not any(line.strip() for line in data.get("summary", [])):
+        if note and not any(line.strip() for line in note.summary):
             issues.append("missing summary")
         return issues
 
@@ -529,7 +529,7 @@ class DailyCommands:
         await self.github.update_status_if_task_reviewed(code_review)
 
         existing_data = self.parser.parse(file_path)
-        existing_tasks = existing_data.get("planned_tasks", []) if existing_data else []
+        existing_tasks = existing_data.planned_tasks if existing_data else []
         existing_descs = [t.description.lower() for t in existing_tasks]
 
         to_add = [
