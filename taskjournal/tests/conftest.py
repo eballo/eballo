@@ -1,7 +1,8 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Generator, Sequence
 from os.path import join
 from pathlib import Path
 from datetime import date, datetime
+from shutil import rmtree
 from textwrap import dedent
 from unittest.mock import MagicMock
 
@@ -25,6 +26,14 @@ from taskjournal.services.claude_code import ClaudeCodeService
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.wifi import WifiService
 from taskjournal.services.working_days import WorkingDaysService
+
+
+@fixture(autouse=True, scope="session")
+def cleanup_mock_artifacts() -> Generator[None, None, None]:
+    yield
+    artifact = Path(__file__).parent.parent / "MagicMock"
+    if artifact.exists():
+        rmtree(artifact)
 
 
 @fixture
