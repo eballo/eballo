@@ -22,7 +22,7 @@ class TestCommands:
     ) -> None:
         # given
         cmd.file_service.get_week_folder.return_value = temp_week_folder
-        makedirs = mocker.patch("taskjournal.commands.commands.makedirs")
+        makedirs = mocker.patch("taskjournal.commands.daily.makedirs")
 
         # when
         result = cmd._get_week_folder(fixed_datetime)
@@ -40,7 +40,7 @@ class TestCommands:
         temp_week_folder: str,
     ) -> None:
         # given
-        mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
+        mocker.patch.object(cmd._daily, "_get_week_folder", return_value=temp_week_folder)
         cmd.time_service.get_daily_notes_name.return_value = "2025-01-15-DailyNotes.md"
 
         # when
@@ -60,13 +60,13 @@ class TestCommands:
     ) -> None:
         # given
         mocker.patch.object(
-            cmd,
+            cmd._daily,
             "_get_daily_notes_file_path",
             return_value=join(temp_week_folder, "2025-01-15-DailyNotes.md"),
         )
         cmd.file_service.load_template.return_value = "date={{date}}, time={{time}}, sprint={{sprint_name}}"
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
-        warn = mocker.patch("taskjournal.commands.commands.logger.warning")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        warn = mocker.patch("taskjournal.commands.daily.logger.warning")
 
         mocker.patch.object(
             cmd.github,
@@ -92,9 +92,9 @@ class TestCommands:
     ) -> None:
         # given
         path = join(temp_week_folder, "2025-01-15-DailyNotes.md")
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value=path)
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value=path)
         cmd.file_service.load_template.return_value = "date={{date}}, time={{time}}, sprint={{sprint_name}}\n{{tasks}}\n{{code_review_tasks}}"
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
         cmd.task_manager.get_default_tasks.return_value = ["task-default"]
         mocker.patch.object(
             cmd.jira,
@@ -125,8 +125,8 @@ class TestCommands:
             new_callable=AsyncMock,
             return_value=["task-code-review"],
         )
-        mocker.patch.object(cmd, "_schedule_macos_alarm")
-        info = mocker.patch("taskjournal.commands.commands.logger.info")
+        mocker.patch.object(cmd._daily, "_schedule_macos_alarm")
+        info = mocker.patch("taskjournal.commands.daily.logger.info")
 
         # when
         await cmd.create_daily_notes(fixed_datetime, force=True)
@@ -149,12 +149,12 @@ class TestCommands:
     ) -> None:
         # given
         mocker.patch.object(
-            cmd,
+            cmd._daily,
             "_get_daily_notes_file_path",
             return_value=join(temp_week_folder, "2025-01-15-DailyNotes.md"),
         )
         cmd.file_service.load_template.return_value = "sprint={{sprint_name}}\n{{tasks}}\n{{code_review_tasks}}"
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
+        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
         mocker.patch.object(cmd.jira, "get_active_sprint", return_value=None)
         cmd.task_manager.get_default_tasks.return_value = []
         mocker.patch.object(
@@ -180,7 +180,7 @@ class TestCommands:
             "taskjournal.services.task_manager.TaskManager.unique_tasks",
             return_value=[],
         )
-        mocker.patch.object(cmd, "_schedule_macos_alarm")
+        mocker.patch.object(cmd._daily, "_schedule_macos_alarm")
 
         # when
         await cmd.create_daily_notes(fixed_datetime)
@@ -199,12 +199,12 @@ class TestCommands:
     ) -> None:
         # given
         mocker.patch.object(
-            cmd,
+            cmd._daily,
             "_get_daily_notes_file_path",
             return_value=join(temp_week_folder, "missing.md"),
         )
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
-        err = mocker.patch("taskjournal.commands.commands.logger.error")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
+        err = mocker.patch("taskjournal.commands.daily.logger.error")
 
         # when
         cmd.finalize_daily_notes(fixed_datetime)
@@ -221,8 +221,8 @@ class TestCommands:
     ) -> None:
         # given
         path = join(temp_week_folder, "2025-01-15-DailyNotes.md")
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value=path)
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value=path)
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
         cmd.file_service.check_finalized_in_file.return_value = False
         content = ["## 2025-01-15 09:30\n", "Other line\n"]
         cmd.file_service.get_lines.return_value = list(content)
@@ -232,8 +232,8 @@ class TestCommands:
             "taskjournal.services.utils.FormatUtils.wrap_with_format",
             side_effect=lambda s: f"**{s}**",
         )
-        info = mocker.patch("taskjournal.commands.commands.logger.info")
-        mocker.patch.object(cmd, "_cancel_macos_alarm")
+        info = mocker.patch("taskjournal.commands.daily.logger.info")
+        mocker.patch.object(cmd._daily, "_cancel_macos_alarm")
         custom_end = fixed_datetime + timedelta(hours=2, minutes=15)
 
         # when
@@ -256,8 +256,8 @@ class TestCommands:
     ) -> None:
         # given
         path = join(temp_week_folder, "2025-01-15-DailyNotes.md")
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value=path)
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value=path)
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
         mocker.patch(
             "taskjournal.services.file.FileService.check_finalized_in_file",
             return_value=False,
@@ -270,13 +270,13 @@ class TestCommands:
         )
         # Assumption: patch datetime.now via module-level reference
         mocker.patch(
-            "taskjournal.commands.commands.datetime",
+            "taskjournal.commands.daily.datetime",
             **{
                 "now.return_value": fixed_datetime + timedelta(hours=1),
                 "strftime": datetime.strftime,
             },
         )
-        mocker.patch.object(cmd, "_cancel_macos_alarm")
+        mocker.patch.object(cmd._daily, "_cancel_macos_alarm")
 
         # when
         cmd.finalize_daily_notes(custom_date=None)  # type: ignore[arg-type]
@@ -286,9 +286,9 @@ class TestCommands:
     ) -> None:
         # given
         path = "/tmp/week3/2025-01-15-DailyNotes.md"
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value=path)
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
-        calc = mocker.patch.object(cmd, "_calculate_time")
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value=path)
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        calc = mocker.patch.object(cmd._daily, "_calculate_time")
 
         # when
         cmd.daily_time(fixed_datetime)
@@ -301,10 +301,10 @@ class TestCommands:
     ) -> None:
         # given
         mocker.patch.object(
-            cmd, "_get_daily_notes_file_path", return_value="/missing.md"
+            cmd._daily, "_get_daily_notes_file_path", return_value="/missing.md"
         )
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
-        warn = mocker.patch("taskjournal.commands.commands.logger.warning")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
+        warn = mocker.patch("taskjournal.commands.daily.logger.warning")
 
         # when
         cmd.daily_time(fixed_datetime)
@@ -321,11 +321,11 @@ class TestCommands:
         temp_week_folder: str,
     ) -> None:
         # given
-        mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
+        mocker.patch.object(cmd._reports, "_get_week_folder", return_value=temp_week_folder)
         cmd.file_service.load_template.return_value = "start={{start_date}}\nend={{end_date}}\nt={{total_time}}\nworked={{total_worked_days}}\nvacation={{vacation_days}}\noffice={{days_at_office}}\nhome={{days_at_home}}\nfireman={{is_fireman_week}}\n{{summary}}"
 
         files = ["2025-01-13-DailyNotes.md", "2025-01-14-DailyNotes.md"]
-        mocker.patch("taskjournal.commands.commands.listdir", return_value=files)
+        mocker.patch("taskjournal.commands.reports.listdir", return_value=files)
 
         cmd.file_service.get_summary_from_daily_notes.side_effect = ["Summary 1", "Summary 2"]
 
@@ -389,7 +389,7 @@ class TestCommands:
     ) -> None:
         # given
         create_week_summary = mocker.patch.object(
-            cmd, "create_week_summary", new_callable=AsyncMock
+            cmd._reports, "create_week_summary", new_callable=AsyncMock
         )
         start_date = datetime(2025, 1, 1)  # Wednesday (Week 1)
         end_date = datetime(2025, 1, 15)  # Wednesday (Week 3)
@@ -420,7 +420,7 @@ class TestCommands:
         temp_week_folder: str,
     ) -> None:
         # given
-        mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
+        mocker.patch.object(cmd._reports, "_get_week_folder", return_value=temp_week_folder)
         cmd.file_service.load_template.return_value = "tasks={{total_tasks}}, epics={{total_epics}}, gh={{github_contributions}}\n{{tasks}}\n{{epics}}"
         # when
         tasks = ["T-1", "T-2", "T-3"]
@@ -456,7 +456,7 @@ class TestCommands:
         temp_week_folder: str,
     ) -> None:
         # given
-        mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
+        mocker.patch.object(cmd._reports, "_get_week_folder", return_value=temp_week_folder)
         cmd.file_service.load_template.return_value = "tasks={{total_tasks}}, epics={{total_epics}}, gh={{github_contributions}}, summary={{summary}}, time={{total_time}}"
         mocker.patch.object(
             cmd.jira,
@@ -519,8 +519,8 @@ class TestCommands:
         temp_week_folder: str,
     ) -> None:
         # given
-        mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
+        mocker.patch.object(cmd._reports, "_get_week_folder", return_value=temp_week_folder)
+        mocker.patch("taskjournal.commands.reports.exists", return_value=False)
         cmd.file_service.load_template.return_value = "retro {{sprint_name}}"
         # Use SimpleNamespace here too to avoid MagicMock 'name' kwarg conflict
         mocker.patch.object(
@@ -541,8 +541,8 @@ class TestCommands:
         temp_week_folder: str,
     ) -> None:
         # given
-        mocker.patch.object(cmd, "_get_week_folder", return_value=temp_week_folder)
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch.object(cmd._reports, "_get_week_folder", return_value=temp_week_folder)
+        mocker.patch("taskjournal.commands.reports.exists", return_value=True)
         # when
         cmd.create_retro(fixed_datetime)
 
@@ -554,7 +554,7 @@ class TestCommands:
     ) -> None:
         # given
         cmd.backup_service.create.return_value = "/tmp/backup.zip"
-        info = mocker.patch("taskjournal.commands.commands.logger.info")
+        info = mocker.patch("taskjournal.commands.admin.logger.info")
 
         # when
         cmd.create_backup()
@@ -570,7 +570,7 @@ class TestCommands:
     ) -> None:
         # given
         cmd.time_service.calculate_working_hours.return_value = ("09:00", 3.5, datetime(2025, 1, 15, 12, 30))
-        info = mocker.patch("taskjournal.commands.commands.logger.info")
+        info = mocker.patch("taskjournal.commands.daily.logger.info")
 
         # when
         cmd._calculate_time("/tmp/day.md")
@@ -583,7 +583,7 @@ class TestCommands:
     ) -> None:
         # given
         cmd.time_service.calculate_working_hours.return_value = (None, None, None)
-        err = mocker.patch("taskjournal.commands.commands.logger.error")
+        err = mocker.patch("taskjournal.commands.daily.logger.error")
 
         # when
         cmd._calculate_time("/tmp/day.md")
@@ -595,7 +595,7 @@ class TestCommands:
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
         # given
-        info = mocker.patch("taskjournal.commands.commands.logger.info")
+        info = mocker.patch("taskjournal.commands.admin.logger.info")
 
         # when
         cmd.show_info(fixed_datetime)
@@ -613,8 +613,8 @@ class TestCommands:
     def test_list_tasks_in_daily__returns_empty_when_file_missing(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/missing.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
+        mocker.patch.object(cmd._tasks, "_get_daily_notes_file_path", return_value="/missing.md")
+        mocker.patch("taskjournal.commands.tasks.exists", return_value=False)
 
         result = cmd.list_tasks_in_daily(fixed_datetime)
 
@@ -623,8 +623,8 @@ class TestCommands:
     def test_list_tasks_in_daily__returns_tasks_from_parser(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/day.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch.object(cmd._tasks, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.tasks.exists", return_value=True)
         task = Task(id="1", description="Do it", status=Status.TODO)
         cmd.parser.parse.return_value = {"planned_tasks": [task]}
 
@@ -635,8 +635,8 @@ class TestCommands:
     def test_add_task_to_daily__raises_when_file_missing(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/missing.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
+        mocker.patch.object(cmd._tasks, "_get_daily_notes_file_path", return_value="/missing.md")
+        mocker.patch("taskjournal.commands.tasks.exists", return_value=False)
 
         with raises(FileNotFoundError):
             cmd.add_task_to_daily(fixed_datetime, "New task")
@@ -644,8 +644,8 @@ class TestCommands:
     def test_add_task_to_daily__raises_when_section_not_found(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/day.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch.object(cmd._tasks, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.tasks.exists", return_value=True)
         cmd.file_service.get_lines.return_value = ["Some line\n", "Another\n"]
 
         with raises(ValueError, match="Planned Tasks section not found"):
@@ -654,8 +654,8 @@ class TestCommands:
     def test_add_task_to_daily__inserts_after_last_task(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/day.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch.object(cmd._tasks, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.tasks.exists", return_value=True)
         lines = ["## Planned Tasks\n", " - [ ] Existing task\n", "## Notes\n"]
         cmd.file_service.get_lines.return_value = list(lines)
 
@@ -667,8 +667,8 @@ class TestCommands:
     def test_complete_task_in_daily__returns_true_when_found(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/day.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch.object(cmd._tasks, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.tasks.exists", return_value=True)
         cmd.file_service.get_lines.return_value = [" - [ ] Do the thing\n"]
 
         result = cmd.complete_task_in_daily(fixed_datetime, "Do the thing")
@@ -680,8 +680,8 @@ class TestCommands:
     def test_block_task_in_daily__returns_false_when_not_found(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/day.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch.object(cmd._tasks, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.tasks.exists", return_value=True)
         cmd.file_service.get_lines.return_value = [" - [ ] Something else\n"]
 
         result = cmd.block_task_in_daily(fixed_datetime, "nonexistent task")
@@ -806,17 +806,17 @@ class TestCommands:
     ) -> None:
         saturday = datetime(2026, 6, 27)  # weekday() == 5
         path = join(temp_week_folder, "2026-06-27-DailyNotes.md")
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value=path)
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value=path)
         cmd.file_service.load_template.return_value = ""
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
-        mocker.patch.object(cmd, "get_previous_day_issues", return_value=None)
+        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
+        mocker.patch.object(cmd._daily, "get_previous_day_issues", return_value=None)
         mocker.patch.object(cmd.jira, "get_active_sprint", return_value=None)
         mocker.patch.object(cmd.jira, "get_current_sprint_tasks_not_done_assigned_to_me", new_callable=AsyncMock, return_value=[])
         mocker.patch.object(cmd.jira, "get_current_sprint_tasks_in_code_review", new_callable=AsyncMock, return_value=[])
         mocker.patch.object(cmd.github, "update_status_if_task_reviewed", new_callable=AsyncMock, return_value=[])
         cmd.task_manager.get_previous_pending_tasks.return_value = []
         cmd.task_manager.get_default_tasks.return_value = []
-        warn = mocker.patch("taskjournal.commands.commands.logger.warning")
+        warn = mocker.patch("taskjournal.commands.daily.logger.warning")
 
         await cmd.create_daily_notes(saturday)
 
@@ -828,9 +828,9 @@ class TestCommands:
         # Sunday — checks Saturday
         sunday = datetime(2026, 6, 28)  # weekday() == 6
         saturday_file = "/notes/2026-06-27-DailyNotes.md"
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value=saturday_file)
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
-        mocker.patch.object(cmd, "_note_issues", return_value=["missing end time"])
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value=saturday_file)
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        mocker.patch.object(cmd._daily, "_note_issues", return_value=["missing end time"])
 
         result = cmd.get_previous_day_issues(sunday)
 
@@ -844,9 +844,9 @@ class TestCommands:
         self, cmd: CommandManager, mocker: MockerFixture
     ) -> None:
         monday = datetime(2026, 6, 22)
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/notes/friday.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
-        mocker.patch.object(cmd, "_note_issues", return_value=[])
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/notes/friday.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        mocker.patch.object(cmd._daily, "_note_issues", return_value=[])
 
         result = cmd.get_previous_day_issues(monday)
 
@@ -865,9 +865,9 @@ class TestCommands:
         def _exists(path: str) -> bool:
             return path == tuesday_file
 
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", side_effect=_file_path)
-        mocker.patch("taskjournal.commands.commands.exists", side_effect=_exists)
-        mocker.patch.object(cmd, "_note_issues", return_value=["missing end time"])
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", side_effect=_file_path)
+        mocker.patch("taskjournal.commands.daily.exists", side_effect=_exists)
+        mocker.patch.object(cmd._daily, "_note_issues", return_value=["missing end time"])
 
         result = cmd.get_previous_day_issues(friday)
 
@@ -880,8 +880,8 @@ class TestCommands:
         self, cmd: CommandManager, mocker: MockerFixture
     ) -> None:
         today = datetime(2026, 6, 26)
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/notes/missing.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/notes/missing.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
 
         result = cmd.get_previous_day_issues(today)
 
@@ -890,7 +890,7 @@ class TestCommands:
     def test_audit_daily_notes__returns_empty_when_year_dir_missing(
         self, cmd: CommandManager, mocker: MockerFixture
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
+        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
 
         result = cmd.audit_daily_notes(2025)
 
@@ -909,8 +909,8 @@ class TestCommands:
         with open(note_file, "w") as f:
             f.write("## Planned Tasks\n[ ] Fix the bug\n[ ] Review PR\n")
 
-        mocker.patch("taskjournal.commands.commands.BASE_DIR", note_dir)
-        mocker.patch("taskjournal.commands.commands.TEMPLATE_FORMAT", "md")
+        mocker.patch("taskjournal.commands.search.BASE_DIR", note_dir)
+        mocker.patch("taskjournal.commands.search.TEMPLATE_FORMAT", "md")
 
         results = cmd.search_notes("fix")
 
@@ -931,8 +931,8 @@ class TestCommands:
         with open(summary, "w") as f:
             f.write("Match here too\n")
 
-        mocker.patch("taskjournal.commands.commands.BASE_DIR", note_dir)
-        mocker.patch("taskjournal.commands.commands.TEMPLATE_FORMAT", "md")
+        mocker.patch("taskjournal.commands.search.BASE_DIR", note_dir)
+        mocker.patch("taskjournal.commands.search.TEMPLATE_FORMAT", "md")
 
         daily_results = cmd.search_notes("match", note_type="daily")
         week_results = cmd.search_notes("match", note_type="week")
@@ -945,11 +945,11 @@ class TestCommands:
     def test_create_one_on_one__creates_parent_directory(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.BASE_DIR", "/base")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
+        mocker.patch("taskjournal.commands.reports.BASE_DIR", "/base")
+        mocker.patch("taskjournal.commands.reports.exists", return_value=False)
         cmd.time_service.get_1on1_name.return_value = "2025-01-15-1on1.md"
         cmd.file_service.load_template.return_value = "template"
-        makedirs_mock = mocker.patch("taskjournal.commands.commands.makedirs")
+        makedirs_mock = mocker.patch("taskjournal.commands.reports.makedirs")
 
         cmd.create_one_on_one(fixed_datetime)
 
@@ -959,8 +959,8 @@ class TestCommands:
     def test_create_one_on_one__skips_write_when_file_exists(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.BASE_DIR", "/base")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch("taskjournal.commands.reports.BASE_DIR", "/base")
+        mocker.patch("taskjournal.commands.reports.exists", return_value=True)
         cmd.time_service.get_1on1_name.return_value = "2025-01-15-1on1.md"
 
         cmd.create_one_on_one(fixed_datetime)
@@ -972,8 +972,8 @@ class TestCommands:
     def test_add_topic_to_one_on_one__inserts_topic(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "create_one_on_one")
-        mocker.patch("taskjournal.commands.commands.BASE_DIR", "/base")
+        mocker.patch.object(cmd._reports, "create_one_on_one")
+        mocker.patch("taskjournal.commands.reports.BASE_DIR", "/base")
         cmd.time_service.get_1on1_name.return_value = "2025-01-15-1on1.md"
         cmd.file_service.get_lines.return_value = [
             "# Proposal topics\n",
@@ -988,8 +988,8 @@ class TestCommands:
     def test_add_topic_to_one_on_one__raises_when_section_missing(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "create_one_on_one")
-        mocker.patch("taskjournal.commands.commands.BASE_DIR", "/base")
+        mocker.patch.object(cmd._reports, "create_one_on_one")
+        mocker.patch("taskjournal.commands.reports.BASE_DIR", "/base")
         cmd.time_service.get_1on1_name.return_value = "2025-01-15-1on1.md"
         cmd.file_service.get_lines.return_value = ["# Meeting notes\n", "Some text\n"]
 
@@ -1001,8 +1001,8 @@ class TestCommands:
     def test_get_streak_stats__empty_when_no_notes(
         self, cmd: CommandManager, mocker: MockerFixture
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.BASE_DIR", "/empty")
-        mocker.patch("taskjournal.commands.commands.walk", return_value=[])
+        mocker.patch("taskjournal.commands.daily.BASE_DIR", "/empty")
+        mocker.patch("taskjournal.commands.daily.walk", return_value=[])
 
         stats = cmd.get_streak_stats(datetime(2025, 1, 15))
 
@@ -1013,14 +1013,14 @@ class TestCommands:
         self, cmd: CommandManager, mocker: MockerFixture
     ) -> None:
         import os
-        mocker.patch("taskjournal.commands.commands.BASE_DIR", "/notes")
+        mocker.patch("taskjournal.commands.daily.BASE_DIR", "/notes")
         files = [
             "2025-01-13-DailyNotes.md",  # Mon
             "2025-01-14-DailyNotes.md",  # Tue
             "2025-01-15-DailyNotes.md",  # Wed (today)
         ]
         mocker.patch(
-            "taskjournal.commands.commands.walk",
+            "taskjournal.commands.daily.walk",
             return_value=[("/notes/w03", [], files)],
         )
 
@@ -1035,8 +1035,8 @@ class TestCommands:
     async def test_sync_daily_notes__raises_when_file_missing(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/missing.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=False)
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/missing.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
 
         with raises(FileNotFoundError):
             await cmd.sync_daily_notes(fixed_datetime)
@@ -1045,8 +1045,8 @@ class TestCommands:
     async def test_sync_daily_notes__skips_write_when_all_tasks_present(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        mocker.patch.object(cmd, "_get_daily_notes_file_path", return_value="/day.md")
-        mocker.patch("taskjournal.commands.commands.exists", return_value=True)
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
         existing = Task(id="1", description="Fix bug", status=Status.TODO)
         cmd.parser.parse.return_value = {"planned_tasks": [existing]}
         pending = Task(id="1", description="Fix bug", status=Status.TODO)
@@ -1063,8 +1063,8 @@ class TestCommands:
     def test__schedule_macos_alarm__skips_on_non_darwin(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime, tmp_path: Path
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.platform", "linux")
-        run = mocker.patch("taskjournal.commands.commands.subprocess_run")
+        mocker.patch("taskjournal.commands.daily.platform", "linux")
+        run = mocker.patch("taskjournal.commands.daily.subprocess_run")
 
         cmd._schedule_macos_alarm(fixed_datetime, str(tmp_path / ".alarm_job"))
 
@@ -1073,12 +1073,12 @@ class TestCommands:
     def test__schedule_macos_alarm__logs_info_and_saves_job_on_success(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime, tmp_path: Path
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        mocker.patch("taskjournal.commands.daily.platform", "darwin")
         fake_result = mocker.MagicMock()
         fake_result.returncode = 0
         fake_result.stderr = b"job 42 at Tue Jun 30 12:57:00 2026"
-        mocker.patch("taskjournal.commands.commands.subprocess_run", return_value=fake_result)
-        info = mocker.patch("taskjournal.commands.commands.logger.info")
+        mocker.patch("taskjournal.commands.daily.subprocess_run", return_value=fake_result)
+        info = mocker.patch("taskjournal.commands.daily.logger.info")
         alarm_file = str(tmp_path / ".alarm_job")
 
         cmd._schedule_macos_alarm(fixed_datetime, alarm_file)
@@ -1089,12 +1089,12 @@ class TestCommands:
     def test__schedule_macos_alarm__logs_debug_on_failure(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime, tmp_path: Path
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        mocker.patch("taskjournal.commands.daily.platform", "darwin")
         fake_result = mocker.MagicMock()
         fake_result.returncode = 1
         fake_result.stderr = b"atd not running"
-        mocker.patch("taskjournal.commands.commands.subprocess_run", return_value=fake_result)
-        debug = mocker.patch("taskjournal.commands.commands.logger.debug")
+        mocker.patch("taskjournal.commands.daily.subprocess_run", return_value=fake_result)
+        debug = mocker.patch("taskjournal.commands.daily.logger.debug")
 
         cmd._schedule_macos_alarm(fixed_datetime, str(tmp_path / ".alarm_job"))
 
@@ -1103,12 +1103,12 @@ class TestCommands:
     def test__schedule_macos_alarm__logs_debug_on_exception(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime, tmp_path: Path
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        mocker.patch("taskjournal.commands.daily.platform", "darwin")
         mocker.patch(
-            "taskjournal.commands.commands.subprocess_run",
+            "taskjournal.commands.daily.subprocess_run",
             side_effect=FileNotFoundError("at not found"),
         )
-        debug = mocker.patch("taskjournal.commands.commands.logger.debug")
+        debug = mocker.patch("taskjournal.commands.daily.logger.debug")
 
         cmd._schedule_macos_alarm(fixed_datetime, str(tmp_path / ".alarm_job"))
 
@@ -1119,8 +1119,8 @@ class TestCommands:
     def test__cancel_macos_alarm__skips_on_non_darwin(
         self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.platform", "linux")
-        run = mocker.patch("taskjournal.commands.commands.subprocess_run")
+        mocker.patch("taskjournal.commands.daily.platform", "linux")
+        run = mocker.patch("taskjournal.commands.daily.subprocess_run")
         alarm_file = tmp_path / ".alarm_job"
         alarm_file.write_text("42")
 
@@ -1131,8 +1131,8 @@ class TestCommands:
     def test__cancel_macos_alarm__skips_when_no_alarm_file(
         self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.platform", "darwin")
-        run = mocker.patch("taskjournal.commands.commands.subprocess_run")
+        mocker.patch("taskjournal.commands.daily.platform", "darwin")
+        run = mocker.patch("taskjournal.commands.daily.subprocess_run")
 
         cmd._cancel_macos_alarm(str(tmp_path / ".alarm_job"))
 
@@ -1141,11 +1141,11 @@ class TestCommands:
     def test__cancel_macos_alarm__cancels_job_and_removes_file(
         self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        mocker.patch("taskjournal.commands.daily.platform", "darwin")
         fake_result = mocker.MagicMock()
         fake_result.returncode = 0
-        run = mocker.patch("taskjournal.commands.commands.subprocess_run", return_value=fake_result)
-        info = mocker.patch("taskjournal.commands.commands.logger.info")
+        run = mocker.patch("taskjournal.commands.daily.subprocess_run", return_value=fake_result)
+        info = mocker.patch("taskjournal.commands.daily.logger.info")
         alarm_file = tmp_path / ".alarm_job"
         alarm_file.write_text("42")
 
@@ -1158,12 +1158,12 @@ class TestCommands:
     def test__cancel_macos_alarm__logs_debug_when_atrm_fails(
         self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path
     ) -> None:
-        mocker.patch("taskjournal.commands.commands.platform", "darwin")
+        mocker.patch("taskjournal.commands.daily.platform", "darwin")
         fake_result = mocker.MagicMock()
         fake_result.returncode = 1
         fake_result.stderr = b"no such job"
-        mocker.patch("taskjournal.commands.commands.subprocess_run", return_value=fake_result)
-        debug = mocker.patch("taskjournal.commands.commands.logger.debug")
+        mocker.patch("taskjournal.commands.daily.subprocess_run", return_value=fake_result)
+        debug = mocker.patch("taskjournal.commands.daily.logger.debug")
         alarm_file = tmp_path / ".alarm_job"
         alarm_file.write_text("99")
 
