@@ -1,6 +1,5 @@
 from os.path import exists, isdir
 
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from typer import Typer, Context, Option
@@ -8,9 +7,8 @@ from typer import Typer, Context, Option
 from taskjournal.cli.context import get_container, get_today, parse_date
 from taskjournal.config import BASE_DIR, TEMPLATE_FORMAT
 from taskjournal.services.base import BaseService, ServiceStatus
+from taskjournal.services.logger import console
 from taskjournal.services.setup import ENV_PATH
-
-console = Console()
 
 _ICON = {
     ServiceStatus.OK: "[green]✓[/green]",

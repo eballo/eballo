@@ -1,8 +1,10 @@
 import logging
 
+from rich.console import Console
 from rich.logging import RichHandler
 
 logger = logging.getLogger("TaskTracker")
+console = Console()
 
 
 def configure_logging(debug: bool = False) -> None:

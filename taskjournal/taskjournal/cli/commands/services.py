@@ -14,7 +14,7 @@ from taskjournal.constants import (
     JIRA_MODE_MONTH,
 )
 from taskjournal.services.github import GithubService
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 
 
 def build_app() -> Typer:
@@ -56,27 +56,27 @@ def build_app() -> Typer:
         m = get_manager(ctx)
 
         if all:
-            logger.info("📝 All Tasks:")
+            console.print("📝 All Tasks:")
             mode = JIRA_MODE_ALL
         elif mine:
-            logger.info("📝 Current Sprint Tasks ALL assigned to me:")
+            console.print("📝 Current Sprint Tasks ALL assigned to me:")
             mode = JIRA_MODE_MINE
         elif code:
-            logger.info("📝 Current Sprint Tasks in Code Review:")
+            console.print("📝 Current Sprint Tasks in Code Review:")
             mode = JIRA_MODE_CODE
         elif midreview:
-            logger.info("📝 Current Tasks assigned to me in the last 6 months:")
+            console.print("📝 Current Tasks assigned to me in the last 6 months:")
             mode = JIRA_MODE_MIDREVIEW
         elif month:
-            logger.info("📝 Current Tasks assigned to me in the last month:")
+            console.print("📝 Current Tasks assigned to me in the last month:")
             mode = JIRA_MODE_MONTH
         else:
-            logger.info("📝 Current Sprint Tasks assigned to me (not finished):")
+            console.print("📝 Current Sprint Tasks assigned to me (not finished):")
             mode = JIRA_MODE_DEFAULT
 
         tasks = run(m.get_jira_tasks(mode))
         for task in tasks:
-            logger.info(task)
+            console.print(task)
 
     @app.command(
         "git",
@@ -103,7 +103,7 @@ def build_app() -> Typer:
         logger.debug(f"debug={get_debug(ctx)}")
 
         if (date or contributed is not None) and not stats:
-            logger.info(
+            console.print(
                 "❌ The '--date' and '--contributed' options can only be used together with '--stats'."
             )
             sys_exit(1)
@@ -137,6 +137,6 @@ def build_app() -> Typer:
         ),
     ) -> None:
         result = run(get_manager(ctx).run_ai_prompt(prompt))
-        logger.info(result)
+        console.print(result)
 
     return app

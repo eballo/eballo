@@ -50,7 +50,7 @@ class TaskManager(BaseService):
         wifi_location = self._get_location_from_wifi()
         default_location = TaskManager._get_default_locations(date)
         work_from = wifi_location if wifi_location else default_location
-        logger.info(f"Work from: {work_from}")
+        logger.debug(f"Work from: {work_from}")
         return work_from
 
     @staticmethod

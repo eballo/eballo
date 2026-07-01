@@ -4,7 +4,6 @@ from os.path import exists
 from sys import exit as sys_exit
 from typing import Any
 
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from typer import Context, Option, Typer
@@ -12,13 +11,10 @@ from typer import Context, Option, Typer
 from taskjournal.cli.context import get_debug, get_manager, get_today, parse_date
 from taskjournal.models.task import Status
 from taskjournal.services.file import FileService
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 from taskjournal.services.time import TimeService
 
 _DATETIME_FMT = "%Y-%m-%d %H:%M"
-
-console = Console()
-
 
 def _fix_file_interactively(manager: Any, date_str: str, file_path: str, issues: list[str]) -> None:
     if "missing end time" in issues:
@@ -313,7 +309,7 @@ def build_app() -> Typer:
         console.print(table)
 
         if issues == 0:
-            logger.info("All checks passed.")
+            console.print("[green]✓[/green] All checks passed.")
         else:
             logger.warning(f"{issues} issue{'s' if issues > 1 else ''} found.")
 
@@ -390,7 +386,7 @@ def build_app() -> Typer:
         if issue_count:
             summary += f"  /  {issue_count} with issues"
         summary += f"  ({ok_count + issue_count} total)"
-        logger.info(summary)
+        console.print(summary)
 
         if fix and files_to_fix:
             console.print()
@@ -418,7 +414,7 @@ def build_app() -> Typer:
         coverage_gaps = manager.audit_weekly_coverage(target_year)
         if not coverage_gaps:
             console.print(Panel(week_summary, expand=False))
-            logger.info("Coverage: all week folders have 5 files (daily or holiday).")
+            console.print("[green]✓[/green] Coverage: all week folders have 5 files (daily or holiday).")
         else:
             coverage_table = Table(show_header=False, box=None, padding=(0, 1))
             coverage_table.add_column("icon", width=3)
@@ -432,6 +428,6 @@ def build_app() -> Typer:
                 )
             console.print(Panel(f"[bold]Coverage gaps[/bold] — {week_summary}", expand=False))
             console.print(coverage_table)
-            logger.info(f"Coverage: {len(coverage_gaps)} week(s) with missing files.")
+            console.print(f"[yellow]⚠[/yellow] Coverage: {len(coverage_gaps)} week(s) with missing files.")
 
     return app

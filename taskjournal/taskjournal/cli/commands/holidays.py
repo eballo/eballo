@@ -6,7 +6,7 @@ from typer import Argument, Typer, Context, Option
 from taskjournal.cli.context import get_today, get_debug
 from taskjournal.config import BASE_DIR, HOLIDAYS_FILE
 from taskjournal.services.holidays import HolidayService
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 
 
 def build_app() -> Typer:
@@ -103,7 +103,7 @@ def build_app() -> Typer:
     )
     def holidays_days_until_next_holiday(ctx: Context) -> None:
         days, next_date, description = get_service(ctx).get_days_until_next_holiday()
-        logger.info(
+        console.print(
             f"There are {days} day(s) until the next holiday. "
             f"Next holiday: {description} on {next_date}"
         )

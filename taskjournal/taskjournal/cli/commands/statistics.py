@@ -1,14 +1,11 @@
 from typing import Any
 
-from rich.console import Console
 from rich.panel import Panel
 from typer import Typer, Context, Option
 
 from taskjournal.cli.context import get_container, get_manager, get_today, get_debug
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 from taskjournal.services.working_days import WorkingDaysService  # kept for type hint
-
-console = Console()
 
 
 def build_app() -> Typer:
