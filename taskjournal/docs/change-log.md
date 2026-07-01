@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.52.0
+
+- txt format support
+
 ## 0.51.0
 
 - unify async model
