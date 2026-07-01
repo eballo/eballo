@@ -128,7 +128,7 @@ class DailyCommands:
                 if day > today:
                     continue
                 daily_path = join(week_path, f"{day}-DailyNotes.{TEMPLATE_FORMAT}")
-                holiday_path = join(week_path, f"{day}-DailyNotes-Holidays.md")
+                holiday_path = join(week_path, f"{day}-DailyNotes-Holidays.{TEMPLATE_FORMAT}")
                 if not exists(daily_path) and not exists(holiday_path):
                     week_missing.append(str(day))
 

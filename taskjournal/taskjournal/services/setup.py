@@ -2,6 +2,7 @@ from os import makedirs
 from os.path import exists, join
 from pathlib import Path
 
+from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.constants import PLACEHOLDER_HOME_WIFI, PLACEHOLDER_OFFICE_WIFI
 from taskjournal.services.base import BaseService
 from taskjournal.services.logger import logger
@@ -110,10 +111,9 @@ class SetupService(BaseService):
         return values.get(key, "") not in ("", _DEFAULTS.get(key, ""))
 
     def create_data_files(self, base_dir: str, year: int) -> None:
-        """Create holidays.md and fireman_weeks.md for the given year if missing."""
         files = {
-            join(base_dir, str(year), "holidays", "holidays.md"): _HOLIDAYS_TEMPLATE.format(year=year),
-            join(base_dir, str(year), "fireman", "fireman_weeks.md"): _FIREMAN_TEMPLATE.format(year=year),
+            join(base_dir, str(year), "holidays", f"holidays.{TEMPLATE_FORMAT}"): _HOLIDAYS_TEMPLATE.format(year=year),
+            join(base_dir, str(year), "fireman", f"fireman_weeks.{TEMPLATE_FORMAT}"): _FIREMAN_TEMPLATE.format(year=year),
         }
         for path, content in files.items():
             if exists(path):

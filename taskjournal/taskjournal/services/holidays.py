@@ -4,7 +4,7 @@ from os.path import exists, join
 from datetime import date as datetime
 from re import compile
 
-from taskjournal.config import BASE_DIR
+from taskjournal.config import BASE_DIR, TEMPLATE_FORMAT
 from taskjournal.services.base import BaseService
 from taskjournal.services.file import FileService
 from taskjournal.services.logger import logger
@@ -185,8 +185,7 @@ class HolidayService(BaseService):
             if not exists(week_folder):
                 makedirs(week_folder, exist_ok=True)
                 logger.info(f"Created directory: {week_folder}")
-            # Format: 2025-01-06-DailyNotes-Holidays.md
-            filename = f"{date_obj}-DailyNotes-Holidays.md"
+            filename = f"{date_obj}-DailyNotes-Holidays.{TEMPLATE_FORMAT}"
             file_path = join(week_folder, filename)
 
             content = (

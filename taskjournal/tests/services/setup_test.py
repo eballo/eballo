@@ -3,6 +3,7 @@ from pathlib import Path
 from pytest import fixture
 from pytest_mock import MockerFixture
 
+from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.services.setup import SetupService, _DEFAULTS, ENV_PATH
 
 
@@ -131,8 +132,8 @@ class TestSetupService:
     ) -> None:
         service.create_data_files(str(tmp_path), 2026)
 
-        holidays_path = tmp_path / "2026" / "holidays" / "holidays.md"
-        fireman_path = tmp_path / "2026" / "fireman" / "fireman_weeks.md"
+        holidays_path = tmp_path / "2026" / "holidays" / f"holidays.{TEMPLATE_FORMAT}"
+        fireman_path = tmp_path / "2026" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
 
         assert holidays_path.exists()
         assert fireman_path.exists()
@@ -145,7 +146,7 @@ class TestSetupService:
         mocker: MockerFixture,
         service: SetupService,
     ) -> None:
-        holidays_path = tmp_path / "2026" / "holidays" / "holidays.md"
+        holidays_path = tmp_path / "2026" / "holidays" / f"holidays.{TEMPLATE_FORMAT}"
         holidays_path.parent.mkdir(parents=True)
         holidays_path.write_text("existing content", encoding="utf-8")
         mock_logger = mocker.patch("taskjournal.services.setup.logger")
@@ -154,3 +155,17 @@ class TestSetupService:
 
         assert holidays_path.read_text() == "existing content"
         mock_logger.debug.assert_called()
+
+    def test_create_data_files_uses_txt_extension_when_template_format_is_txt(
+        self,
+        tmp_path: Path,
+        service: SetupService,
+        mocker: MockerFixture,
+    ) -> None:
+        mocker.patch("taskjournal.services.setup.TEMPLATE_FORMAT", "txt")
+
+        service.create_data_files(str(tmp_path), 2026)
+
+        assert (tmp_path / "2026" / "holidays" / "holidays.txt").exists()
+        assert (tmp_path / "2026" / "fireman" / "fireman_weeks.txt").exists()
+        assert not (tmp_path / "2026" / "holidays" / "holidays.md").exists()
