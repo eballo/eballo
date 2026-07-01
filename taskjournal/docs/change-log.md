@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.54.0
+
+- user output improvements no logger info
+
 ## 0.53.0
 
 - template review
