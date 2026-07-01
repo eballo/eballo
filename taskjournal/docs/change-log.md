@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.48.0
+
+- 1.11 CLI command reorganisation — wk task, wk report, panels
+
 ## 0.47.0
 
 - Remove manual changelog entry — CI adds it automatically on merge
