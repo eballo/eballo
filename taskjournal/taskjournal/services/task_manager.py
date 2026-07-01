@@ -1,7 +1,6 @@
 from datetime import datetime
 from os import listdir
 from os.path import exists, join
-from typing import Any
 from uuid import uuid4
 
 from taskjournal.config import TEMPLATE_FORMAT
@@ -12,6 +11,7 @@ from taskjournal.constants import (
     WORK_LOCATION_HOME,
     WORK_LOCATION_OFFICE,
 )
+from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.models.task import Task, Status, Epic
 from taskjournal.services.base import BaseService
 from taskjournal.services.logger import logger
@@ -31,14 +31,11 @@ class TaskManager(BaseService):
 
     def get_tasks_from_daily_notes(self, file_path: str) -> list[Task]:
         try:
-            data = self.parser.parse(file_path)
-            if data is None:
+            note = self.parser.parse(file_path)
+            if note is None:
                 logger.error(f"Error reading file {file_path}")
                 return []
-            tasks = data.get("planned_tasks", [])
-            if not isinstance(tasks, list):
-                return []
-            return tasks
+            return note.planned_tasks
         except Exception:
             logger.error(f"Error reading file {file_path}")
             return []
@@ -121,9 +118,8 @@ class TaskManager(BaseService):
             return []
 
     @staticmethod
-    def get_pending_tasks(data: dict[str, Any]) -> list[Task]:
-        tasks = data.get("planned_tasks", [])
-        return [task for task in tasks if task.status == Status.TODO]
+    def get_pending_tasks(note: ParsedNote) -> list[Task]:
+        return [task for task in note.planned_tasks if task.status == Status.TODO]
 
     @staticmethod
     def unique_tasks(tasks: list[Task]) -> list[Task]:

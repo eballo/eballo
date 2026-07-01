@@ -1,8 +1,7 @@
-from typing import Any
-
 from pytest import raises
 from pytest_mock import MockerFixture
 
+from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.models.task import Status
 from taskjournal.services.parser import ParserService, DailyParserService
 
@@ -64,21 +63,22 @@ class TestParser:
         data = daily_parser_service._parse_content(lines, ".txt")
 
         # then
-        assert data["sprint_name"] == "Sprint 42"
-        assert data["date"] == "2026-01-15"
-        assert data["start_time"] == "09:00:00"
-        assert data["end_time"] == "18:00:00"
-        assert data["time_spent"] == "08:00"
-        assert data["work_from"] == "Home"
-        assert [t.status for t in data["planned_tasks"]] == [
+        assert isinstance(data, ParsedNote)
+        assert data.sprint_name == "Sprint 42"
+        assert data.date == "2026-01-15"
+        assert data.start_time == "09:00:00"
+        assert data.end_time == "18:00:00"
+        assert data.time_spent == "08:00"
+        assert data.work_from == "Home"
+        assert [t.status for t in data.planned_tasks] == [
             Status.TODO,
             Status.DONE,
             Status.BLOCKED,
         ]
-        assert data["code_review_tasks"][0].description == "CR TODO"
-        assert data["notes"] == ["Note line 1", ""]
-        assert data["summary"] == ["Accomplished today"]
-        assert data["firefighter"] == ["Incident one"]
+        assert data.code_review_tasks[0].description == "CR TODO"
+        assert data.notes == ["Note line 1", ""]
+        assert data.summary == ["Accomplished today"]
+        assert data.firefighter == ["Incident one"]
 
     def test_daily_parser_parse_content_md_tasks_and_finalized(
         self, daily_parser_service: DailyParserService
@@ -96,26 +96,26 @@ class TestParser:
         data = daily_parser_service._parse_content(lines, ".md")
 
         # then
-        assert data["end_time"] == "17:30:00"
-        assert data["time_spent"] == "08:30"
-        assert data["planned_tasks"][0].status == Status.DONE
-        assert data["planned_tasks"][1].status == Status.BLOCKED
+        assert data.end_time == "17:30:00"
+        assert data.time_spent == "08:30"
+        assert data.planned_tasks[0].status == Status.DONE
+        assert data.planned_tasks[1].status == Status.BLOCKED
 
     def test_daily_parser_parse_tasks_no_match_keeps_section_empty(
         self, daily_parser_service: DailyParserService
     ) -> None:
         # given
-        data: dict[str, list[Any]] = {"planned_tasks": [], "code_review_tasks": []}
+        note = ParsedNote()
 
-        daily_parser_service._parse_tasks("planned_tasks", data, "not a task", ".txt")
+        daily_parser_service._parse_tasks("planned_tasks", note, "not a task", ".txt")
         # when
         daily_parser_service._parse_tasks(
-            "code_review_tasks", data, "not a task", ".md"
+            "code_review_tasks", note, "not a task", ".md"
         )
 
         # then
-        assert data["planned_tasks"] == []
-        assert data["code_review_tasks"] == []
+        assert note.planned_tasks == []
+        assert note.code_review_tasks == []
 
     def test_daily_parser_metadata_line_without_match_is_ignored(
         self, daily_parser_service: DailyParserService
@@ -127,8 +127,8 @@ class TestParser:
         data = daily_parser_service._parse_content(lines, ".txt")
 
         # then
-        assert data["sprint_name"] == ""
-        assert len(data["planned_tasks"]) == 1
+        assert data.sprint_name == ""
+        assert len(data.planned_tasks) == 1
 
     def test_daily_parser_parse_work_from_with_emojis_and_markdown(
         self, daily_parser_service: DailyParserService
@@ -144,16 +144,16 @@ class TestParser:
         # when & then
         # 1. Markdown with bold and emoji
         data = daily_parser_service._parse_content([lines[0]], ".md")
-        assert data["work_from"] == "🏠 Home"
+        assert data.work_from == "🏠 Home"
 
         # 2. Markdown with bold and office emoji
         data = daily_parser_service._parse_content([lines[1]], ".md")
-        assert data["work_from"] == "🏢 Office"
+        assert data.work_from == "🏢 Office"
 
         # 3. Plain text with emoji
         data = daily_parser_service._parse_content([lines[2]], ".txt")
-        assert data["work_from"] == "🏠 Home"
+        assert data.work_from == "🏠 Home"
 
         # 4. Plain text standard
         data = daily_parser_service._parse_content([lines[3]], ".txt")
-        assert data["work_from"] == "Office"
+        assert data.work_from == "Office"

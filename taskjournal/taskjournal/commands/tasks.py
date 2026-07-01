@@ -35,8 +35,8 @@ class TaskCommands:
         file_path = self._get_daily_notes_file_path(date)
         if not exists(file_path):
             return []
-        data = self.parser.parse(file_path)
-        return data.get("planned_tasks", []) if data else []
+        note = self.parser.parse(file_path)
+        return note.planned_tasks if note else []
 
     def add_task_to_daily(self, date: datetime, description: str) -> None:
         file_path = self._get_daily_notes_file_path(date)

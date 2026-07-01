@@ -4,6 +4,7 @@ from datetime import date, datetime
 from pytest import mark
 from pytest_mock import MockerFixture
 
+from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.services.working_days import WorkingDaysService
 
 
@@ -232,8 +233,8 @@ class TestWorkingDays:
             side_effect=[3600, 7200],
         )
         # Mock DailyParserService.parse
-        mock_data_1 = {"work_from": "office", "summary": ["Did A"]}
-        mock_data_2 = {"work_from": "home", "summary": ["Did B"]}
+        mock_data_1 = ParsedNote(work_from="office", summary=["Did A"])
+        mock_data_2 = ParsedNote(work_from="home", summary=["Did B"])
         mocker.patch(
             "taskjournal.services.working_days.DailyParserService.parse",
             side_effect=[mock_data_1, mock_data_2],
@@ -288,8 +289,8 @@ class TestWorkingDays:
         )
 
         # Mock DailyParserService.parse
-        mock_data_mon = {"work_from": "office"}
-        mock_data_tue = {"work_from": "home"}
+        mock_data_mon = ParsedNote(work_from="office")
+        mock_data_tue = ParsedNote(work_from="home")
         mocker.patch(
             "taskjournal.services.working_days.DailyParserService.parse",
             side_effect=[mock_data_mon, mock_data_tue],

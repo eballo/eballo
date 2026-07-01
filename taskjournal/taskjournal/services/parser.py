@@ -1,6 +1,6 @@
 from os.path import splitext
 from re import compile, IGNORECASE, Pattern
-from typing import Any, Literal
+from typing import Literal
 from uuid import uuid4
 
 from taskjournal.constants import (
@@ -10,6 +10,7 @@ from taskjournal.constants import (
     SECTION_PLANNED_TASKS,
     SECTION_SUMMARY,
 )
+from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.models.task import Status, Task
 from taskjournal.services.base import BaseService
 from taskjournal.services.logger import logger
@@ -33,7 +34,7 @@ _STATUS_CHAR_MAP: dict[str, Status] = {
 
 
 class ParserService(BaseService):
-    def parse(self, content: str) -> dict[str, Any] | None:
+    def parse(self, file_path: str) -> ParsedNote | None:
         raise NotImplementedError()
 
 
@@ -72,12 +73,11 @@ class DailyParserService(ParserService):
         self.task_regex_txt = compile(r"^\[([ xX>~-])\]\s*(.*)")
         self.task_regex_md = compile(r"^\s*-\s*\[([ xX>~-])\]\s*(.*)")
 
-    def parse(self, file_path: str) -> dict[str, Any] | None:
+    def parse(self, file_path: str) -> ParsedNote | None:
         try:
             _, extension = splitext(file_path)
             lines = self._get_lines(file_path)
-            data = self._parse_content(lines, extension)
-            return data
+            return self._parse_content(lines, extension)
         except Exception as e:
             logger.error(f"Failed to parse daily notes {file_path}: {e}")
             return None
@@ -88,28 +88,13 @@ class DailyParserService(ParserService):
             lines = f.readlines()
         return lines
 
-    def _parse_content(self, lines: list[str], format_extension: str) -> dict[str, Any]:
-        data: dict[str, Any] = {
-            "sprint_name": "",
-            "date": None,
-            "start_time": None,
-            "end_time": None,
-            "breaks": [],
-            "time_spent": "",
-            "work_from": "",
-            "planned_tasks": [],
-            "code_review_tasks": [],
-            "notes": [],
-            "summary": [],
-            "firefighter": [],
-        }
-
+    def _parse_content(self, lines: list[str], format_extension: str) -> ParsedNote:
+        note = ParsedNote()
         current_section = "metadata"
 
         for line in lines:
             line_stripped = line.strip()
 
-            # 1. Detect section headers via centralised regex patterns
             section_switched = False
             for section_name, pattern in _SECTION_RULES:
                 if pattern.match(line_stripped):
@@ -119,46 +104,34 @@ class DailyParserService(ParserService):
             if section_switched:
                 continue
 
-            # 2. Parse Metadata
             if current_section == "metadata":
                 break_match = self.break_regex.match(line_stripped)
                 if break_match:
-                    breaks_list = data["breaks"]
-                    if isinstance(breaks_list, list):
-                        breaks_list.append(break_match.group(1).strip())
+                    note.breaks.append(break_match.group(1).strip())
                     continue
                 for key, regex in self.meta_regex.items():
                     match = regex.match(line_stripped)
                     if match:
-                        data[key] = match.group(1).strip()
+                        setattr(note, key, match.group(1).strip())
                         break
 
-            # 3. Parse Content based on section
             if current_section == "planned_tasks":
-                self._parse_tasks(
-                    "planned_tasks", data, line_stripped, format_extension
-                )
+                self._parse_tasks("planned_tasks", note, line_stripped, format_extension)
             elif current_section == "code_review_tasks":
-                self._parse_tasks(
-                    "code_review_tasks", data, line_stripped, format_extension
-                )
+                self._parse_tasks("code_review_tasks", note, line_stripped, format_extension)
+            elif current_section in ("notes", "summary", "firefighter"):
+                section_list: list[str] = getattr(note, current_section)
+                if line_stripped and line_stripped != "---":
+                    section_list.append(line_stripped)
+                elif not line_stripped and len(section_list) > 0:
+                    section_list.append("")
 
-            elif current_section in ["notes", "summary", "firefighter"]:
-                # Preserve empty lines for notes and summary
-                section_list = data[current_section]
-                if isinstance(section_list, list):
-                    if line_stripped and line_stripped != "---":
-                        section_list.append(line_stripped)
-                    elif not line_stripped and len(section_list) > 0:
-                        # Add newline to preserve paragraph structure
-                        section_list.append("")
-
-        return data
+        return note
 
     def _parse_tasks(
         self,
         current_section: Literal["planned_tasks", "code_review_tasks"],
-        data: dict[str, Any],
+        note: ParsedNote,
         line_stripped: str,
         format_extension: str,
     ) -> None:
@@ -171,14 +144,6 @@ class DailyParserService(ParserService):
             status_char = task_match.group(1).lower()
             description = task_match.group(2)
             status = _STATUS_CHAR_MAP.get(status_char, Status.TODO)
-
-            # Create Task object
-            task = Task(
-                id=str(uuid4()),
-                key=None,
-                description=description,
-                status=status,
-            )
-            section_list = data[current_section]
-            if isinstance(section_list, list):
-                section_list.append(task)
+            task = Task(id=str(uuid4()), key=None, description=description, status=status)
+            section_list: list[Task] = getattr(note, current_section)
+            section_list.append(task)

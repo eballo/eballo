@@ -1,11 +1,11 @@
+from dataclasses import asdict
 from datetime import datetime
 from re import search
-from json import dumps
-from typing import Any
 
 from jinja2 import Template
 
 from taskjournal.config import DAILY_NOTES_TEMPLATE
+from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.models.task import Task, Status
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.base import BaseService
@@ -42,17 +42,17 @@ class MigrationService(BaseService):
 
         logger.info(f"Migrating {file_path}...")
         try:
-            data = self.daily_parser_service.parse(file_path)
-            if data is None:
+            note = self.daily_parser_service.parse(file_path)
+            if note is None:
                 logger.error(f"Failed to parse daily notes {file_path}")
                 return
-            logger.debug(dumps(data, indent=4, sort_keys=True))
+            logger.debug(str(asdict(note)))
 
             date = self._extract_datetime_object(file_path)
             if date is None:
                 logger.error(f"Failed to extract date from {file_path}")
                 return
-            md_content = self._generate_md_content(data, date)
+            md_content = self._generate_md_content(note, date)
 
             # Define new filename
             new_file_path = file_path.replace(".txt", ".md")
@@ -81,42 +81,33 @@ class MigrationService(BaseService):
             return dt_object
         return None
 
-    def _generate_md_content(self, data: dict[str, Any], date: datetime) -> str:
+    def _generate_md_content(self, note: ParsedNote, date: datetime) -> str:
         work_from = self.task_manager.get_work_from_location(date)
         template_content = FileService.load_template(DAILY_NOTES_TEMPLATE)
 
-        start_date_time = data["start_time"] if data["start_time"] else "09:00:00"
-        end_date_time = (
-            data["end_time"] if data["end_time"] else self._get_end_time(date)
-        )
+        start_date_time = note.start_time if note.start_time else "09:00:00"
+        end_date_time = note.end_time if note.end_time else self._get_end_time(date)
 
         daily_notes_content = Template(template_content).render(
             day_name=date.strftime("%A"),
-            sprint_name=(
-                data["sprint_name"] if data["sprint_name"] else "No active sprint"
-            ),
-            date=data["date"] if data["date"] else date.strftime("%Y-%m-%d"),
+            sprint_name=note.sprint_name if note.sprint_name else "No active sprint",
+            date=note.date if note.date else date.strftime("%Y-%m-%d"),
             start_time=start_date_time,
             end_time=end_date_time,
             time_spent=(
-                data["time_spent"]
-                if data["time_spent"]
+                note.time_spent
+                if note.time_spent
                 else self._calculate_time_spent(start_date_time, end_date_time)
             ),
             work_from=work_from,
-            tasks=self.task_formatter.format_tasks(
-                data["planned_tasks"], with_name=True
-            ),
+            tasks=self.task_formatter.format_tasks(note.planned_tasks, with_name=True),
             code_review_tasks=self.task_formatter.format_tasks(
-                data["code_review_tasks"],
-                with_name=True,
+                note.code_review_tasks, with_name=True,
             ),
-            notes="\n".join(data["notes"]),
-            summary="\n".join(data["summary"]),
-            firefighter=True if data["firefighter"] else False,
-            firefighter_notes=(
-                "\n".join(data["firefighter"]) if data["firefighter"] else ""
-            ),
+            notes="\n".join(note.notes),
+            summary="\n".join(note.summary),
+            firefighter=bool(note.firefighter),
+            firefighter_notes="\n".join(note.firefighter) if note.firefighter else "",
             extra="\n **NOTE:** This daily note was migrated from a legacy .txt format. For more information, check the txt file.",
         )
 

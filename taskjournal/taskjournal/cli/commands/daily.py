@@ -195,8 +195,8 @@ def build_app() -> Typer:
 
         # Tasks
         manager = get_manager(ctx)
-        data = manager.parser.parse(daily_file)
-        tasks = data.get("planned_tasks", []) if data else []
+        note = manager.parser.parse(daily_file)
+        tasks = note.planned_tasks if note else []
         done = sum(1 for t in tasks if t.status == Status.DONE)
         pending = sum(1 for t in tasks if t.status == Status.TODO)
         blocked = sum(1 for t in tasks if t.status == Status.BLOCKED)
@@ -278,8 +278,8 @@ def build_app() -> Typer:
 
         # Tasks
         manager = get_manager(ctx)
-        data = manager.parser.parse(daily_file)
-        tasks = data.get("planned_tasks", []) if data else []
+        note = manager.parser.parse(daily_file)
+        tasks = note.planned_tasks if note else []
         if tasks:
             done = sum(1 for t in tasks if t.status == Status.DONE)
             pending = sum(1 for t in tasks if t.status == Status.TODO)
@@ -289,7 +289,7 @@ def build_app() -> Typer:
             checks.append((False, "Tasks", "No tasks found"))
 
         # Summary
-        summary_lines = data.get("summary", []) if data else []
+        summary_lines = note.summary if note else []
         has_summary = any(line.strip() for line in summary_lines)
         checks.append((
             has_summary,
