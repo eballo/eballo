@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.49.0
+
+- Split CommandManager into domain-specific classes (1.12)
+
 ## 0.48.0
 
 - 1.11 CLI command reorganisation — wk task, wk report, panels
