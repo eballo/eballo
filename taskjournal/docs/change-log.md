@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.50.0
+
+- typed parser models
+
 ## 0.49.0
 
 - Split CommandManager into domain-specific classes (1.12)
