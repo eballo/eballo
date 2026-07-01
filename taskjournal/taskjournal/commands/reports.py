@@ -203,14 +203,18 @@ class ReportCommands:
             self.file_service.write_to_file(retro_file, template_content)
             logger.info(f"Retro file ensured: {retro_file}")
 
-    def create_one_on_one(self, custom_date: datetime) -> None:
+    def create_one_on_one(self, custom_date: datetime, person_name: str = "") -> None:
         one_one_one_file_name = self.time_service.get_1on1_name(custom_date)
         one_one_one_file = join(BASE_DIR, f"{custom_date.year}/1on1s/{one_one_one_file_name}")
 
         if not exists(one_one_one_file):
             makedirs(str(Path(one_one_one_file).parent), exist_ok=True)
             template_content = self.file_service.load_template(ONE_ON_ONE_TEMPLATE)
-            self.file_service.write_to_file(one_one_one_file, template_content)
+            rendered = Template(template_content).render(
+                date=custom_date.strftime("%Y-%m-%d"),
+                person_name=person_name,
+            )
+            self.file_service.write_to_file(one_one_one_file, rendered)
             logger.info(f"1on1 file ensured: {one_one_one_file}")
 
     def add_topic_to_one_on_one(self, date: datetime, topic: str) -> None:

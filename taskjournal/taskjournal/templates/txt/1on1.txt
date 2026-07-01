@@ -1,4 +1,10 @@
-# Proposal topics
+1on1 — {{person_name}}
+
+Date: {{date}}
+
+---
+
+Proposal topics
 
 Doing self-review
 
@@ -9,14 +15,18 @@ Doing self-review
 - Anything you want to share with me?
 - Anything you want to improve in our 1on1s?
 
-# Summary
+---
+
+Summary
 
 - Key takeaways from the discussion
 - Action items for both parties
 - Follow-up topics for next meeting
 - Any additional notes or comments
 
-# Next Steps
+---
+
+Next Steps
 
 - Schedule next 1on1 meeting
 - Prepare any materials or topics for discussion
