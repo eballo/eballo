@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.51.0
+
+- unify async model
+
 ## 0.50.0
 
 - typed parser models
