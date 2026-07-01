@@ -5,6 +5,7 @@ from taskjournal.commands.daily import DailyCommands
 from taskjournal.commands.reports import ReportCommands
 from taskjournal.commands.search import SearchCommands
 from taskjournal.commands.tasks import TaskCommands
+from taskjournal.models.github import RepoCommitStat
 from taskjournal.models.task import Task
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.ai_service import AIService
@@ -72,6 +73,9 @@ class CommandManager:
         self._admin = AdminCommands(
             backup_service=backup_service,
             time_service=time_service,
+            jira=jira,
+            github=github,
+            ai_service=ai_service,
         )
 
     # ── Daily ─────────────────────────────────────────────────────────────────
@@ -198,3 +202,17 @@ class CommandManager:
 
     def show_info(self, today: datetime) -> None:
         return self._admin.show_info(today)
+
+    async def get_jira_tasks(self, mode: str = "") -> list[Task]:
+        return await self._admin.get_jira_tasks(mode)
+
+    async def get_github_stats(
+        self,
+        since_date: datetime | None,
+        only_contributed: bool,
+        org_name: str,
+    ) -> list[RepoCommitStat] | None:
+        return await self._admin.get_github_stats(since_date, only_contributed, org_name)
+
+    async def run_ai_prompt(self, prompt: str) -> str:
+        return await self._admin.run_ai_prompt(prompt)

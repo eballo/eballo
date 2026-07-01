@@ -5,6 +5,15 @@ from typer import Typer, Context, Option
 
 from taskjournal.cli.context import get_manager, get_debug, parse_date
 from taskjournal.config import GIT_HUB_ORGANIZATION_NAME
+from taskjournal.constants import (
+    JIRA_MODE_ALL,
+    JIRA_MODE_CODE,
+    JIRA_MODE_DEFAULT,
+    JIRA_MODE_MIDREVIEW,
+    JIRA_MODE_MINE,
+    JIRA_MODE_MONTH,
+)
+from taskjournal.services.github import GithubService
 from taskjournal.services.logger import logger
 
 
@@ -44,31 +53,28 @@ def build_app() -> Typer:
         ),
     ) -> None:
         logger.debug(f"debug={get_debug(ctx)}")
-        service = get_manager(ctx).jira
+        m = get_manager(ctx)
 
         if all:
             logger.info("📝 All Tasks:")
-            tasks = run(service.get_current_sprint_tasks())
+            mode = JIRA_MODE_ALL
         elif mine:
             logger.info("📝 Current Sprint Tasks ALL assigned to me:")
-            tasks = run(service.get_current_sprint_tasks_all_assigned_to_me())
+            mode = JIRA_MODE_MINE
         elif code:
             logger.info("📝 Current Sprint Tasks in Code Review:")
-            tasks = run(service.get_current_sprint_tasks_in_code_review())
+            mode = JIRA_MODE_CODE
         elif midreview:
             logger.info("📝 Current Tasks assigned to me in the last 6 months:")
-            tasks = run(
-                service.get_current_tasks_assigned_to_me_last_6_months()
-            )
+            mode = JIRA_MODE_MIDREVIEW
         elif month:
             logger.info("📝 Current Tasks assigned to me in the last month:")
-            tasks = run(service.get_current_tasks_assigned_to_me_last_month())
+            mode = JIRA_MODE_MONTH
         else:
             logger.info("📝 Current Sprint Tasks assigned to me (not finished):")
-            tasks = run(
-                service.get_current_sprint_tasks_not_done_assigned_to_me()
-            )
+            mode = JIRA_MODE_DEFAULT
 
+        tasks = run(m.get_jira_tasks(mode))
         for task in tasks:
             logger.info(task)
 
@@ -95,8 +101,6 @@ def build_app() -> Typer:
         ),
     ) -> None:
         logger.debug(f"debug={get_debug(ctx)}")
-        service = get_manager(ctx).github
-        service.org_name = organization
 
         if (date or contributed is not None) and not stats:
             logger.info(
@@ -107,14 +111,13 @@ def build_app() -> Typer:
         if stats:
             custom_date = parse_date(date) if date else None
             commit_stats = run(
-                service.get_org_commit_stats(
+                get_manager(ctx).get_github_stats(
                     since_date=custom_date,
                     only_contributed=contributed,
+                    org_name=organization,
                 )
-                if custom_date
-                else service.get_org_commit_stats(only_contributed=contributed)
             )
-            service.print_commit_stats(commit_stats)
+            GithubService.print_commit_stats(commit_stats)
 
     @app.command(
         "claude",
@@ -133,7 +136,7 @@ def build_app() -> Typer:
             help="Custom prompt to send to the AI service.",
         ),
     ) -> None:
-        result = run(get_manager(ctx).ai_service.summarize([prompt]))
+        result = run(get_manager(ctx).run_ai_prompt(prompt))
         logger.info(result)
 
     return app
