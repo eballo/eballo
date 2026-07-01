@@ -25,7 +25,7 @@ class TestOneOnOne:
         # then
         assert result.exit_code == 0
         manager_instance.create_one_on_one.assert_called_once_with(
-            datetime(2025, 1, 19, 10, 0, 0)
+            datetime(2025, 1, 19, 10, 0, 0), person_name=""
         )
 
     @freeze_time("2025-01-19 10:00:00")

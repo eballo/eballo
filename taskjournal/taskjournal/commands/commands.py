@@ -178,8 +178,8 @@ class CommandManager:
     def create_retro(self, custom_date: datetime) -> None:
         return self._reports.create_retro(custom_date)
 
-    def create_one_on_one(self, custom_date: datetime) -> None:
-        return self._reports.create_one_on_one(custom_date)
+    def create_one_on_one(self, custom_date: datetime, person_name: str = "") -> None:
+        return self._reports.create_one_on_one(custom_date, person_name=person_name)
 
     def add_topic_to_one_on_one(self, date: datetime, topic: str) -> None:
         return self._reports.add_topic_to_one_on_one(date, topic)

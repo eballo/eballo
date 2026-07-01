@@ -63,7 +63,8 @@ class TestSetupCLI:
                    "gh-token", "org-name",                  # github
                    "claude_code",                          # AI provider (no key needed)
                    "HomeWifi", "OfficeWifi",                # wifi
-                   "Obsidian"]                              # editor
+                   "Obsidian",                             # editor
+                   "Alice"]                                # manager name
         service_mock, _ = self._mock_wizard(mocker, cli_container, env_exists=False, confirm_values=confirms, prompt_side_effect=prompts)
 
         result = invoke_cli(["setup"])
@@ -81,7 +82,7 @@ class TestSetupCLI:
         # AI section is always a prompt (no confirm for it)
         confirms = [True, False, False, False, False, True]
         service_mock, _ = self._mock_wizard(mocker, cli_container, env_exists=True, confirm_values=confirms,
-                                            prompt_side_effect=["claude_code", "Obsidian"])
+                                            prompt_side_effect=["claude_code", "Obsidian", ""])
 
         result = invoke_cli(["setup"])
 
@@ -98,7 +99,7 @@ class TestSetupCLI:
         # confirms: paths, no-jira, no-github, no-wifi, no-data_files
         confirms = [True, False, False, False, False]
         # First prompt (format) returns invalid then valid, then the rest
-        prompts = ["xml", "md", "/notes", "/backup", "claude_code", "Obsidian"]
+        prompts = ["xml", "md", "/notes", "/backup", "claude_code", "Obsidian", ""]
         service_mock, _ = self._mock_wizard(mocker, cli_container, env_exists=False, confirm_values=confirms,
                                             prompt_side_effect=prompts)
 

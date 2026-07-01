@@ -140,6 +140,13 @@ def build_app() -> Typer:
             default=existing.get("EDITOR_APP", "Obsidian"),
         )
 
+        # ── People ────────────────────────────────────────────────────────
+        console.print(Panel("[bold]People[/bold]", expand=False))
+        values["MANAGER_NAME"] = typer.prompt(
+            "Your manager's name (used as default for 1on1 notes)",
+            default=existing.get("MANAGER_NAME", ""),
+        )
+
         # ── Data files ────────────────────────────────────────────────────
         year = datetime.now().year
         console.print(Panel(f"[bold]Data files ({year})[/bold]", expand=False))
@@ -204,6 +211,8 @@ def _print_summary(service: SetupService, values: dict[str, str]) -> None:
     _row("Office WiFi SSID", "OFFICE_WIFI")
     table.add_section()
     _row("Editor app", "EDITOR_APP")
+    table.add_section()
+    _row("Manager name", "MANAGER_NAME")
 
     console.print(table)
     console.print(

@@ -3,6 +3,7 @@ from asyncio import run
 from typer import Context, Option, Typer
 
 from taskjournal.cli.context import get_debug, get_manager, get_today, parse_date
+from taskjournal.config import MANAGER_NAME
 from taskjournal.services.logger import logger
 
 _DATETIME_FMT = "%Y-%m-%d %H:%M"
@@ -91,13 +92,14 @@ def build_app() -> Typer:
 
     @one_on_one_app.command(
         "create",
-        help="Create a 1on1 note.\n\nExamples:\n  wk report 1on1 create\n",
+        help="Create a 1on1 note.\n\nExamples:\n  wk report 1on1 create\n  wk report 1on1 create --person 'Alice'\n",
     )
     def report_one_on_one(
         ctx: Context,
+        person: str = Option(MANAGER_NAME, "--person", "-p", help="Name of the person you are meeting with."),
     ) -> None:
         logger.debug(f"debug={get_debug(ctx)}")
-        get_manager(ctx).create_one_on_one(get_today(ctx))
+        get_manager(ctx).create_one_on_one(get_today(ctx), person_name=person)
 
     @one_on_one_app.command(
         "add-topic",

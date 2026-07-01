@@ -2,31 +2,13 @@ from os import makedirs
 from os.path import exists, join
 from pathlib import Path
 
-from taskjournal.config import TEMPLATE_FORMAT
+from jinja2 import Template
+
+from taskjournal.config import FIREMAN_WEEKS_TEMPLATE, HOLIDAYS_TEMPLATE, TEMPLATE_FORMAT
 from taskjournal.constants import PLACEHOLDER_HOME_WIFI, PLACEHOLDER_OFFICE_WIFI
 from taskjournal.services.base import BaseService
+from taskjournal.services.file import FileService
 from taskjournal.services.logger import logger
-
-_HOLIDAYS_TEMPLATE = """\
-# Holidays {year}
-# Format: YYYY-MM-DD - Description
-#
-## Public holidays
-# 2026-01-01 - New Year's Day
-
-## Company holidays
-# Add company-specific days here
-
-## Personal days
-# Add personal days off here
-"""
-
-_FIREMAN_TEMPLATE = """\
-# Fireman weeks {year}
-# Add one date per week you are on fireman duty (any day of that week).
-# Format: YYYY-MM-DD
-#
-"""
 
 ENV_PATH = Path.home() / ".config" / "taskjournal" / ".env"
 
@@ -45,6 +27,7 @@ _DEFAULTS = {
     "HOME_WIFI": PLACEHOLDER_HOME_WIFI,
     "OFFICE_WIFI": PLACEHOLDER_OFFICE_WIFI,
     "EDITOR_APP": "Obsidian",
+    "MANAGER_NAME": "",
 }
 
 
@@ -97,6 +80,9 @@ class SetupService(BaseService):
             "\n",
             "# Editor\n",
             f'EDITOR_APP={values["EDITOR_APP"]}\n',
+            "\n",
+            "# People\n",
+            f'MANAGER_NAME={values["MANAGER_NAME"]}\n',
         ]
         extra = {k: v for k, v in values.items() if k not in known_keys}
         if extra:
@@ -111,9 +97,11 @@ class SetupService(BaseService):
         return values.get(key, "") not in ("", _DEFAULTS.get(key, ""))
 
     def create_data_files(self, base_dir: str, year: int) -> None:
+        holidays_content = Template(FileService.load_template(HOLIDAYS_TEMPLATE)).render(year=year)
+        fireman_content = Template(FileService.load_template(FIREMAN_WEEKS_TEMPLATE)).render(year=year)
         files = {
-            join(base_dir, str(year), "holidays", f"holidays.{TEMPLATE_FORMAT}"): _HOLIDAYS_TEMPLATE.format(year=year),
-            join(base_dir, str(year), "fireman", f"fireman_weeks.{TEMPLATE_FORMAT}"): _FIREMAN_TEMPLATE.format(year=year),
+            join(base_dir, str(year), "holidays", f"holidays.{TEMPLATE_FORMAT}"): holidays_content,
+            join(base_dir, str(year), "fireman", f"fireman_weeks.{TEMPLATE_FORMAT}"): fireman_content,
         }
         for path, content in files.items():
             if exists(path):
