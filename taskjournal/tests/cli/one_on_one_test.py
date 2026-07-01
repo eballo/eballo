@@ -20,7 +20,7 @@ class TestOneOnOne:
         manager_instance = cli_manager
 
         # when
-        result = invoke_cli(["1on1", "report"])
+        result = invoke_cli(["report", "1on1", "create"])
 
         # then
         assert result.exit_code == 0
@@ -35,7 +35,7 @@ class TestOneOnOne:
         invoke_cli: Callable[[list[str]], Result],
         caplog: LogCaptureFixture,
     ) -> None:
-        result = invoke_cli(["1on1", "add-topic", "-t", "My topic"])
+        result = invoke_cli(["report", "1on1", "add-topic", "-t", "My topic"])
 
         assert result.exit_code == 0
         cli_manager.add_topic_to_one_on_one.assert_called_once_with(
@@ -52,7 +52,7 @@ class TestOneOnOne:
     ) -> None:
         cli_manager.add_topic_to_one_on_one.side_effect = FileNotFoundError("no file")
 
-        result = invoke_cli(["1on1", "add-topic", "-t", "topic"])
+        result = invoke_cli(["report", "1on1", "add-topic", "-t", "topic"])
 
         assert result.exit_code == 0
         assert "no file" in caplog.text
@@ -66,7 +66,7 @@ class TestOneOnOne:
     ) -> None:
         cli_manager.add_topic_to_one_on_one.side_effect = ValueError("no section")
 
-        result = invoke_cli(["1on1", "add-topic", "-t", "topic"])
+        result = invoke_cli(["report", "1on1", "add-topic", "-t", "topic"])
 
         assert result.exit_code == 0
         assert "no section" in caplog.text

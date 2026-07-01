@@ -144,7 +144,7 @@ class TestDailyTask:
         task = Task(id="1", description="Fix bug", status=Status.TODO)
         cli_manager.list_tasks_in_daily.return_value = [task]
 
-        result = invoke_cli(["daily", "task", "list"])
+        result = invoke_cli(["task", "list"])
 
         assert result.exit_code == 0
         assert "Fix bug" in result.output
@@ -158,7 +158,7 @@ class TestDailyTask:
     ) -> None:
         cli_manager.list_tasks_in_daily.return_value = []
 
-        result = invoke_cli(["daily", "task", "list"])
+        result = invoke_cli(["task", "list"])
 
         assert result.exit_code == 0
         assert "No tasks found" in caplog.text
@@ -170,7 +170,7 @@ class TestDailyTask:
         invoke_cli: Callable[[list[str]], Result],
         caplog: LogCaptureFixture,
     ) -> None:
-        result = invoke_cli(["daily", "task", "add", "New task"])
+        result = invoke_cli(["task", "add", "New task"])
 
         assert result.exit_code == 0
         cli_manager.add_task_to_daily.assert_called_once_with(
@@ -187,7 +187,7 @@ class TestDailyTask:
     ) -> None:
         cli_manager.add_task_to_daily.side_effect = ValueError("no section")
 
-        result = invoke_cli(["daily", "task", "add", "something"])
+        result = invoke_cli(["task", "add", "something"])
 
         assert result.exit_code == 1
         assert "no section" in caplog.text
@@ -201,7 +201,7 @@ class TestDailyTask:
     ) -> None:
         cli_manager.complete_task_in_daily.return_value = True
 
-        result = invoke_cli(["daily", "task", "done", "Fix bug"])
+        result = invoke_cli(["task", "done", "Fix bug"])
 
         assert result.exit_code == 0
         assert "Marked done: Fix bug" in caplog.text
@@ -215,7 +215,7 @@ class TestDailyTask:
     ) -> None:
         cli_manager.complete_task_in_daily.return_value = False
 
-        result = invoke_cli(["daily", "task", "done", "nonexistent"])
+        result = invoke_cli(["task", "done", "nonexistent"])
 
         assert result.exit_code == 0
         assert "No matching task found" in caplog.text
@@ -229,10 +229,94 @@ class TestDailyTask:
     ) -> None:
         cli_manager.block_task_in_daily.return_value = True
 
-        result = invoke_cli(["daily", "task", "block", "Blocked item"])
+        result = invoke_cli(["task", "block", "Blocked item"])
 
         assert result.exit_code == 0
         assert "Marked blocked: Blocked item" in caplog.text
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_task_block_warns_when_not_found(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        caplog: LogCaptureFixture,
+    ) -> None:
+        cli_manager.block_task_in_daily.return_value = False
+
+        result = invoke_cli(["task", "block", "nonexistent"])
+
+        assert result.exit_code == 0
+        assert "No matching task found" in caplog.text
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_task_block_logs_error_on_file_not_found(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        caplog: LogCaptureFixture,
+    ) -> None:
+        cli_manager.block_task_in_daily.side_effect = FileNotFoundError("no file")
+
+        result = invoke_cli(["task", "block", "something"])
+
+        assert result.exit_code == 1
+        assert "no file" in caplog.text
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_task_done_logs_error_on_file_not_found(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        caplog: LogCaptureFixture,
+    ) -> None:
+        cli_manager.complete_task_in_daily.side_effect = FileNotFoundError("no file")
+
+        result = invoke_cli(["task", "done", "something"])
+
+        assert result.exit_code == 1
+        assert "no file" in caplog.text
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_task_wip_marks_task(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        caplog: LogCaptureFixture,
+    ) -> None:
+        cli_manager.wip_task_in_daily.return_value = True
+
+        result = invoke_cli(["task", "wip", "Current task"])
+
+        assert result.exit_code == 0
+        assert "Marked wip: Current task" in caplog.text
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_task_wip_warns_when_not_found(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        caplog: LogCaptureFixture,
+    ) -> None:
+        cli_manager.wip_task_in_daily.return_value = False
+
+        result = invoke_cli(["task", "wip", "nonexistent"])
+
+        assert result.exit_code == 0
+        assert "No matching task found" in caplog.text
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_task_wip_logs_error_on_file_not_found(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        caplog: LogCaptureFixture,
+    ) -> None:
+        cli_manager.wip_task_in_daily.side_effect = FileNotFoundError("no file")
+
+        result = invoke_cli(["task", "wip", "something"])
+
+        assert result.exit_code == 1
+        assert "no file" in caplog.text
 
 
 class TestDailyAudit:
