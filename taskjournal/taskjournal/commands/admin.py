@@ -14,7 +14,7 @@ from taskjournal.services.ai_service import AIService
 from taskjournal.services.backup import BackupService
 from taskjournal.services.github import GithubService
 from taskjournal.services.jira import JiraService
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 from taskjournal.services.time import TimeService
 
 
@@ -36,13 +36,13 @@ class AdminCommands:
 
     def create_backup(self) -> None:
         backup_file = self.backup_service.create()
-        logger.info(f"Backup created at: {backup_file}")
+        console.print(f"[green]✓[/green] Backup created at: {backup_file}")
 
     def show_info(self, today: datetime) -> None:
         day_name = today.strftime("%A")
         week_number = today.isocalendar()[1]
-        logger.info(f"📅 Today is {day_name}, {today.strftime('%Y-%m-%d')}")
-        logger.info(f"🔢 We are in week {week_number}")
+        console.print(f"📅 Today is {day_name}, {today.strftime('%Y-%m-%d')}")
+        console.print(f"🔢 We are in week {week_number}")
 
     async def get_jira_tasks(self, mode: str = JIRA_MODE_DEFAULT) -> list[Task]:
         if mode == JIRA_MODE_ALL:

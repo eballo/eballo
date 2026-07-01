@@ -4,9 +4,8 @@ from rich.table import Table
 from typer import Argument, Option, Typer, Context
 
 from taskjournal.cli.context import get_today
-from taskjournal.cli.commands.daily import console
 from taskjournal.services.fireman import FiremanService
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 
 
 def build_app() -> Typer:
@@ -39,7 +38,7 @@ def build_app() -> Typer:
         weeks = svc.get_all_weeks()
 
         if not weeks:
-            logger.info("No fireman weeks registered.")
+            console.print("No fireman weeks registered.")
             return
 
         table = Table(show_header=False, box=None, padding=(0, 1))
@@ -71,16 +70,16 @@ def build_app() -> Typer:
         weeks = svc.get_upcoming_weeks(today)
 
         if not weeks:
-            logger.info("No upcoming fireman weeks.")
+            console.print("No upcoming fireman weeks.")
             return
 
         current_monday = svc._get_monday(today)
         for monday in weeks:
             days = (monday - today).days
             if monday == current_monday:
-                logger.info(f"▶ week of {monday} — this week")
+                console.print(f"[bold yellow]▶[/bold yellow] week of {monday} — this week")
             else:
-                logger.info(f"○ week of {monday} — in {days} day(s)")
+                console.print(f"[cyan]○[/cyan] week of {monday} — in {days} day(s)")
 
     @app.command("summary", help="Summary of fireman weeks (done, remaining, next).")
     def fireman_summary(

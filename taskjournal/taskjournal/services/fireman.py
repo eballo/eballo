@@ -4,7 +4,7 @@ from re import compile
 
 from taskjournal.config import BASE_DIR, FIREMAN_WEEKS_FILE
 from taskjournal.services.base import BaseService
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 
 
 class FiremanService(BaseService):
@@ -60,7 +60,7 @@ class FiremanService(BaseService):
             with open(fireman_path, "a", encoding="utf-8") as f:
                 f.write(f"{date_str}\n")
             self.fireman_weeks.add(monday)
-            logger.info(f"Fireman week added: {date_str} (week of {monday})")
+            console.print(f"[green]✓[/green] Fireman week added: {date_str} (week of {monday})")
         except FileNotFoundError:
             logger.error(f"Fireman file not found: {fireman_path}. Run 'wk setup' first.")
 
@@ -88,7 +88,7 @@ class FiremanService(BaseService):
         total = len(all_weeks)
 
         if total == 0:
-            logger.info("No fireman weeks registered.")
+            console.print("No fireman weeks registered.")
             return
 
         past = self.get_past_weeks(today)
@@ -97,21 +97,21 @@ class FiremanService(BaseService):
         remaining = len(upcoming)
         percent = (done / total) * 100 if total > 0 else 0
 
-        logger.info(f"Total fireman weeks: {total}")
-        logger.info(f"Done:      {done} ({percent:.1f}%)")
-        logger.info(f"Remaining: {remaining}")
+        console.print(f"Total fireman weeks: {total}")
+        console.print(f"Done:      {done} ({percent:.1f}%)")
+        console.print(f"Remaining: {remaining}")
 
         days, next_monday = self.get_next_week(today)
         if next_monday:
-            logger.info(f"Next:      week of {next_monday} — in {days} day(s)")
+            console.print(f"Next:      week of {next_monday} — in {days} day(s)")
         else:
-            logger.info("No upcoming fireman weeks.")
+            console.print("No upcoming fireman weeks.")
 
     def is_fireman_week(self) -> bool:
         """Returns True if the date's week is in the fireman list"""
         normalized_input = self._get_monday(self.create_datetime.date())
         is_fireman_week = normalized_input in self.fireman_weeks
-        logger.info(
+        logger.debug(
             f"Checking if {self.create_datetime.date()} is a fireman week: {is_fireman_week}"
         )
         return is_fireman_week

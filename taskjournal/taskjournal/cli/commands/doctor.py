@@ -1,15 +1,13 @@
 from pathlib import Path
 
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from typer import Context, Typer
 
 from taskjournal.cli.context import get_container
 from taskjournal.services.base import HealthCheckResult, ServiceStatus
+from taskjournal.services.logger import console
 from taskjournal.services.setup import ENV_PATH
-
-console = Console()
 
 _STATUS_ICON = {
     ServiceStatus.OK: "[green]✓[/green]",

@@ -81,7 +81,7 @@ class TestFireman:
         fireman_file.write_text("2025-01-06\n", encoding="utf-8")
 
         mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        logger = mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.fireman.logger")
 
         # when
         true_service = fireman_service_factory(datetime(2025, 1, 8, 10, 0, 0))
@@ -90,7 +90,6 @@ class TestFireman:
         # then
         assert true_service.is_fireman_week() is True
         assert false_service.is_fireman_week() is False
-        assert logger.info.call_count >= 2
 
     def _make_service_with_weeks(
         self,
@@ -239,12 +238,13 @@ class TestFireman:
         fireman_service_factory: Callable[[datetime], FiremanService],
     ) -> None:
         mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        logger_mock = mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.fireman.logger")
+        cp = mocker.patch("taskjournal.services.fireman.console.print")
 
         svc = fireman_service_factory(datetime(2025, 1, 1))
         svc.summary(date(2025, 6, 1))
 
-        logger_mock.info.assert_called_once_with("No fireman weeks registered.")
+        cp.assert_called_once_with("No fireman weeks registered.")
 
     def test_summary_with_past_and_upcoming(
         self,
@@ -256,12 +256,13 @@ class TestFireman:
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n2025-01-20\n2025-02-03\n", encoding="utf-8")
         mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        logger_mock = mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.fireman.logger")
+        cp = mocker.patch("taskjournal.services.fireman.console.print")
 
         svc = fireman_service_factory(datetime(2025, 1, 1))
         svc.summary(date(2025, 1, 14))  # after week of Jan 6, before Jan 20
 
-        calls = [str(c) for c in logger_mock.info.call_args_list]
+        calls = [str(c) for c in cp.call_args_list]
         assert any("Total fireman weeks: 3" in c for c in calls)
         assert any("Done:" in c for c in calls)
         assert any("Next:" in c for c in calls)
@@ -276,10 +277,11 @@ class TestFireman:
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n", encoding="utf-8")
         mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        logger_mock = mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.fireman.logger")
+        cp = mocker.patch("taskjournal.services.fireman.console.print")
 
         svc = fireman_service_factory(datetime(2025, 1, 1))
         svc.summary(date(2025, 12, 31))
 
-        calls = [str(c) for c in logger_mock.info.call_args_list]
+        calls = [str(c) for c in cp.call_args_list]
         assert any("No upcoming fireman weeks" in c for c in calls)

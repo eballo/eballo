@@ -3,17 +3,14 @@ from datetime import timedelta
 from os.path import exists, join
 
 from sys import exit as sys_exit
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from typer import Typer, Context, Option
 
 from taskjournal.cli.context import get_manager, get_today, get_debug, parse_date
 from taskjournal.services.file import FileService
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 from taskjournal.services.time import TimeService
-
-console = Console()
 
 
 def build_app() -> Typer:

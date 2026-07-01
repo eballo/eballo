@@ -127,7 +127,7 @@ class TestCommands:
             return_value=["task-code-review"],
         )
         mocker.patch.object(cmd._daily, "_schedule_macos_alarm")
-        info = mocker.patch("taskjournal.commands.daily.logger.info")
+        cp = mocker.patch("taskjournal.commands.daily.console.print")
 
         # when
         await cmd.create_daily_notes(fixed_datetime, force=True)
@@ -137,7 +137,7 @@ class TestCommands:
         assert cmd.task_formatter.format_tasks.call_count == 2
         assert any(
             "estimated finish" in " ".join(map(str, c.args))
-            for c in info.mock_calls
+            for c in cp.mock_calls
         )
 
     @mark.asyncio
@@ -233,7 +233,7 @@ class TestCommands:
             "taskjournal.services.utils.FormatUtils.wrap_with_format",
             side_effect=lambda s: f"**{s}**",
         )
-        info = mocker.patch("taskjournal.commands.daily.logger.info")
+        cp = mocker.patch("taskjournal.commands.daily.console.print")
         mocker.patch.object(cmd._daily, "_cancel_macos_alarm")
         custom_end = fixed_datetime + timedelta(hours=2, minutes=15)
 
@@ -245,7 +245,7 @@ class TestCommands:
         assert wrap.call_count >= 2
         assert any(
             "Daily notes finalized" in " ".join(map(str, c.args))
-            for c in info.mock_calls
+            for c in cp.mock_calls
         )
 
     def test_finalize_daily_notes__uses_now_when_no_custom_date(
@@ -555,7 +555,7 @@ class TestCommands:
     ) -> None:
         # given
         cmd.backup_service.create.return_value = "/tmp/backup.zip"
-        info = mocker.patch("taskjournal.commands.admin.logger.info")
+        cp = mocker.patch("taskjournal.commands.admin.console.print")
 
         # when
         cmd.create_backup()
@@ -563,7 +563,7 @@ class TestCommands:
         # then
         assert any(
             "Backup created at: /tmp/backup.zip" in " ".join(map(str, c.args))
-            for c in info.mock_calls
+            for c in cp.mock_calls
         )
 
     def test__calculate_time__logs_when_elapsed_available(
@@ -571,13 +571,13 @@ class TestCommands:
     ) -> None:
         # given
         cmd.time_service.calculate_working_hours.return_value = ("09:00", 3.5, datetime(2025, 1, 15, 12, 30))
-        info = mocker.patch("taskjournal.commands.daily.logger.info")
+        cp = mocker.patch("taskjournal.commands.daily.console.print")
 
         # when
         cmd._calculate_time("/tmp/day.md")
 
         # then
-        assert info.call_count == 3
+        assert cp.call_count == 3
 
     def test__calculate_time__logs_error_when_elapsed_missing(
         self, cmd: CommandManager, mocker: MockerFixture
@@ -596,7 +596,7 @@ class TestCommands:
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
         # given
-        info = mocker.patch("taskjournal.commands.admin.logger.info")
+        cp = mocker.patch("taskjournal.commands.admin.console.print")
 
         # when
         cmd.show_info(fixed_datetime)
@@ -604,8 +604,8 @@ class TestCommands:
         # then
         # fixed_datetime is 2025-01-15 (Wednesday)
         # 2025-01-15 is ISO week 3
-        assert info.call_count == 2
-        calls = [c.args[0] for c in info.mock_calls]
+        assert cp.call_count == 2
+        calls = [c.args[0] for c in cp.mock_calls]
         assert "Today is Wednesday, 2025-01-15" in calls[0]
         assert "We are in week 3" in calls[1]
 
@@ -1134,12 +1134,12 @@ class TestCommands:
         fake_result.returncode = 0
         fake_result.stderr = b"job 42 at Tue Jun 30 12:57:00 2026"
         mocker.patch("taskjournal.commands.daily.subprocess_run", return_value=fake_result)
-        info = mocker.patch("taskjournal.commands.daily.logger.info")
+        cp = mocker.patch("taskjournal.commands.daily.console.print")
         alarm_file = str(tmp_path / ".alarm_job")
 
         cmd._schedule_macos_alarm(fixed_datetime, alarm_file)
 
-        assert any("Alarm set for" in str(c.args) for c in info.mock_calls)
+        assert any("Alarm set for" in str(c.args) for c in cp.mock_calls)
         assert Path(alarm_file).read_text() == "42"
 
     def test__schedule_macos_alarm__logs_debug_on_failure(
@@ -1201,7 +1201,7 @@ class TestCommands:
         fake_result = mocker.MagicMock()
         fake_result.returncode = 0
         run = mocker.patch("taskjournal.commands.daily.subprocess_run", return_value=fake_result)
-        info = mocker.patch("taskjournal.commands.daily.logger.info")
+        cp = mocker.patch("taskjournal.commands.daily.console.print")
         alarm_file = tmp_path / ".alarm_job"
         alarm_file.write_text("42")
 
@@ -1209,7 +1209,7 @@ class TestCommands:
 
         run.assert_called_once_with(["atrm", "42"], capture_output=True)
         assert not alarm_file.exists()
-        assert any("Alarm cancelled" in str(c.args) for c in info.mock_calls)
+        assert any("Alarm cancelled" in str(c.args) for c in cp.mock_calls)
 
     def test__cancel_macos_alarm__logs_debug_when_atrm_fails(
         self, cmd: CommandManager, mocker: MockerFixture, tmp_path: Path

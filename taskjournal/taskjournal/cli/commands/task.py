@@ -1,14 +1,11 @@
 from sys import exit as sys_exit
 
-from rich.console import Console
 from rich.table import Table
 from typer import Argument, Context, Option, Typer
 
 from taskjournal.cli.context import get_manager, get_today, parse_date
 from taskjournal.models.task import Status
-from taskjournal.services.logger import logger
-
-console = Console()
+from taskjournal.services.logger import console, logger
 
 
 def build_app() -> Typer:
@@ -27,7 +24,7 @@ def build_app() -> Typer:
         tasks = get_manager(ctx).list_tasks_in_daily(today)
 
         if not tasks:
-            logger.info("No tasks found.")
+            console.print("No tasks found.")
             return
 
         _STATUS_STYLE: dict[str, tuple[str, str, str]] = {
@@ -57,7 +54,7 @@ def build_app() -> Typer:
         today = parse_date(date) if date else get_today(ctx)
         try:
             get_manager(ctx).add_task_to_daily(today, description)
-            logger.info(f"Added: {description}")
+            console.print(f"[green]✓[/green] Added: {description}")
         except (FileNotFoundError, ValueError) as e:
             logger.error(str(e))
             sys_exit(1)
@@ -72,7 +69,7 @@ def build_app() -> Typer:
         try:
             found = get_manager(ctx).complete_task_in_daily(today, description)
             if found:
-                logger.info(f"Marked done: {description}")
+                console.print(f"[green]✓[/green] Marked done: {description}")
             else:
                 logger.warning(f"No matching task found for: {description}")
         except FileNotFoundError as e:
@@ -89,7 +86,7 @@ def build_app() -> Typer:
         try:
             found = get_manager(ctx).block_task_in_daily(today, description)
             if found:
-                logger.info(f"Marked blocked: {description}")
+                console.print(f"[yellow]⚠[/yellow] Marked blocked: {description}")
             else:
                 logger.warning(f"No matching task found for: {description}")
         except FileNotFoundError as e:
@@ -106,7 +103,7 @@ def build_app() -> Typer:
         try:
             found = get_manager(ctx).wip_task_in_daily(today, description)
             if found:
-                logger.info(f"Marked wip: {description}")
+                console.print(f"[blue]▶[/blue] Marked wip: {description}")
             else:
                 logger.warning(f"No matching task found for: {description}")
         except FileNotFoundError as e:

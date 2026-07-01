@@ -20,7 +20,7 @@ from taskjournal.services.fireman import FiremanService
 from taskjournal.services.github import GithubService
 from taskjournal.services.holidays import HolidayService
 from taskjournal.services.jira import JiraService
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
@@ -278,7 +278,7 @@ class DailyCommands:
 
         default = self.task_manager.get_default_tasks()
         if create_datetime.strftime("%A") == "Monday":
-            logger.info("Checking for pending tasks from last week...")
+            logger.debug("Checking for pending tasks from last week...")
             one_week_ago = create_datetime - timedelta(weeks=1)
             week_folder = self._get_week_folder(one_week_ago)
             last_week_pending_tasks = self.task_manager.get_previous_pending_tasks(week_folder, current_file)
@@ -325,15 +325,15 @@ class DailyCommands:
 
         logger.debug(f"Daily Notes created successfully {daily_notes_file}")
         day_number = min(days_before_today + 1, 5)
-        logger.info(
+        console.print(
             f"Day {day_number} of 5"
             f"  |  accumulated: {accumulated_h}h {accumulated_m:02d}m"
             f"  |  expected: {expected_h}h {expected_m:02d}m"
             f"  |  extra: {extra_sign}{extra_h}h {extra_m:02d}m"
         )
         streak = self.get_streak_stats(create_datetime)
-        logger.info(f"Streak: {streak['current']} day(s)  |  all-time best: {streak['longest']} day(s)")
-        logger.info(
+        console.print(f"Streak: {streak['current']} day(s)  |  all-time best: {streak['longest']} day(s)")
+        console.print(
             f"Today: {today_h}h {today_m:02d}m work + 1h lunch"
             f"  →  estimated finish {finish.strftime('%H:%M')}"
         )
@@ -350,7 +350,7 @@ class DailyCommands:
             from re import compile as re_compile
             result = subprocess_run(["at", finish_str], input=script.encode(), capture_output=True)
             if result.returncode == 0:
-                logger.info(f"Alarm set for {finish_str} — end of scheduled workday")
+                console.print(f"[dim]Alarm set for {finish_str} — end of scheduled workday[/dim]")
                 m = re_compile(r"job\s+(\d+)").search(result.stderr.decode())
                 if m:
                     Path(alarm_file).write_text(m.group(1))
@@ -370,7 +370,7 @@ class DailyCommands:
             result = subprocess_run(["atrm", job_id], capture_output=True)
             alarm_path.unlink()
             if result.returncode == 0:
-                logger.info(f"Alarm cancelled (job {job_id})")
+                console.print(f"[dim]Alarm cancelled (job {job_id})[/dim]")
             else:
                 logger.debug(f"Could not cancel alarm job {job_id}: {result.stderr.decode().strip()}")
         except Exception as e:
@@ -412,7 +412,7 @@ class DailyCommands:
         content.insert(created_line_index + 2, total_time_line)
         self.file_service.write_lines_to_file(daily_notes_file, content)
 
-        logger.info(f"Daily notes finalized {daily_notes_file}")
+        console.print(f"[green]✓[/green] Daily notes finalized: {daily_notes_file}")
 
         alarm_file = join(dirname(daily_notes_file), f".alarm_job_{final_time.strftime('%Y-%m-%d')}")
         self._cancel_macos_alarm(alarm_file)
@@ -509,9 +509,9 @@ class DailyCommands:
     def _calculate_time(self, daily_notes_file: str) -> None:
         started_time, elapsed_hours, finish_time = self.time_service.calculate_working_hours(daily_notes_file)
         if elapsed_hours is not None and finish_time is not None:
-            logger.info(f"Started time: {started_time}")
-            logger.info(f"Elapsed working time: {elapsed_hours:.2f}")
-            logger.info(f"Estimated finish time: {finish_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            console.print(f"Started time: {started_time}")
+            console.print(f"Elapsed working time: {elapsed_hours:.2f}")
+            console.print(f"Estimated finish time: {finish_time.strftime('%Y-%m-%d %H:%M:%S')}")
         else:
             logger.error("Could not calculate working hours.")
 
@@ -523,7 +523,7 @@ class DailyCommands:
         if not exists(file_path):
             raise FileNotFoundError(f"No daily notes for {date.strftime('%Y-%m-%d')}")
 
-        logger.info("Fetching Jira tasks...")
+        logger.debug("Fetching Jira tasks...")
         pending = await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
         code_review = await self.jira.get_current_sprint_tasks_in_code_review()
         await self.github.update_status_if_task_reviewed(code_review)
@@ -541,7 +541,7 @@ class DailyCommands:
         ]
 
         if not to_add:
-            logger.info("All Jira tasks already present in daily notes.")
+            console.print("[green]✓[/green] All Jira tasks already present in daily notes.")
             return
 
         lines = self.file_service.get_lines(file_path)
@@ -567,6 +567,6 @@ class DailyCommands:
         for offset, task in enumerate(to_add):
             formatted = self.task_formatter.format_task(task, with_name=True, with_status=False)
             lines.insert(insert_at + 1 + offset, formatted + "\n")
-            logger.info(f"Added: {task.description}")
+            console.print(f"  [green]+[/green] {task.description}")
 
         self.file_service.write_lines_to_file(file_path, lines)

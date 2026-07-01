@@ -69,7 +69,7 @@ class TaskCommands:
         prefix = " - " if ext == ".md" else ""
         lines.insert(insert_at + 1, f"{prefix}[ ] {description}\n")
         self.file_service.write_lines_to_file(file_path, lines)
-        logger.info(f"Task added: {description}")
+        logger.debug(f"Task added: {description}")
 
     def _update_task_status(self, date: datetime, description: str, new_char: str) -> bool:
         file_path = self._get_daily_notes_file_path(date)

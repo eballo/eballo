@@ -20,7 +20,7 @@ from taskjournal.services.file import FileService
 from taskjournal.services.fireman import FiremanService
 from taskjournal.services.github import GithubService
 from taskjournal.services.jira import JiraService
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
@@ -121,12 +121,12 @@ class ReportCommands:
         )
 
         self.file_service.write_to_file(summary_file, week_summary_content)
-        logger.info(f"Week summary file created at: {summary_file}")
+        console.print(f"[green]✓[/green] Week summary created: {summary_file}")
 
     async def recreate_week_summaries(self, start_date: datetime, end_date: datetime) -> None:
         current_date = start_date - timedelta(days=start_date.weekday())
         while current_date <= end_date:
-            logger.info(f"Recreating week summary for week starting {current_date.strftime('%Y-%m-%d')}...")
+            console.print(f"  Recreating week summary for week starting {current_date.strftime('%Y-%m-%d')}...")
             await self.create_week_summary(current_date)
             current_date += timedelta(days=7)
 
@@ -150,7 +150,7 @@ class ReportCommands:
         )
 
         self.file_service.write_to_file(half_year_review_file, half_year_content)
-        logger.info(f"Half year review file created: {half_year_review_file}")
+        console.print(f"[green]✓[/green] Half year review created: {half_year_review_file}")
 
     async def create_month_review(self, custom_date: datetime) -> None:
         week_folder = self._get_week_folder(custom_date)
@@ -189,7 +189,7 @@ class ReportCommands:
         )
 
         self.file_service.write_to_file(month_review_file, month_content)
-        logger.info(f"Month review file created: {month_review_file}")
+        console.print(f"[green]✓[/green] Month review created: {month_review_file}")
 
     def create_retro(self, custom_date: datetime) -> None:
         week_folder = self._get_week_folder(custom_date)
@@ -201,7 +201,7 @@ class ReportCommands:
             sprint_name = sprint.name if sprint else "No active sprint"
             template_content = Template(template_content).render(sprint_name=sprint_name)
             self.file_service.write_to_file(retro_file, template_content)
-            logger.info(f"Retro file ensured: {retro_file}")
+            console.print(f"[green]✓[/green] Retro file created: {retro_file}")
 
     def create_one_on_one(self, custom_date: datetime, person_name: str = "") -> None:
         one_one_one_file_name = self.time_service.get_1on1_name(custom_date)
@@ -215,7 +215,7 @@ class ReportCommands:
                 person_name=person_name,
             )
             self.file_service.write_to_file(one_one_one_file, rendered)
-            logger.info(f"1on1 file ensured: {one_one_one_file}")
+            console.print(f"[green]✓[/green] 1on1 file created: {one_one_one_file}")
 
     def add_topic_to_one_on_one(self, date: datetime, topic: str) -> None:
         self.create_one_on_one(date)
@@ -245,4 +245,4 @@ class ReportCommands:
 
         lines.insert(insert_at + 1, f"- {topic}\n")
         self.file_service.write_lines_to_file(file_path, lines)
-        logger.info(f"Topic added: {topic}")
+        console.print(f"[green]✓[/green] Topic added: {topic}")

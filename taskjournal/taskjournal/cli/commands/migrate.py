@@ -29,7 +29,7 @@ def build_app() -> Typer:
         if isfile(path):
             service.migrate_file(path)
         elif isdir(path):
-            logger.info(f"Scanning directory: {path}")
+            logger.debug(f"Scanning directory: {path}")
             for root, _, files in walk(path):
                 for file in files:
                     if file.endswith("DailyNotes.txt"):

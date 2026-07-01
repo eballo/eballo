@@ -4,7 +4,7 @@ from typer import Context, Option, Typer
 
 from taskjournal.cli.context import get_debug, get_manager, get_today, parse_date
 from taskjournal.config import MANAGER_NAME
-from taskjournal.services.logger import logger
+from taskjournal.services.logger import console, logger
 
 _DATETIME_FMT = "%Y-%m-%d %H:%M"
 
@@ -116,7 +116,7 @@ def build_app() -> Typer:
         today = get_today(ctx)
         try:
             get_manager(ctx).add_topic_to_one_on_one(today, topic)
-            logger.info(f"Added topic: {topic}")
+            console.print(f"[green]✓[/green] Added topic: {topic}")
         except (FileNotFoundError, ValueError) as e:
             logger.error(str(e))
 

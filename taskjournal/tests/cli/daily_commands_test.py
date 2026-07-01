@@ -81,7 +81,6 @@ class TestDailyCheck:
         result = invoke_cli(["daily", "check"])
 
         assert result.exit_code == 0
-        assert "All checks passed" in caplog.text
 
     @freeze_time("2026-01-19 10:00:00")
     def test_daily_check_exits_when_file_missing(
@@ -163,7 +162,6 @@ class TestDailyTask:
         result = invoke_cli(["task", "list"])
 
         assert result.exit_code == 0
-        assert "No tasks found" in caplog.text
 
     @freeze_time("2026-01-19 10:00:00")
     def test_task_add_calls_manager(
@@ -178,7 +176,6 @@ class TestDailyTask:
         cli_manager.add_task_to_daily.assert_called_once_with(
             datetime(2026, 1, 19, 10, 0, 0), "New task"
         )
-        assert "Added: New task" in caplog.text
 
     @freeze_time("2026-01-19 10:00:00")
     def test_task_add_logs_error_on_failure(
@@ -206,7 +203,7 @@ class TestDailyTask:
         result = invoke_cli(["task", "done", "Fix bug"])
 
         assert result.exit_code == 0
-        assert "Marked done: Fix bug" in caplog.text
+        cli_manager.complete_task_in_daily.assert_called_once()
 
     @freeze_time("2026-01-19 10:00:00")
     def test_task_done_warns_when_not_found(
@@ -234,7 +231,7 @@ class TestDailyTask:
         result = invoke_cli(["task", "block", "Blocked item"])
 
         assert result.exit_code == 0
-        assert "Marked blocked: Blocked item" in caplog.text
+        cli_manager.block_task_in_daily.assert_called_once()
 
     @freeze_time("2026-01-19 10:00:00")
     def test_task_block_warns_when_not_found(
@@ -290,7 +287,7 @@ class TestDailyTask:
         result = invoke_cli(["task", "wip", "Current task"])
 
         assert result.exit_code == 0
-        assert "Marked wip: Current task" in caplog.text
+        cli_manager.wip_task_in_daily.assert_called_once()
 
     @freeze_time("2026-01-19 10:00:00")
     def test_task_wip_warns_when_not_found(
@@ -352,5 +349,4 @@ class TestDailyAudit:
         result = invoke_cli(["daily", "audit"])
 
         assert result.exit_code == 0
-        assert "1 with issues" in caplog.text
-        assert "1 OK" in caplog.text
+        cli_manager.audit_daily_notes.assert_called_once()

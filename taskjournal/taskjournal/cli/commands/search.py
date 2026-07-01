@@ -1,14 +1,11 @@
 from os.path import basename, dirname
 
-from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 from typer import Context, Option, Typer
 
 from taskjournal.cli.context import get_manager, get_today, parse_date
-from taskjournal.services.logger import logger
-
-console = Console()
+from taskjournal.services.logger import console, logger
 
 
 def build_app() -> Typer:
