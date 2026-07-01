@@ -17,7 +17,7 @@ class TestCli:
         # then
         assert result.exit_code == 0
 
-        for name in ("daily", "week", "month", "half-year", "retro"):
+        for name in ("daily", "task", "week", "report", "statistics", "holidays", "fireman"):
             assert name in result.stdout
 
     def test_main_app_version_option_runs_version_callback(

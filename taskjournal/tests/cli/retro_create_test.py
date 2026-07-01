@@ -20,7 +20,7 @@ class TestRetroCreate:
         manager_instance = cli_manager
 
         # when
-        result = invoke_cli(["retro", "create"])
+        result = invoke_cli(["report", "retro"])
 
         # then
         assert result.exit_code == 0
@@ -38,9 +38,20 @@ class TestRetroCreate:
         manager_instance = cli_manager
 
         # when
-        result = invoke_cli(["retro", "create", "--date", "bad-date"])
+        result = invoke_cli(["report", "retro", "--date", "bad-date"])
 
         # then
         assert result.exit_code == 1
         assert "❌ Invalid date format. Use 'YYYY-MM-DD HH:MM'." in caplog.text
         manager_instance.create_retro.assert_not_called()
+
+    @freeze_time("2025-01-19 10:00:00")
+    def test_retro_create_with_date(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        result = invoke_cli(["report", "retro", "--date", "2025-01-15 09:00"])
+
+        assert result.exit_code == 0
+        cli_manager.create_retro.assert_called_once_with(datetime(2025, 1, 15, 9, 0, 0))

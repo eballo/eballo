@@ -1,18 +1,15 @@
 from asyncio import run
 from datetime import datetime
-from os import environ
 from os.path import exists
-from subprocess import run as subprocess_run
 from sys import exit as sys_exit
 from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from typer import Argument, Context, Option, Typer
+from typer import Context, Option, Typer
 
 from taskjournal.cli.context import get_debug, get_manager, get_today, parse_date
-from taskjournal.config import EDITOR_APP
 from taskjournal.models.task import Status
 from taskjournal.services.file import FileService
 from taskjournal.services.logger import logger
@@ -340,109 +337,6 @@ def build_app() -> Typer:
             logger.error(str(e))
             sys_exit(1)
 
-    # --- task sub-group ---
-    task_app = Typer(
-        help="Manage tasks in the current day's notes.",
-        no_args_is_help=True,
-        pretty_exceptions_enable=False,
-    )
-    app.add_typer(task_app, name="task")
-
-    @task_app.command("list", help="List all tasks for today (or a given date).")
-    def task_list(
-        ctx: Context,
-        date: str | None = Option(None, "--date", help="Date: 'YYYY-MM-DD'."),
-    ) -> None:
-        today = parse_date(date) if date else get_today(ctx)
-        tasks = get_manager(ctx).list_tasks_in_daily(today)
-
-        if not tasks:
-            logger.info("No tasks found.")
-            return
-
-        _STATUS_STYLE: dict[str, tuple[str, str, str]] = {
-            "Done":        ("[green]✓[/green]",    "[green]done[/green]",        "[dim]{desc}[/dim]"),
-            "Blocked":     ("[red]✗[/red]",         "[bold red]blocked[/bold red]", "[bold red]{desc}[/bold red]"),
-            "In Progress": ("[blue]▶[/blue]",       "[blue]wip[/blue]",           "{desc}"),
-            "Code Review": ("[cyan]~[/cyan]",       "[cyan]review[/cyan]",        "[cyan]{desc}[/cyan]"),
-        }
-        _DEFAULT_STYLE: tuple[str, str, str] = ("[dim]○[/dim]", "[dim]todo[/dim]", "[dim]{desc}[/dim]")
-
-        table = Table(show_header=False, box=None, padding=(0, 1))
-        table.add_column("icon", width=4)
-        table.add_column("status", width=9)
-        table.add_column("task")
-
-        for t in tasks:
-            icon, badge, desc_fmt = _STATUS_STYLE.get(t.status.value, _DEFAULT_STYLE)
-            table.add_row(icon, badge, desc_fmt.format(desc=t.description))
-        console.print(table)
-
-    @task_app.command("add", help="Add a new task to today's planned tasks.")
-    def task_add(
-        ctx: Context,
-        description: str = Argument(..., help="Task description."),
-        date: str | None = Option(None, "--date", help="Date: 'YYYY-MM-DD'."),
-    ) -> None:
-        today = parse_date(date) if date else get_today(ctx)
-        try:
-            get_manager(ctx).add_task_to_daily(today, description)
-            logger.info(f"Added: {description}")
-        except (FileNotFoundError, ValueError) as e:
-            logger.error(str(e))
-            sys_exit(1)
-
-    @task_app.command("done", help="Mark a task as done in today's notes.")
-    def task_done(
-        ctx: Context,
-        description: str = Argument(..., help="Task description (partial match)."),
-        date: str | None = Option(None, "--date", help="Date: 'YYYY-MM-DD'."),
-    ) -> None:
-        today = parse_date(date) if date else get_today(ctx)
-        try:
-            found = get_manager(ctx).complete_task_in_daily(today, description)
-            if found:
-                logger.info(f"Marked done: {description}")
-            else:
-                logger.warning(f"No matching task found for: {description}")
-        except FileNotFoundError as e:
-            logger.error(str(e))
-            sys_exit(1)
-
-    @task_app.command("block", help="Mark a task as blocked in today's notes.")
-    def task_block(
-        ctx: Context,
-        description: str = Argument(..., help="Task description (partial match)."),
-        date: str | None = Option(None, "--date", help="Date: 'YYYY-MM-DD'."),
-    ) -> None:
-        today = parse_date(date) if date else get_today(ctx)
-        try:
-            found = get_manager(ctx).block_task_in_daily(today, description)
-            if found:
-                logger.info(f"Marked blocked: {description}")
-            else:
-                logger.warning(f"No matching task found for: {description}")
-        except FileNotFoundError as e:
-            logger.error(str(e))
-            sys_exit(1)
-
-    @task_app.command("wip", help="Mark a task as work in progress in today's notes.")
-    def task_wip(
-        ctx: Context,
-        description: str = Argument(..., help="Task description (partial match)."),
-        date: str | None = Option(None, "--date", help="Date: 'YYYY-MM-DD'."),
-    ) -> None:
-        today = parse_date(date) if date else get_today(ctx)
-        try:
-            found = get_manager(ctx).wip_task_in_daily(today, description)
-            if found:
-                logger.info(f"Marked wip: {description}")
-            else:
-                logger.warning(f"No matching task found for: {description}")
-        except FileNotFoundError as e:
-            logger.error(str(e))
-            sys_exit(1)
-
     @app.command(
         "audit",
         help=(
@@ -504,5 +398,40 @@ def build_app() -> Typer:
                 console.print(f"[bold cyan]{date_str}[/bold cyan]  [yellow]{' · '.join(issues)}[/yellow]")
                 _fix_file_interactively(manager, date_str, file_path, issues)
                 console.print()
+
+        console.print()
+        from datetime import date as _date
+        current_iso = _date.today().isocalendar()
+        current_week = current_iso[1] if current_iso[0] == target_year else 0
+        expected_complete = current_week - 1 if current_week else 52
+        present_folders = manager.count_week_folders(target_year)
+
+        if current_week:
+            week_summary = (
+                f"Week [bold]{current_week}[/bold] of {target_year} — "
+                f"weeks 1–{expected_complete} should be complete · "
+                f"[bold]{present_folders}[/bold] of [bold]{expected_complete}[/bold] folders present"
+            )
+        else:
+            week_summary = f"{target_year} — [bold]{present_folders}[/bold] of [bold]{expected_complete}[/bold] folders present"
+
+        coverage_gaps = manager.audit_weekly_coverage(target_year)
+        if not coverage_gaps:
+            console.print(Panel(week_summary, expand=False))
+            logger.info("Coverage: all week folders have 5 files (daily or holiday).")
+        else:
+            coverage_table = Table(show_header=False, box=None, padding=(0, 1))
+            coverage_table.add_column("icon", width=3)
+            coverage_table.add_column("week", style="bold", width=8)
+            coverage_table.add_column("missing")
+            for week_name, missing_dates in coverage_gaps:
+                coverage_table.add_row(
+                    "[red]✗[/red]",
+                    week_name,
+                    f"[red]{', '.join(missing_dates)}[/red]",
+                )
+            console.print(Panel(f"[bold]Coverage gaps[/bold] — {week_summary}", expand=False))
+            console.print(coverage_table)
+            logger.info(f"Coverage: {len(coverage_gaps)} week(s) with missing files.")
 
     return app

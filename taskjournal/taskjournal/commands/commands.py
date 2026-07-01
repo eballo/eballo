@@ -112,6 +112,57 @@ class CommandManager:
 
         return results
 
+    def count_week_folders(self, year: int) -> int:
+        """Return the number of weekN folders in the year directory."""
+        year_dir = join(str(BASE_DIR), str(year))
+        if not exists(year_dir):
+            return 0
+        return sum(1 for e in listdir(year_dir) if e.startswith("week") and isdir(join(year_dir, e)))
+
+    def audit_weekly_coverage(self, year: int) -> list[tuple[str, list[str]]]:
+        """Return (week_folder_name, [missing_date_str, ...]) for weeks lacking all 5 files.
+
+        A day slot is covered if either a regular daily note or a holiday file exists.
+        Future days are skipped.
+        """
+        from datetime import date as date_t
+
+        year_dir = join(str(BASE_DIR), str(year))
+        if not exists(year_dir):
+            return []
+
+        today = date_t.today()
+        missing: list[tuple[str, list[str]]] = []
+
+        for entry in sorted(listdir(year_dir)):
+            if not entry.startswith("week"):
+                continue
+            week_path = join(year_dir, entry)
+            if not isdir(week_path):
+                continue
+            try:
+                week_num = int(entry[4:])
+            except ValueError:
+                continue
+
+            week_missing: list[str] = []
+            for day_num in range(1, 6):
+                try:
+                    day = date_t.fromisocalendar(year, week_num, day_num)
+                except ValueError:
+                    continue
+                if day > today:
+                    continue
+                daily_path = join(week_path, f"{day}-DailyNotes.{TEMPLATE_FORMAT}")
+                holiday_path = join(week_path, f"{day}-DailyNotes-Holidays.md")
+                if not exists(daily_path) and not exists(holiday_path):
+                    week_missing.append(str(day))
+
+            if week_missing:
+                missing.append((entry, week_missing))
+
+        return missing
+
     def get_previous_day_issues(self, today: datetime) -> tuple[str, str, list[str]] | None:
         candidate = today - timedelta(days=1)
         for _ in range(14):

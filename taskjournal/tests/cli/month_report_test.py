@@ -20,7 +20,7 @@ class TestMonthReport:
         # when
         manager_instance.create_month_review = AsyncMock()
 
-        result = invoke_cli(["month", "report"])
+        result = invoke_cli(["report", "month"])
 
         # then
         assert result.exit_code == 0
@@ -39,7 +39,7 @@ class TestMonthReport:
         # when
         manager_instance.create_month_review = AsyncMock()
 
-        result = invoke_cli(["month", "report", "--date", "2025-02-10"])
+        result = invoke_cli(["report", "month", "--date", "2025-02-10"])
 
         # then
         assert result.exit_code == 0
@@ -58,7 +58,7 @@ class TestMonthReport:
         # when
         manager_instance.create_month_review = AsyncMock()
 
-        result = invoke_cli(["month", "report", "--date", "not-a-date"])
+        result = invoke_cli(["report", "month", "--date", "not-a-date"])
 
         # then
         assert result.exit_code == 1
