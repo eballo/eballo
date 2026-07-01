@@ -124,6 +124,25 @@ dependency is required, declare it as a required `__init__` parameter.
 Only add comments for WHY (hidden constraints, non-obvious invariants). Well-named
 identifiers document themselves.
 
+### 8. Async boundary — the CLI never calls service methods directly
+
+The boundary is strict:
+
+| Layer | Rule |
+|---|---|
+| **Services** | External I/O (Jira, GitHub, AI, HTTP) → `async def`. File I/O → `def`. |
+| **CommandManager / domain classes** | Methods that `await` a service → `async def`. Pure file methods → `def`. |
+| **CLI** | Always goes through `CommandManager`. Uses `run(m.method())` for `async` methods; calls sync methods directly. Never accesses `manager.jira`, `manager.github`, or `manager.ai_service` directly. |
+
+```python
+# WRONG — CLI bypassing CommandManager
+service = get_manager(ctx).jira
+tasks = run(service.get_current_sprint_tasks())
+
+# CORRECT — CLI calls CommandManager, which owns the async boundary
+tasks = run(get_manager(ctx).get_jira_tasks())
+```
+
 ---
 
 ## Architecture
