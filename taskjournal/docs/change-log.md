@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.57.0
+
+- improve wk info
+
 ## 0.56.0
 
 - abstraction
