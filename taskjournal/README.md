@@ -1,4 +1,4 @@
-# 🗓️ Task Journal
+# Task Journal
 
 [![Version](https://img.shields.io/badge/version-0.59.0-blue.svg)](#task-journal)
 [![Python](https://img.shields.io/badge/python-3.12%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/downloads/)
@@ -14,7 +14,9 @@ It helps you:
 - generate weekly, monthly, half-year, retrospective, and 1:1 reports
 - generate AI-assisted summaries
 - pull context from Jira and GitHub
+- manage pull request reviews
 - compute holidays and working-day statistics
+- track firefighter duty weeks
 - create backups and migrate legacy files
 
 For the full explanation of features, configuration, and command examples, see:
@@ -22,41 +24,131 @@ For the full explanation of features, configuration, and command examples, see:
 
 ## Features
 
-### Daily workflow
+### Daily workflow (`wk daily`)
+
 - `wk daily start` — create a daily note from a template, carrying pending tasks forward
-- `wk daily finish` — finalize the day and calculate total time spent
-- `wk daily status` — show elapsed time, task breakdown, and finalization state for today
-- `wk daily check` — validate the structure and completeness of today's note
-- `wk daily audit` — scan all notes for a year and list incomplete ones (`--fix` opens files in `$EDITOR`)
-- `wk daily sync` — pull current Jira tasks and add any missing ones to today's note
-- `wk daily task add/done/block/list` — manage tasks directly from the CLI
+- `wk daily start --date 'YYYY-MM-DD HH:MM' --force` — create for a specific date, overwriting if it exists
+- `wk daily start --ff` — firefighter mode (marks the day accordingly)
+- `wk daily start --w Home|Office` — specify working location (auto-detected via WiFi if configured)
 - `wk daily start --offline` — skip all Jira and GitHub API calls
+- `wk daily finish` — write end time and calculate total time spent
+- `wk daily finish --date 'YYYY-MM-DD HH:MM'` — finalize a specific day
+- `wk daily time` — show elapsed working time for today
+- `wk daily status` — show elapsed time, task breakdown, and finalization state
+- `wk daily check` — validate the structure and completeness of a daily note
+- `wk daily sync` — pull latest Jira tasks and add any missing ones to today's note
+- `wk daily audit` — scan all notes for a year and list incomplete ones
+- `wk daily audit --fix` — interactively fix incomplete notes (set end time, summary)
 
-### Reports
-- `wk week report` — weekly summary (warns if any daily note is incomplete)
-- `wk week list` — list daily notes for a week with their status and time logged
-- Monthly, half-year, and retrospective reports
-- 1:1 report with `wk 1on1 add-topic` to append topics from the CLI
+### Task management (`wk task`)
 
-### Statistics and calendar
+- `wk task list` — list all tasks for today with status icons
+- `wk task add <description>` — add a new planned task
+- `wk task done <description>` — mark a task as done (partial match)
+- `wk task wip <description>` — mark a task as work in progress
+- `wk task block <description>` — mark a task as blocked
+
+All task commands accept `--date YYYY-MM-DD` to target a specific day.
+
+### Reports (`wk week`, `wk report`)
+
+- `wk week report` — generate a weekly summary
+- `wk week list` — list daily notes for a week with status and time logged
+- `wk week recreate-since --date YYYY-MM-DD` — regenerate all weekly reports from a date up to today
+- `wk report month` — create a monthly report
+- `wk report half-year` — create a half-year report
+- `wk report retro` — create or open a retrospective file for the current sprint
+- `wk report 1on1 create` — create a 1-on-1 meeting note
+- `wk report 1on1 add-topic -t 'topic'` — append a topic to the next 1-on-1 without opening the file
+
+### Statistics (`wk statistics`)
+
+- `wk statistics all --year 2026` — summary of working days for the year
+- `wk statistics progress` — progress through working days so far
+- `wk statistics real` — actual working days including holidays taken
 - `wk statistics streak` — consecutive journaling streak and all-time record
-- Holiday listing, upcoming holidays, and working-day statistics
-- Progress and real-time statistics
 
-### Integrations
-- Jira task context
-- GitHub contribution statistics
-- AI summary generation
+### Calendar (`wk holidays`, `wk fireman`)
 
-### Search
-- `wk search` — search by keyword across all notes with `--from`, `--to`, and `--type` filters
+**Holidays:**
+- `wk holidays all --year 2026` — list all holidays for the year
+- `wk holidays upcoming` — list upcoming holidays
+- `wk holidays past` — list past holidays
+- `wk holidays summary` — summary of holidays (done, remaining, next)
+- `wk holidays add YYYY-MM-DD 'description'` — add a holiday entry
+- `wk holidays populate` — generate Markdown files from the holidays list
 
-### Configuration and maintenance
-- `wk setup` — interactive configuration wizard
-- `wk doctor` — full health check of configuration and external integrations
-- `wk info` — show `BASE_DIR`, template format, and integration status
-- Backup notes and migrate legacy `.txt` files to `.md`
-- Templates in Markdown and plain text
+**Firefighter weeks:**
+- `wk fireman add YYYY-MM-DD` — register a firefighter duty week (any date in the week)
+- `wk fireman list` — list all registered firefighter weeks for the year
+- `wk fireman upcoming` — show upcoming firefighter weeks
+- `wk fireman summary` — summary of done, remaining, and next firefighter week
+
+### Pull requests (`wk pr`)
+
+- `wk pr list` — list open PRs waiting for your review
+- `wk pr sync` — add PRs pending review as tasks in today's daily notes
+
+### Search (`wk search`)
+
+- `wk search -q <keyword>` — search across all notes and report files
+- `wk search -q <keyword> --from YYYY-MM-DD --to YYYY-MM-DD` — filter by date range
+- `wk search -q <keyword> --type daily|week` — filter by file type
+
+### Admin (`wk setup`, `wk doctor`, `wk backup`, `wk migrate`)
+
+- `wk setup` — interactive wizard to configure paths, Jira, GitHub, AI provider, WiFi, editor, and manager
+- `wk doctor` — health check of configuration and all external integrations
+- `wk info show` — show current date, week, file paths, and integration status
+- `wk backup run` — create a backup of all notes
+- `wk backup schedule --time HH:MM` — schedule an automatic daily backup via cron
+- `wk backup schedule --disable` — remove the scheduled backup
+- `wk migrate daily <path>` — migrate legacy `.txt` daily notes to `.md` format
+
+### Service tools (`wk services`)
+
+These commands are useful for diagnostics and standalone queries:
+
+- `wk services jira` — query Jira tasks (flags: `--mine`, `--all`, `--code`, `--midreview`, `--month`)
+- `wk services git --stats` — show GitHub commit stats for the organisation
+- `wk services claude` — send a test prompt to the active AI service
+
+## Configuration
+
+Task Journal loads environment variables from `~/.config/taskjournal/.env`.
+
+Create it from the sample file:
+
+```bash
+mkdir -p ~/.config/taskjournal
+cp sample.env ~/.config/taskjournal/.env
+```
+
+Or run the interactive wizard:
+
+```bash
+wk setup
+```
+
+Key variables:
+
+| Variable | Purpose |
+|---|---|
+| `BASE_DIR` | Root folder where daily and weekly files are stored |
+| `BACKUP_DIR` | Folder for backups |
+| `TEMPLATE_FORMAT` | `md` or `txt` |
+| `JIRA_ORGANIZATION` | Jira subdomain (e.g. `mycompany`) |
+| `JIRA_EMAIL` | Jira account email |
+| `JIRA_API_TOKEN` | Jira API token |
+| `JIRA_BOARD_ID` | Jira board ID |
+| `GIT_HUB_TOKEN` | GitHub personal access token |
+| `GIT_HUB_ORGANIZATION_NAME` | GitHub organisation name |
+| `AI_PROVIDER` | `claude_code` (no key needed) or `openai` |
+| `OPENAI_API_KEY` | OpenAI API key (only if `AI_PROVIDER=openai`) |
+| `HOME_WIFI` | Home WiFi SSID for automatic location detection |
+| `OFFICE_WIFI` | Office WiFi SSID for automatic location detection |
+| `EDITOR_APP` | macOS app to open notes (e.g. `Obsidian`) |
+| `MANAGER_NAME` | Manager's name, used as default for 1-on-1 notes |
 
 ## Requirements
 
@@ -97,10 +189,11 @@ wk --help
 ## Quick start
 
 ```bash
-wk --help
-wk daily start
-wk daily finish
-wk week report
+wk setup            # configure on first run
+wk daily start      # create today's note
+wk daily finish     # close the day
+wk week report      # generate the weekly summary
+wk doctor           # verify all integrations
 ```
 
 ## Development
@@ -128,6 +221,7 @@ Poe tasks:
 
 ```bash
 uv run poe format    # black
+uv run poe lint      # mypy
 uv run poe test      # pytest
 uv run poe coverage  # coverage XML
 uv run poe check     # format + test + coverage
