@@ -5,6 +5,7 @@ from sys import exit as sys_exit
 from typing import Any
 
 from rich.panel import Panel
+from rich.prompt import Prompt
 from rich.table import Table
 from typer import Context, Option, Typer
 
@@ -129,6 +130,17 @@ def build_app() -> Typer:
                 console.print(f"\n[bold cyan]{prev_date_str}[/bold cyan]  [yellow]{' · '.join(prev_issues)}[/yellow]")
                 _fix_file_interactively(m, prev_date_str, prev_file, prev_issues)
                 console.print()
+
+        if not work_from and not offline and m.get_wifi_location() is None:
+            choice = Prompt.ask(
+                "Working from?",
+                choices=["Home", "Office", "Other"],
+                default="Home",
+            )
+            if choice == "Other":
+                work_from = Prompt.ask("Enter your location")
+            else:
+                work_from = choice
 
         run(m.create_daily_notes(creation_date, force, firefighter, work_from, offline))
 

@@ -11,6 +11,7 @@ from taskjournal.cli.commands.fireman import build_app as build_fireman
 from taskjournal.cli.commands.holidays import build_app as build_holidays
 from taskjournal.cli.commands.info import build_app as build_info
 from taskjournal.cli.commands.migrate import build_app as build_migrate
+from taskjournal.cli.commands.pr import build_app as build_pr
 from taskjournal.cli.commands.report import build_app as build_report
 from taskjournal.cli.commands.search import build_app as build_search
 from taskjournal.cli.commands.services import build_app as build_services
@@ -38,8 +39,7 @@ def create_app(container: AppContainer | None = None) -> Typer:
         rich_markup_mode="rich",
         pretty_exceptions_enable=False,
         help=(
-            "Task Journal CLI.\n\n"
-            "A CLI tool to organize your work by managing notes, summaries, reports. \n\n"
+            "A CLI tool to organize your work by managing notes, summaries, reports.\n\n"
             "Helping you stay on track and communicate progress effectively.\n\n"
             "Use --help on any command to see detailed options and examples."
         ),
@@ -61,6 +61,7 @@ def create_app(container: AppContainer | None = None) -> Typer:
     app.add_typer(build_backup(), name="backup", rich_help_panel="🔧 Admin")
     app.add_typer(build_migrate(), name="migrate", rich_help_panel="🔧 Admin")
     # Tools
+    app.add_typer(build_pr(), name="pr", rich_help_panel="🗂️ Tools")
     app.add_typer(build_services(), name="services", rich_help_panel="🗂️ Tools")
     app.add_typer(build_search(), name="search", rich_help_panel="🗂️ Tools")
     app.add_typer(build_info(), name="info", rich_help_panel="🗂️ Tools")

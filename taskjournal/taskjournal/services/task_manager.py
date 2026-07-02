@@ -63,7 +63,7 @@ class TaskManager(BaseService):
         logger.debug(f"Day of the week: {day_of_week} - Location: {working_from_location}")
         return working_from_location
 
-    def _get_location_from_wifi(self) -> str | None:
+    def get_wifi_location(self) -> str | None:
         wifi_name = self.wifi_service.get_name()
         logger.debug(f"WiFi name: {wifi_name}")
         if wifi_name == self.wifi_service.home_wifi:
@@ -71,6 +71,9 @@ class TaskManager(BaseService):
         if wifi_name == self.wifi_service.office_wifi:
             return WORK_LOCATION_OFFICE
         return None
+
+    def _get_location_from_wifi(self) -> str | None:
+        return self.get_wifi_location()
 
     @staticmethod
     def get_default_tasks() -> list[Task]:

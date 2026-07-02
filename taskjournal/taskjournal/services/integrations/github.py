@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 from httpx import AsyncClient
 from gidgethub.httpx import GitHubAPI
 
-from taskjournal.models.github import RepoCommitStat
+from taskjournal.models.github import PullRequest, RepoCommitStat
 from taskjournal.models.task import Status, Task
 from taskjournal.services.base import BaseService, HealthCheckResult, ServiceStatus
 from taskjournal.services.logger import logger
@@ -277,6 +277,29 @@ class GithubService(BaseService):
         logger.info(f"   Your commits: {total_user_commits}")
         logger.info(f"   Org total commits: {total_all_commits}")
         logger.info(f"   Your overall contribution: {overall_percentage}%")
+
+    async def get_prs_pending_review(self) -> list[PullRequest]:
+        if not self.gh:
+            logger.error("GitHub client not initialized.")
+            return []
+        try:
+            query = f"is:pr+is:open+org:{self.org_name}+review-requested:@me"
+            data = await self.gh.getitem(f"/search/issues?q={query}")
+            result: list[PullRequest] = []
+            for item in data.get("items", []):
+                repo_url: str = item.get("repository_url", "")
+                repo = repo_url.rsplit("/", 1)[-1] if repo_url else "unknown"
+                result.append(PullRequest(
+                    number=item["number"],
+                    title=item["title"],
+                    repo=repo,
+                    url=item["html_url"],
+                    author=(item.get("user") or {}).get("login", "unknown"),
+                ))
+            return result
+        except Exception as e:
+            logger.error(f"Failed to fetch PRs pending review: {e}")
+            return []
 
     async def update_status_if_task_reviewed(self, code_review: list[Task]) -> None:
         for task in code_review:
