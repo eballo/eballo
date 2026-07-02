@@ -15,16 +15,16 @@ from taskjournal.config import (
     MONTH_REVIEW_TEMPLATE,
     ONE_ON_ONE_TEMPLATE,
 )
-from taskjournal.services.ai_service import AIService
+from taskjournal.services.ai.base import AIService
 from taskjournal.services.file import FileService
-from taskjournal.services.fireman import FiremanService
-from taskjournal.services.github import GithubService
-from taskjournal.services.jira import JiraService
+from taskjournal.services.calendar.fireman import FiremanService
+from taskjournal.services.integrations.github import GithubService
+from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.logger import console, logger
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
-from taskjournal.services.working_days import WorkingDaysService
+from taskjournal.services.calendar.working_days import WorkingDaysService
 from taskjournal.services.utils import FormatUtils
 
 

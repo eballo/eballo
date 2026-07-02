@@ -4,7 +4,7 @@ from rich.table import Table
 from typer import Argument, Option, Typer, Context
 
 from taskjournal.cli.context import get_today
-from taskjournal.services.fireman import FiremanService
+from taskjournal.services.calendar.fireman import FiremanService
 from taskjournal.services.logger import console, logger
 
 

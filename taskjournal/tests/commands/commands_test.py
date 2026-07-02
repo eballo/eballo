@@ -342,12 +342,12 @@ class TestCommands:
             "days_at_home": 1,
         }
         mocker.patch(
-            "taskjournal.services.working_days.WorkingDaysService.get_week_stats",
+            "taskjournal.services.calendar.working_days.WorkingDaysService.get_week_stats",
             return_value=mock_stats,
         )
 
         mocker.patch(
-            "taskjournal.services.fireman.FiremanService.is_fireman_week",
+            "taskjournal.services.calendar.fireman.FiremanService.is_fireman_week",
             return_value=False,
         )
 
@@ -487,7 +487,7 @@ class TestCommands:
             "daily_summaries": ["Done something"],
         }
         mocker.patch(
-            "taskjournal.services.working_days.WorkingDaysService.get_month_stats",
+            "taskjournal.services.calendar.working_days.WorkingDaysService.get_month_stats",
             return_value=mock_stats,
         )
 

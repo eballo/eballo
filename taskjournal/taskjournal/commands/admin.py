@@ -10,10 +10,10 @@ from taskjournal.constants import (
 )
 from taskjournal.models.github import RepoCommitStat
 from taskjournal.models.task import Task
-from taskjournal.services.ai_service import AIService
+from taskjournal.services.ai.base import AIService
 from taskjournal.services.backup import BackupService
-from taskjournal.services.github import GithubService
-from taskjournal.services.jira import JiraService
+from taskjournal.services.integrations.github import GithubService
+from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.logger import console, logger
 from taskjournal.services.time import TimeService
 

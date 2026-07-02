@@ -16,10 +16,10 @@ from taskjournal.config import (
 from taskjournal.models.task import Task
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.file import FileService
-from taskjournal.services.fireman import FiremanService
-from taskjournal.services.github import GithubService
-from taskjournal.services.holidays import HolidayService
-from taskjournal.services.jira import JiraService
+from taskjournal.services.calendar.fireman import FiremanService
+from taskjournal.services.integrations.github import GithubService
+from taskjournal.services.calendar.holidays import HolidayService
+from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.logger import console, logger
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.task_manager import TaskManager

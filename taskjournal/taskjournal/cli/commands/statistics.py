@@ -5,7 +5,7 @@ from typer import Typer, Context, Option
 
 from taskjournal.cli.context import get_container, get_manager, get_today, get_debug
 from taskjournal.services.logger import console, logger
-from taskjournal.services.working_days import WorkingDaysService  # kept for type hint
+from taskjournal.services.calendar.working_days import WorkingDaysService  # kept for type hint
 
 
 def build_app() -> Typer:

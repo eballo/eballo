@@ -7,7 +7,7 @@ from pytest import mark
 from pytest_mock import MockerFixture
 
 from taskjournal.models.task import Status
-from taskjournal.services.jira import JiraService
+from taskjournal.services.integrations.jira import JiraService
 
 
 class _FakeResponse:
@@ -63,7 +63,7 @@ class TestJira:
         # given
         jira_client = mocker.MagicMock()
         jira_ctor = mocker.patch(
-            "taskjournal.services.jira.JIRA", return_value=jira_client
+            "taskjournal.services.integrations.jira.JIRA", return_value=jira_client
         )
 
         # when
@@ -77,7 +77,7 @@ class TestJira:
 
     def test_init_failure_sets_jira_none(self, mocker: MockerFixture) -> None:
         # given
-        mocker.patch("taskjournal.services.jira.JIRA", side_effect=RuntimeError("boom"))
+        mocker.patch("taskjournal.services.integrations.jira.JIRA", side_effect=RuntimeError("boom"))
 
         # when
         service = JiraService(api_token="tok", email="e@e.com", board_id="BD", organization="org")
@@ -86,7 +86,7 @@ class TestJira:
         assert service.jira is None
 
     def test_init_skips_connection_when_unconfigured(self, mocker: MockerFixture) -> None:
-        jira_ctor = mocker.patch("taskjournal.services.jira.JIRA")
+        jira_ctor = mocker.patch("taskjournal.services.integrations.jira.JIRA")
 
         service = JiraService(
             api_token="your-jira-key", email="e@e.com", board_id="BD", organization="org"
@@ -183,7 +183,7 @@ class TestJira:
         # when
         fixed_now = datetime(2026, 3, 7, 12, 0, 0)
         mocker.patch(
-            "taskjournal.services.jira.datetime", **{"now.return_value": fixed_now}
+            "taskjournal.services.integrations.jira.datetime", **{"now.return_value": fixed_now}
         )
 
         await jira_service.get_current_tasks_assigned_to_me_last_month()
@@ -361,7 +361,7 @@ class TestJira:
 
         # when
         fake_client = _FakeAsyncClient(response=_FakeResponse(payload=payload))
-        mocker.patch("taskjournal.services.jira.AsyncClient", return_value=fake_client)
+        mocker.patch("taskjournal.services.integrations.jira.AsyncClient", return_value=fake_client)
         mocker.patch.object(
             jira_service,
             "_fetch_repo_from_dev_status",
@@ -400,7 +400,7 @@ class TestJira:
         # given
         response = _FakeResponse(raise_exc=RuntimeError("http 500"))
         fake_client = _FakeAsyncClient(response=response)
-        mocker.patch("taskjournal.services.jira.AsyncClient", return_value=fake_client)
+        mocker.patch("taskjournal.services.integrations.jira.AsyncClient", return_value=fake_client)
 
         # when
         tasks = await jira_service._get_issues("assignee = currentUser()")

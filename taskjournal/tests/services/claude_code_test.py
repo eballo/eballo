@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from pytest import fixture, mark
 from pytest_mock import MockerFixture
 
-from taskjournal.services.claude_code import ClaudeCodeService
+from taskjournal.services.ai.claude_code import ClaudeCodeService
 
 
 @fixture
@@ -27,7 +27,7 @@ def _mock_proc(
         mock_create = AsyncMock(side_effect=side_effect)
     else:
         mock_create = AsyncMock(return_value=mock_proc)
-    mocker.patch("taskjournal.services.claude_code.create_subprocess_exec", mock_create)
+    mocker.patch("taskjournal.services.ai.claude_code.create_subprocess_exec", mock_create)
     return mock_proc
 
 
@@ -98,7 +98,7 @@ class TestClaudeCode:
         mock_proc.returncode = 1
         mock_proc.communicate = AsyncMock(return_value=(b"", b"some error"))
         mocker.patch(
-            "taskjournal.services.claude_code.create_subprocess_exec",
+            "taskjournal.services.ai.claude_code.create_subprocess_exec",
             AsyncMock(return_value=mock_proc),
         )
 
@@ -118,7 +118,7 @@ class TestClaudeCode:
         mock_proc.returncode = 0
         mock_proc.communicate = AsyncMock(side_effect=TimeoutError())
         mocker.patch(
-            "taskjournal.services.claude_code.create_subprocess_exec",
+            "taskjournal.services.ai.claude_code.create_subprocess_exec",
             AsyncMock(return_value=mock_proc),
         )
 
@@ -146,7 +146,7 @@ class TestClaudeCode:
         claude_code_service: ClaudeCodeService,
         mocker: MockerFixture,
     ) -> None:
-        mocker.patch("taskjournal.services.claude_code.which", return_value="/usr/local/bin/claude")
+        mocker.patch("taskjournal.services.ai.claude_code.which", return_value="/usr/local/bin/claude")
         result = claude_code_service.health_check()
         assert result.status.value == "ok"
 
@@ -155,6 +155,6 @@ class TestClaudeCode:
         claude_code_service: ClaudeCodeService,
         mocker: MockerFixture,
     ) -> None:
-        mocker.patch("taskjournal.services.claude_code.which", return_value=None)
+        mocker.patch("taskjournal.services.ai.claude_code.which", return_value=None)
         result = claude_code_service.health_check()
         assert result.status.value == "unconfigured"

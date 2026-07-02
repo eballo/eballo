@@ -9,7 +9,7 @@ from taskjournal.constants import WORK_LOCATION_HOME, WORK_LOCATION_OFFICE
 from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.services.base import BaseService
 from taskjournal.services.file import FileService
-from taskjournal.services.holidays import HolidayService
+from taskjournal.services.calendar.holidays import HolidayService
 from taskjournal.services.logger import logger
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.time import TimeService
