@@ -29,11 +29,11 @@ class TestSetupCLI:
         cli_container.setup_service.override(providers.Object(service_mock))
 
         if confirm_values is not None:
-            mocker.patch("taskjournal.cli.commands.setup.typer.confirm", side_effect=confirm_values)
+            mocker.patch("taskjournal.cli.commands.setup.confirm", side_effect=confirm_values)
         if prompt_side_effect is not None:
-            mocker.patch("taskjournal.cli.commands.setup.typer.prompt", side_effect=prompt_side_effect)
+            mocker.patch("taskjournal.cli.commands.setup.prompt", side_effect=prompt_side_effect)
         else:
-            mocker.patch("taskjournal.cli.commands.setup.typer.prompt", return_value="value")
+            mocker.patch("taskjournal.cli.commands.setup.prompt", return_value="value")
 
         return service_mock, env_path
 

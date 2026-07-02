@@ -277,7 +277,10 @@ def jira_service(mocker: MockerFixture) -> JiraService:
 
 @fixture
 def github_service() -> GithubService:
-    return GithubService(token="fake-token", org_name="test-org")
+    from unittest.mock import MagicMock
+    service = GithubService(token="fake-token", org_name="test-org")
+    service.gh = MagicMock()
+    return service
 
 
 @fixture

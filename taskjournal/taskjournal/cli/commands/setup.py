@@ -1,10 +1,9 @@
 from datetime import datetime
 from pathlib import Path
 
-import typer
 from rich.panel import Panel
 from rich.table import Table
-from typer import Context, Typer
+from typer import confirm, prompt, Exit, Context, Typer
 
 from taskjournal.cli.context import get_container
 from taskjournal.services.logger import console
@@ -27,48 +26,48 @@ def build_app() -> Typer:
         _print_header(existing)
 
         if ENV_PATH.exists():
-            update = typer.confirm(
+            update = confirm(
                 "\nA configuration file already exists. Update it?", default=True
             )
             if not update:
                 console.print("[yellow]Setup cancelled. Existing config unchanged.[/yellow]")
-                raise typer.Exit()
+                raise Exit()
 
         values: dict[str, str] = dict(existing)
 
         # ── Paths ─────────────────────────────────────────────────────────
         console.print(Panel("[bold]Paths[/bold]", expand=False))
-        if typer.confirm("Configure paths?", default=not service.is_configured("BASE_DIR", existing)):
-            fmt = typer.prompt("Template format", default=existing["TEMPLATE_FORMAT"])
+        if confirm("Configure paths?", default=not service.is_configured("BASE_DIR", existing)):
+            fmt = prompt("Template format", default=existing["TEMPLATE_FORMAT"])
             while fmt not in ("md", "txt"):
                 console.print("[red]Please enter 'md' or 'txt'.[/red]")
-                fmt = typer.prompt("Template format", default=existing["TEMPLATE_FORMAT"])
+                fmt = prompt("Template format", default=existing["TEMPLATE_FORMAT"])
             values["TEMPLATE_FORMAT"] = fmt
-            values["BASE_DIR"] = typer.prompt(
+            values["BASE_DIR"] = prompt(
                 "Daily notes directory", default=existing["BASE_DIR"]
             )
-            values["BACKUP_DIR"] = typer.prompt(
+            values["BACKUP_DIR"] = prompt(
                 "Backup directory", default=existing["BACKUP_DIR"]
             )
 
         # ── Jira ──────────────────────────────────────────────────────────
         console.print(Panel("[bold]Jira[/bold]", expand=False))
         jira_current = service.is_configured("JIRA_API_TOKEN", existing)
-        if typer.confirm("Configure Jira integration?", default=jira_current):
-            values["JIRA_ORGANIZATION"] = typer.prompt(
+        if confirm("Configure Jira integration?", default=jira_current):
+            values["JIRA_ORGANIZATION"] = prompt(
                 "Jira organization slug (subdomain of atlassian.net)",
                 default=existing["JIRA_ORGANIZATION"] if jira_current else "",
             )
-            values["JIRA_EMAIL"] = typer.prompt(
+            values["JIRA_EMAIL"] = prompt(
                 "Jira account email",
                 default=existing["JIRA_EMAIL"] if jira_current else "",
             )
-            values["JIRA_API_TOKEN"] = typer.prompt(
+            values["JIRA_API_TOKEN"] = prompt(
                 "Jira API token",
                 default=existing["JIRA_API_TOKEN"] if jira_current else "",
                 hide_input=True,
             )
-            values["JIRA_BOARD_ID"] = typer.prompt(
+            values["JIRA_BOARD_ID"] = prompt(
                 "Jira board ID",
                 default=existing["JIRA_BOARD_ID"] if jira_current else "",
             )
@@ -78,13 +77,13 @@ def build_app() -> Typer:
         # ── GitHub ────────────────────────────────────────────────────────
         console.print(Panel("[bold]GitHub[/bold]", expand=False))
         gh_current = service.is_configured("GIT_HUB_TOKEN", existing)
-        if typer.confirm("Configure GitHub integration?", default=gh_current):
-            values["GIT_HUB_TOKEN"] = typer.prompt(
+        if confirm("Configure GitHub integration?", default=gh_current):
+            values["GIT_HUB_TOKEN"] = prompt(
                 "GitHub personal access token",
                 default=existing["GIT_HUB_TOKEN"] if gh_current else "",
                 hide_input=True,
             )
-            values["GIT_HUB_ORGANIZATION_NAME"] = typer.prompt(
+            values["GIT_HUB_ORGANIZATION_NAME"] = prompt(
                 "GitHub organization name",
                 default=existing["GIT_HUB_ORGANIZATION_NAME"] if gh_current else "",
             )
@@ -100,14 +99,14 @@ def build_app() -> Typer:
             "Options: [bold]claude_code[/bold] (Claude Code CLI, no API key needed) | "
             "[bold]openai[/bold] (OpenAI API)"
         )
-        _chosen_provider = typer.prompt(
+        _chosen_provider = prompt(
             "AI provider",
             default=_current_provider,
         )
         values["AI_PROVIDER"] = _chosen_provider if _chosen_provider in _ai_options else _current_provider
 
         if values["AI_PROVIDER"] == "openai":
-            values["OPENAI_API_KEY"] = typer.prompt(
+            values["OPENAI_API_KEY"] = prompt(
                 "OpenAI API key",
                 default=existing.get("OPENAI_API_KEY", ""),
                 hide_input=True,
@@ -118,29 +117,29 @@ def build_app() -> Typer:
         # ── WiFi ──────────────────────────────────────────────────────────
         console.print(Panel("[bold]WiFi location detection[/bold]", expand=False))
         wifi_current = service.is_configured("HOME_WIFI", existing)
-        if typer.confirm(
+        if confirm(
             "Configure WiFi network names for automatic location detection?",
             default=wifi_current,
         ):
-            values["HOME_WIFI"] = typer.prompt(
+            values["HOME_WIFI"] = prompt(
                 "Home WiFi network name (SSID)",
                 default=existing["HOME_WIFI"] if wifi_current else "",
             )
-            values["OFFICE_WIFI"] = typer.prompt(
+            values["OFFICE_WIFI"] = prompt(
                 "Office WiFi network name (SSID)",
                 default=existing["OFFICE_WIFI"] if wifi_current else "",
             )
 
         # ── Editor ───────────────────────────────────────────────────────
         console.print(Panel("[bold]Editor[/bold]", expand=False))
-        values["EDITOR_APP"] = typer.prompt(
+        values["EDITOR_APP"] = prompt(
             "macOS app to open notes with (used by wk daily audit --fix)",
             default=existing.get("EDITOR_APP", "Obsidian"),
         )
 
         # ── People ────────────────────────────────────────────────────────
         console.print(Panel("[bold]People[/bold]", expand=False))
-        values["MANAGER_NAME"] = typer.prompt(
+        values["MANAGER_NAME"] = prompt(
             "Your manager's name (used as default for 1on1 notes)",
             default=existing.get("MANAGER_NAME", ""),
         )
@@ -148,7 +147,7 @@ def build_app() -> Typer:
         # ── Data files ────────────────────────────────────────────────────
         year = datetime.now().year
         console.print(Panel(f"[bold]Data files ({year})[/bold]", expand=False))
-        if typer.confirm(
+        if confirm(
             f"Create holidays.md and fireman_weeks.md for {year} (skipped if already exist)?",
             default=True,
         ):
