@@ -191,7 +191,8 @@ class TestCommands:
         # then
         assert "No active sprint" in content
 
-    def test_finalize_daily_notes__errors_when_file_missing(
+    @mark.asyncio
+    async def test_finalize_daily_notes__errors_when_file_missing(
         self,
         cmd: CommandManager,
         mocker: MockerFixture,
@@ -208,12 +209,13 @@ class TestCommands:
         err = mocker.patch("taskjournal.commands.daily.logger.error")
 
         # when
-        cmd.finalize_daily_notes(fixed_datetime)
+        await cmd.finalize_daily_notes(fixed_datetime)
 
         # then
         err.assert_called_once()
 
-    def test_finalize_daily_notes__writes_end_and_spent_time_with_custom_date(
+    @mark.asyncio
+    async def test_finalize_daily_notes__writes_end_and_spent_time_with_custom_date(
         self,
         cmd: CommandManager,
         mocker: MockerFixture,
@@ -235,10 +237,11 @@ class TestCommands:
         )
         cp = mocker.patch("taskjournal.commands.daily.console.print")
         mocker.patch.object(cmd._daily, "_cancel_macos_alarm")
+        mocker.patch.object(cmd._daily, "_generate_and_write_summary", new=AsyncMock())
         custom_end = fixed_datetime + timedelta(hours=2, minutes=15)
 
         # when
-        cmd.finalize_daily_notes(custom_end)
+        await cmd.finalize_daily_notes(custom_end)
 
         # then
         cmd.file_service.write_lines_to_file.assert_called_once()
@@ -248,7 +251,8 @@ class TestCommands:
             for c in cp.mock_calls
         )
 
-    def test_finalize_daily_notes__uses_now_when_no_custom_date(
+    @mark.asyncio
+    async def test_finalize_daily_notes__uses_now_when_no_custom_date(
         self,
         cmd: CommandManager,
         mocker: MockerFixture,
@@ -278,9 +282,10 @@ class TestCommands:
             },
         )
         mocker.patch.object(cmd._daily, "_cancel_macos_alarm")
+        mocker.patch.object(cmd._daily, "_generate_and_write_summary", new=AsyncMock())
 
         # when
-        cmd.finalize_daily_notes(custom_date=None)  # type: ignore[arg-type]
+        await cmd.finalize_daily_notes(custom_date=None)  # type: ignore[arg-type]
 
     def test_daily_time__calculates_when_file_exists(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
@@ -748,6 +753,82 @@ class TestCommands:
         written = cmd.file_service.write_lines_to_file.call_args[0][1]
         assert any("Reviewed PRs" in l for l in written)
         assert not any("summary of the day" in l for l in written)
+
+    def test_append_ai_summary__inserts_before_separator_and_keeps_existing(
+        self, cmd: CommandManager
+    ) -> None:
+        content = [
+            "## 📋 Summary\n",
+            "\n",
+            "Manual summary line.\n",
+            "\n",
+            "---\n",
+        ]
+        cmd.file_service.get_lines.return_value = list(content)
+
+        cmd._daily._append_ai_summary("/day.md", "AI generated text.")
+
+        written = cmd.file_service.write_lines_to_file.call_args[0][1]
+        assert any("Manual summary line." in l for l in written)
+        assert any("AI generated text." in l for l in written)
+        separator_idx = next(i for i, l in enumerate(written) if l.strip() == "---")
+        ai_idx = next(i for i, l in enumerate(written) if "AI generated text." in l)
+        assert ai_idx < separator_idx
+
+    @mark.asyncio
+    async def test_generate_and_write_summary__writes_when_no_existing_summary(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        cmd.parser.parse.return_value = ParsedNote(summary=[])
+        cmd._daily.ai_service.summarize_day = AsyncMock(return_value="AI text.")
+        fix = mocker.patch.object(cmd._daily, "fix_summary")
+
+        await cmd._daily._generate_and_write_summary("/day.md", no_summary=False)
+
+        fix.assert_called_once_with("/day.md", "AI text.")
+
+    @mark.asyncio
+    async def test_generate_and_write_summary__appends_when_summary_exists(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        cmd.parser.parse.return_value = ParsedNote(summary=["Existing summary."])
+        cmd._daily.ai_service.summarize_day = AsyncMock(return_value="AI text.")
+        append = mocker.patch.object(cmd._daily, "_append_ai_summary")
+
+        await cmd._daily._generate_and_write_summary("/day.md", no_summary=False)
+
+        append.assert_called_once_with("/day.md", "AI text.")
+
+    @mark.asyncio
+    async def test_generate_and_write_summary__skips_when_no_summary_flag(
+        self, cmd: CommandManager
+    ) -> None:
+        await cmd._daily._generate_and_write_summary("/day.md", no_summary=True)
+
+        cmd.parser.parse.assert_not_called()
+
+    @mark.asyncio
+    async def test_generate_and_write_summary__skips_when_ai_returns_empty(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        cmd.parser.parse.return_value = ParsedNote(summary=[])
+        cmd._daily.ai_service.summarize_day = AsyncMock(return_value="")
+        fix = mocker.patch.object(cmd._daily, "fix_summary")
+
+        await cmd._daily._generate_and_write_summary("/day.md", no_summary=False)
+
+        fix.assert_not_called()
+
+    @mark.asyncio
+    async def test_generate_and_write_summary__skips_when_parse_fails(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        cmd.parser.parse.return_value = None
+        warn = mocker.patch("taskjournal.commands.daily.logger.warning")
+
+        await cmd._daily._generate_and_write_summary("/day.md", no_summary=False)
+
+        warn.assert_called_once()
 
     # ── _note_issues / audit ─────────────────────────────────────────────────
 

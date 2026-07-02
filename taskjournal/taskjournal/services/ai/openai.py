@@ -2,7 +2,8 @@ from typing import Any
 
 from httpx import AsyncClient, TimeoutException, HTTPStatusError
 
-from taskjournal.services.ai.base import AIService, build_prompt
+from taskjournal.models.parsed_note import ParsedNote
+from taskjournal.services.ai.base import AIService, build_daily_prompt, build_prompt
 from taskjournal.services.base import HealthCheckResult, ServiceStatus
 from taskjournal.services.logger import logger
 
@@ -33,17 +34,7 @@ class OpenAIService(AIService):
             "Content-Type": "application/json",
         }
 
-    async def summarize(
-        self,
-        daily_summaries: list[str],
-        stats: dict[str, Any] | None = None,
-        is_fireman_week: bool = False,
-        period: str = "weekly",
-    ) -> str:
-        if not daily_summaries:
-            return "No summaries provided."
-
-        prompt = build_prompt(daily_summaries, stats, is_fireman_week, period)
+    async def _call_openai(self, prompt: str) -> str:
         payload = {
             "model": "gpt-4o-mini",  # fast & cost-effective model
             "messages": [{"role": "user", "content": prompt}],
@@ -88,3 +79,17 @@ class OpenAIService(AIService):
             msg = f"⚠️ Failed to summarize due to an unexpected error: {e}"
             logger.error(msg)
             return msg
+
+    async def summarize(
+        self,
+        daily_summaries: list[str],
+        stats: dict[str, Any] | None = None,
+        is_fireman_week: bool = False,
+        period: str = "weekly",
+    ) -> str:
+        if not daily_summaries:
+            return "No summaries provided."
+        return await self._call_openai(build_prompt(daily_summaries, stats, is_fireman_week, period))
+
+    async def summarize_day(self, note: ParsedNote) -> str:
+        return await self._call_openai(build_daily_prompt(note))

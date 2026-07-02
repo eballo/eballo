@@ -147,10 +147,12 @@ def build_app() -> Typer:
     @app.command(
         "finish",
         help=(
-            "Finalize the daily notes (write end time, totals, prompt for summary).\n\n"
+            "Finalize the daily notes (write end time, totals, AI summary).\n\n"
             "Examples:\n"
             "  wk daily finish\n"
             "  wk daily finish --date '2025-09-02 17:30'\n"
+            "  wk daily finish --no-summary\n"
+            "  wk daily finish --force\n"
         ),
     )
     def daily_finish(
@@ -160,6 +162,18 @@ def build_app() -> Typer:
             "--date",
             help="Target date/time: 'today' or 'YYYY-MM-DD HH:MM'.",
         ),
+        no_summary: bool = Option(
+            False,
+            "--no-summary",
+            help="Skip AI summary generation.",
+            show_default=True,
+        ),
+        force: bool = Option(
+            False,
+            "--force",
+            help="Re-finalize even if already finalized.",
+            show_default=True,
+        ),
     ) -> None:
         m = get_manager(ctx)
         custom_date = get_today(ctx)
@@ -168,7 +182,7 @@ def build_app() -> Typer:
         if date:
             custom_date = parse_date(date, _DATETIME_FMT)
 
-        m.finalize_daily_notes(custom_date)
+        run(m.finalize_daily_notes(custom_date, no_summary=no_summary, force=force))
 
     @app.command(
         "time",

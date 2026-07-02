@@ -1,6 +1,8 @@
 from abc import abstractmethod
 from typing import Any
 
+from taskjournal.models.parsed_note import ParsedNote
+from taskjournal.models.task import Status
 from taskjournal.services.base import BaseService, HealthCheckResult, ServiceStatus
 from taskjournal.services.time import TimeService
 
@@ -14,6 +16,9 @@ class AIService(BaseService):
         is_fireman_week: bool = False,
         period: str = "weekly",
     ) -> str: ...
+
+    @abstractmethod
+    async def summarize_day(self, note: ParsedNote) -> str: ...
 
 
 class NullAIService(AIService):
@@ -35,6 +40,58 @@ class NullAIService(AIService):
         period: str = "weekly",
     ) -> str:
         return "AI summaries disabled. Set AI_PROVIDER=claude_code or AI_PROVIDER=openai in .env to enable."
+
+    async def summarize_day(self, note: ParsedNote) -> str:
+        return ""
+
+
+def build_daily_prompt(note: ParsedNote) -> str:
+    done = [t.description for t in note.planned_tasks if t.status == Status.DONE]
+    wip = [t.description for t in note.planned_tasks if t.status in (Status.IN_PROGRESS, Status.CODE_REVIEW)]
+    blocked = [t.description for t in note.planned_tasks if t.status == Status.BLOCKED]
+    pr_reviews = [t.description for t in note.code_review_tasks]
+    notes_lines = [l for l in note.notes if l.strip() and l.strip() not in ("-", "---")]
+    ff_lines = [l for l in note.firefighter if l.strip() and l.strip() not in ("-", "---")]
+    summary_lines = [l for l in note.summary if l.strip() and l.strip() not in ("-", "---")]
+
+    system = (
+        "You are a senior software engineer writing a brief personal daily work journal entry. "
+        "Write 2 to 4 sentences in natural English, first person, past tense. "
+        "Do NOT use markdown headers, bullet points, or section titles. "
+        "Start directly with the journal entry. "
+        "Mention: what was accomplished, any blockers or unfinished work, "
+        "PR reviews if relevant, and firefighter incidents if present. "
+        "Work location is worth one brief mention if it is the office. "
+        "Keep the tone professional but natural — this is a personal journal, not a status report."
+    )
+
+    ctx = f"Daily journal for {note.date or 'today'}"
+    if note.sprint_name:
+        ctx += f", sprint: {note.sprint_name}"
+    if note.time_spent:
+        ctx += f", time worked: {note.time_spent}"
+    if note.work_from:
+        ctx += f", location: {note.work_from}"
+
+    parts: list[str] = [ctx, ""]
+
+    if summary_lines:
+        parts.append("Existing summary notes: " + " ".join(summary_lines))
+    if done:
+        parts.append("Completed: " + "; ".join(done))
+    if wip:
+        parts.append("Work in progress: " + "; ".join(wip))
+    if blocked:
+        parts.append("Blocked: " + "; ".join(blocked))
+    if pr_reviews:
+        parts.append("Code reviews / PRs: " + "; ".join(pr_reviews))
+    if notes_lines:
+        parts.append("Notes: " + " ".join(notes_lines))
+    if ff_lines:
+        parts.append("Firefighter incidents: " + " ".join(ff_lines))
+
+    user_content = "\n".join(parts)
+    return f"{system}\n\n{user_content}"
 
 
 def build_prompt(
