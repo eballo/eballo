@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from re import match as re_match
 from urllib.parse import urlparse
 
-import httpx
+from httpx import AsyncClient
 from gidgethub.httpx import GitHubAPI
 
 from taskjournal.models.github import RepoCommitStat
@@ -23,15 +23,8 @@ class GithubService(BaseService):
     ) -> None:
         self.token = token
         self.org_name = org_name
-        self.client: httpx.AsyncClient = httpx.AsyncClient()
-        try:
-            self.gh: GitHubAPI | None = GitHubAPI(
-                self.client, requester="taskjournal", oauth_token=self.token
-            )
-            logger.debug("Github successfully initialized")
-        except Exception as e:
-            logger.error(f"Failed to initialize GitHub client: {e}")
-            self.gh = None
+        self.client: AsyncClient | None = None
+        self.gh: GitHubAPI | None = None
 
     @property
     def name(self) -> str:
@@ -42,11 +35,6 @@ class GithubService(BaseService):
             return HealthCheckResult(
                 ServiceStatus.UNCONFIGURED,
                 "GIT_HUB_TOKEN not configured — GitHub integration disabled",
-            )
-        if self.gh is None:
-            return HealthCheckResult(
-                ServiceStatus.ERROR,
-                "Failed to initialize GitHub client",
             )
         return HealthCheckResult(
             ServiceStatus.OK,
@@ -297,9 +285,10 @@ class GithubService(BaseService):
                 task.status = Status.DONE
 
     async def __aenter__(self) -> "GithubService":
-        self.client = httpx.AsyncClient()
+        self.client = AsyncClient()
         try:
             self.gh = GitHubAPI(self.client, requester="taskjournal", oauth_token=self.token)
+            logger.debug("Github successfully initialized")
         except Exception as e:
             logger.error(f"Failed to initialize GitHub client: {e}")
             self.gh = None

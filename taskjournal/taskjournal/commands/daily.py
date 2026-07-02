@@ -267,7 +267,8 @@ class DailyCommands:
             sprint_name = sprint.name if sprint else "No active sprint"
             pending = await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
             code_review = await self.jira.get_current_sprint_tasks_in_code_review()
-            await self.github.update_status_if_task_reviewed(code_review)
+            async with self.github:
+                await self.github.update_status_if_task_reviewed(code_review)
 
         folder_path = dirname(daily_notes_file)
         current_file = basename(daily_notes_file)
@@ -526,7 +527,8 @@ class DailyCommands:
         logger.debug("Fetching Jira tasks...")
         pending = await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
         code_review = await self.jira.get_current_sprint_tasks_in_code_review()
-        await self.github.update_status_if_task_reviewed(code_review)
+        async with self.github:
+            await self.github.update_status_if_task_reviewed(code_review)
 
         existing_data = self.parser.parse(file_path)
         existing_tasks = existing_data.planned_tasks if existing_data else []

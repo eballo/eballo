@@ -1,6 +1,6 @@
 from typing import Any
 
-import httpx
+from httpx import AsyncClient, TimeoutException, HTTPStatusError
 
 from taskjournal.services.ai_service import AIService
 from taskjournal.services.base import HealthCheckResult, ServiceStatus
@@ -116,7 +116,7 @@ class OpenAIService(AIService):
         }
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with AsyncClient(timeout=60.0) as client:
                 response = await client.post(
                     self.base_url, headers=self.headers, json=payload
                 )
@@ -142,11 +142,11 @@ class OpenAIService(AIService):
 
             return content.strip()
 
-        except httpx.TimeoutException:
+        except TimeoutException:
             msg = "⚠️ The request to OpenAI timed out. Please try again."
             logger.error(msg)
             return msg
-        except httpx.HTTPStatusError as e:
+        except HTTPStatusError as e:
             msg = f"⚠️ OpenAI service error: {e.response.status_code} {e.response.reason_phrase}"
             logger.error(msg)
             return msg

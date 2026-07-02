@@ -1,4 +1,4 @@
-import os.path
+from os.path import exists, join
 from typing import Any
 
 from typer import Argument, Typer, Context, Option
@@ -20,7 +20,7 @@ def build_app() -> Typer:
             logger.debug("Getting default year")
             year = str(get_today(ctx).year)
         debug = get_debug(ctx)
-        holidays_path = os.path.join(BASE_DIR, f"{year}/{HOLIDAYS_FILE}")
+        holidays_path = join(BASE_DIR, f"{year}/{HOLIDAYS_FILE}")
         logger.debug(f"debug={debug}, path={holidays_path}")
         return HolidayService(debug=debug, filepath=holidays_path)
 
@@ -88,7 +88,7 @@ def build_app() -> Typer:
     ) -> None:
         svc = get_service(ctx, year)
         resolved_year = year or str(get_today(ctx).year)
-        holidays_path = os.path.join(BASE_DIR, f"{resolved_year}/{HOLIDAYS_FILE}")
+        holidays_path = join(BASE_DIR, f"{resolved_year}/{HOLIDAYS_FILE}")
         svc.add_holiday(holidays_path, date, description, category)
 
     @app.command("populate", help="Generate Markdown files for holidays.")

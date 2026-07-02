@@ -72,12 +72,12 @@ class TestGithub:
             async def aclose(self) -> None:
                 return None
 
-        # when
         client = FakeClient()
         aclose_spy = mocker.spy(client, "aclose")
-        mocker.patch("httpx.AsyncClient", return_value=client)
         service = GithubService(token="t", org_name="o")
+        service.client = client  # type: ignore[assignment]
 
+        # when
         await service.close()
 
         # then
@@ -418,22 +418,24 @@ class TestGithub:
         assert mock_summary.call_count == 1
         assert "Overall Contribution Summary" in out
 
-    def test_init_handles_github_client_init_failure(
+    @mark.asyncio
+    async def test_aenter_handles_github_client_init_failure(
         self, mocker: MockerFixture
     ) -> None:
         # given
-        mocker.patch("taskjournal.services.github.httpx.AsyncClient")
         mocker.patch(
             "taskjournal.services.github.GitHubAPI", side_effect=Exception("boom")
         )
-        logger = mocker.patch("taskjournal.services.github.logger")
+        logger_mock = mocker.patch("taskjournal.services.github.logger")
 
         # when
         service = GithubService(token="t", org_name="o")
+        await service.__aenter__()
 
         # then
         assert service.gh is None
-        logger.error.assert_called_once()
+        logger_mock.error.assert_called_once()
+        await service.close()
 
     def test_parse_pr_url_success_and_invalid(self) -> None:
         # given
