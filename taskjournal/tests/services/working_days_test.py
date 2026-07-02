@@ -307,3 +307,118 @@ class TestWorkingDays:
         assert stats["vacation_days"] == 3  # Wed, Thu, Fri missing
         assert stats["days_at_office"] == 1
         assert stats["days_at_home"] == 1
+
+    def test_get_quarter_stats(
+        self,
+        mocker: MockerFixture,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        service = working_days_service_factory("2026")
+        custom_date = datetime(2026, 4, 15)  # Q2
+        base_dir = "/dummy/base"
+
+        mocker.patch(
+            "taskjournal.services.file.FileService.get_week_folder",
+            return_value="/dummy/week",
+        )
+        mocker.patch(
+            "taskjournal.services.time.TimeService.get_daily_notes_name",
+            side_effect=lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md",
+        )
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.exists",
+            side_effect=lambda p: "2026-04-01" in p or "2026-05-01" in p,
+        )
+        mocker.patch(
+            "taskjournal.services.time.TimeService.get_total_time_from_daily_notes",
+            side_effect=[3600, 7200],
+        )
+        mock_note_1 = ParsedNote(work_from="office", summary=["Office work"])
+        mock_note_2 = ParsedNote(work_from="home", summary=["Home work"])
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.DailyParserService.parse",
+            side_effect=[mock_note_1, mock_note_2],
+        )
+
+        stats = service.get_quarter_stats(custom_date, base_dir)
+
+        assert stats["quarter_num"] == 2
+        assert stats["year"] == 2026
+        assert stats["start_date"] == date(2026, 4, 1)
+        assert stats["end_date"] == date(2026, 6, 30)
+        assert stats["total_worked_days"] == 2
+        assert stats["total_time_seconds"] == 10800
+        assert stats["days_at_office"] == 1
+        assert stats["days_at_home"] == 1
+        assert "Office work" in stats["daily_summaries"]
+
+    def test_get_quarter_stats_q1(
+        self,
+        mocker: MockerFixture,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        service = working_days_service_factory("2026")
+        mocker.patch("taskjournal.services.file.FileService.get_week_folder", return_value="/w")
+        mocker.patch("taskjournal.services.time.TimeService.get_daily_notes_name", side_effect=lambda d: f"{d}-DailyNotes.md")
+        mocker.patch("taskjournal.services.calendar.working_days.exists", return_value=False)
+
+        stats = service.get_quarter_stats(datetime(2026, 2, 10), "/dummy")
+
+        assert stats["quarter_num"] == 1
+        assert stats["start_date"] == date(2026, 1, 1)
+        assert stats["end_date"] == date(2026, 3, 31)
+
+    def test_get_quarter_stats_q4(
+        self,
+        mocker: MockerFixture,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        service = working_days_service_factory("2026")
+        mocker.patch("taskjournal.services.file.FileService.get_week_folder", return_value="/w")
+        mocker.patch("taskjournal.services.time.TimeService.get_daily_notes_name", side_effect=lambda d: f"{d}-DailyNotes.md")
+        mocker.patch("taskjournal.services.calendar.working_days.exists", return_value=False)
+
+        stats = service.get_quarter_stats(datetime(2026, 11, 1), "/dummy")
+
+        assert stats["quarter_num"] == 4
+        assert stats["start_date"] == date(2026, 10, 1)
+        assert stats["end_date"] == date(2026, 12, 31)
+
+    def test_get_year_stats(
+        self,
+        mocker: MockerFixture,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        service = working_days_service_factory("2026")
+        base_dir = "/dummy/base"
+
+        mocker.patch(
+            "taskjournal.services.file.FileService.get_week_folder",
+            return_value="/dummy/week",
+        )
+        mocker.patch(
+            "taskjournal.services.time.TimeService.get_daily_notes_name",
+            side_effect=lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md",
+        )
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.exists",
+            side_effect=lambda p: "2026-01-02" in p,
+        )
+        mocker.patch(
+            "taskjournal.services.time.TimeService.get_total_time_from_daily_notes",
+            return_value=3600,
+        )
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.DailyParserService.parse",
+            return_value=ParsedNote(work_from="home", summary=["Year note"]),
+        )
+
+        stats = service.get_year_stats(2026, base_dir)
+
+        assert stats["year"] == 2026
+        assert stats["start_date"] == date(2026, 1, 1)
+        assert stats["end_date"] == date(2026, 12, 31)
+        assert stats["total_worked_days"] == 1
+        assert stats["total_time_seconds"] == 3600
+        assert stats["days_at_home"] == 1
+        assert "Year note" in stats["daily_summaries"]

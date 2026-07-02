@@ -56,51 +56,8 @@ class TestTaskManager:
         mock_logger.error.assert_called_once()
         assert "Error reading file badfile.txt" in mock_logger.error.call_args[0][0]
 
-    @mark.parametrize(
-        "weekday,isoweek,expected_task, expected_len",
-        [
-            ("Wednesday", 3, "Check refinement tasks", 6),
-            ("Thursday", 4, "Get ready for the retro points", 6),  # even week
-            ("Thursday", 3, None, 5),  # odd week
-            ("Friday", 3, "Write down the summary of the week", 6),
-            ("Monday", 3, "New relic alarms - report", 6),
-        ],
-    )
-    def test_get_default_tasks_varies_by_day(
-        self,
-        mocker: MockerFixture,
-        weekday: str,
-        isoweek: int,
-        expected_task: str | None,
-        expected_len: int,
-    ) -> None:
-        # given
-        mock_datetime = mocker.patch("taskjournal.services.task_manager.datetime")
-        mock_datetime.now.return_value.strftime.return_value = weekday
-        mock_datetime.now.return_value.isocalendar.return_value = (2025, isoweek, 1)
-
-        # when
-        tasks = TaskManager.get_default_tasks()
-
-        # then
-        assert len(tasks) == expected_len
-        assert "Check emails" in tasks[0].description
-        assert "Check Calendar" in tasks[1].description
-        assert "Check Jira" in tasks[2].description
-        assert "Check Slack" in tasks[3].description
-        assert "Check the sprint tasks in code review" in tasks[4].description
-
-        if expected_task:
-            assert expected_task in tasks[5].description
-        else:
-            assert all(
-                exp not in tasks
-                for exp in [
-                    "[ ] Check refinement tasks",
-                    "[ ] Get ready for the retro points",
-                    "[ ] Write down the summary of the week",
-                ]
-            )
+    def test_get_default_tasks_returns_empty(self) -> None:
+        assert TaskManager.get_default_tasks() == []
 
     def test_get_previous_tasks_folder_not_exist(self, mocker: MockerFixture) -> None:
         # given

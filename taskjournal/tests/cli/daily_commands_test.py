@@ -350,3 +350,37 @@ class TestDailyAudit:
 
         assert result.exit_code == 0
         cli_manager.audit_daily_notes.assert_called_once()
+
+
+class TestDailyOpen:
+
+    def test_daily_open_calls_editor(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        mocker.patch("taskjournal.services.time.TimeService.resolve_daily_notes_file", return_value=("/day.md", "/week/"))
+        mocker.patch("taskjournal.cli.commands.daily.exists", return_value=True)
+        run_proc = mocker.patch("taskjournal.cli.commands.daily.subprocess_run")
+        mocker.patch("taskjournal.cli.commands.daily.environ", {"EDITOR": "vim"})
+
+        result = invoke_cli(["daily", "open"])
+
+        assert result.exit_code == 0
+        run_proc.assert_called_once_with(["vim", "/day.md"])
+
+    def test_daily_open_exits_when_file_missing(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        caplog: LogCaptureFixture,
+    ) -> None:
+        mocker.patch("taskjournal.services.time.TimeService.resolve_daily_notes_file", return_value=("/day.md", "/week/"))
+        mocker.patch("taskjournal.cli.commands.daily.exists", return_value=False)
+
+        result = invoke_cli(["daily", "open"])
+
+        assert result.exit_code == 1
+        assert "No daily notes found" in caplog.text

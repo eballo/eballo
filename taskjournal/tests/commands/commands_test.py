@@ -114,6 +114,10 @@ class TestCommands:
             "taskjournal.services.task_manager.TaskManager.unique_tasks",
             return_value=["task-default", "task-prev", "task-jira-pending"],
         )
+        mocker.patch(
+            "taskjournal.services.task_manager.TaskManager.get_unique_epic_names",
+            return_value=[],
+        )
         # Use SimpleNamespace to provide a .name attribute without conflicting with MagicMock's 'name' kwarg
         mocker.patch.object(
             cmd.jira,
@@ -830,6 +834,52 @@ class TestCommands:
 
         warn.assert_called_once()
 
+    # ── add_note_to_daily ────────────────────────────────────────────────────
+
+    def test_add_note_to_daily__inserts_timestamped_note(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        path = "/2026-07-02-DailyNotes.md"
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value=path)
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        content = [
+            "## 📝 Notes\n",
+            "\n",
+            " - existing note\n",
+            "\n",
+            "---\n",
+        ]
+        cmd.file_service.get_lines.return_value = list(content)
+
+        cmd.add_note_to_daily(fixed_datetime, "New quick note")
+
+        written = cmd.file_service.write_lines_to_file.call_args[0][1]
+        assert any("New quick note" in l for l in written)
+        existing_idx = next(i for i, l in enumerate(written) if "existing note" in l)
+        new_idx = next(i for i, l in enumerate(written) if "New quick note" in l)
+        assert new_idx > existing_idx
+
+    def test_add_note_to_daily__raises_when_file_missing(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/missing.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
+
+        import pytest
+        with pytest.raises(FileNotFoundError):
+            cmd.add_note_to_daily(fixed_datetime, "note")
+
+    def test_add_note_to_daily__raises_when_notes_section_missing(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        cmd.file_service.get_lines.return_value = ["## Tasks\n", "- [ ] task\n"]
+
+        import pytest
+        with pytest.raises(ValueError, match="Notes section not found"):
+            cmd.add_note_to_daily(fixed_datetime, "note")
+
     # ── _note_issues / audit ─────────────────────────────────────────────────
 
     def test_note_issues__returns_empty_for_complete_note(
@@ -1307,3 +1357,185 @@ class TestCommands:
         cmd._cancel_macos_alarm(str(alarm_file))
 
         assert any("Could not cancel alarm" in str(c.args) for c in debug.mock_calls)
+
+    # ── get_standup ───────────────────────────────────────────────────────────
+
+    def test_get_standup__returns_done_planned_and_code_review_from_yesterday(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/fake/file.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        cmd.parser.parse.return_value = ParsedNote(
+            planned_tasks=[Task(id="1", description="Fix bug", status=Status.DONE)],
+            code_review_tasks=[Task(id="2", description="Review PR #42", status=Status.DONE)],
+        )
+        result = cmd._daily.get_standup(fixed_datetime)
+        assert "Fix bug" in result["done"]
+        assert "Review PR #42" in result["done"]
+
+    def test_get_standup__returns_done_today_separately(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/fake/file.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        cmd.parser.parse.return_value = ParsedNote(
+            planned_tasks=[
+                Task(id="1", description="Deploy hotfix", status=Status.DONE),
+                Task(id="2", description="Write docs", status=Status.TODO),
+            ],
+            code_review_tasks=[Task(id="3", description="Review PR #99", status=Status.DONE)],
+        )
+        result = cmd._daily.get_standup(fixed_datetime)
+        assert "Deploy hotfix" in result["today_done"]
+        assert "Review PR #99" in result["today_done"]
+        assert "Write docs" in result["today"]
+
+    def test_get_standup__returns_blockers_from_both_sections(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/fake/file.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        cmd.parser.parse.return_value = ParsedNote(
+            planned_tasks=[Task(id="1", description="Waiting on API", status=Status.BLOCKED)],
+            code_review_tasks=[Task(id="2", description="PR blocked by CI", status=Status.BLOCKED)],
+        )
+        result = cmd._daily.get_standup(fixed_datetime)
+        assert "Waiting on API" in result["blockers"]
+        assert "PR blocked by CI" in result["blockers"]
+
+    def test_get_standup__returns_empty_when_files_missing(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/fake/file.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
+        result = cmd._daily.get_standup(fixed_datetime)
+        assert result == {"done": [], "today_done": [], "today": [], "blockers": []}
+
+    # ── Delegation wrappers ───────────────────────────────────────────────────
+
+    def test_get_standup__delegates_to_daily(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        expected = {"done": ["task"], "today_done": [], "today": [], "blockers": []}
+        mocker.patch.object(cmd._daily, "get_standup", return_value=expected)
+        assert cmd.get_standup(fixed_datetime) == expected
+
+    def test_add_recurring_task__delegates_to_recurring(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        add = mocker.patch.object(cmd._recurring, "add")
+        cmd.add_recurring_task("standup", ["monday"], monthly=False)
+        add.assert_called_once_with("standup", ["monday"], False)
+
+    def test_remove_recurring_task__delegates_to_recurring(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        mocker.patch.object(cmd._recurring, "remove", return_value=True)
+        assert cmd.remove_recurring_task("standup") is True
+
+    def test_list_recurring_tasks__delegates_to_recurring(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        tasks = [{"description": "standup", "days": "every"}]
+        mocker.patch.object(cmd._recurring, "list_all", return_value=tasks)
+        assert cmd.list_recurring_tasks() == tasks
+
+    def test_get_completion_stats__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        data = [("2025-01-01", 5, 6)]
+        mocker.patch.object(cmd._daily, "get_completion_stats", return_value=data)
+        assert cmd.get_completion_stats(2025) == data
+
+    def test_get_workload_stats__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        data = [("W01", 3600)]
+        mocker.patch.object(cmd._daily, "get_workload_stats", return_value=data)
+        assert cmd.get_workload_stats(2025) == data
+
+    def test_get_pattern_stats__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        data: dict[str, object] = {"best_day": "Monday", "carry_over_rate": 10}
+        mocker.patch.object(cmd._daily, "get_pattern_stats", return_value=data)
+        assert cmd.get_pattern_stats(2025) == data
+
+    def test_get_tags_stats__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        data = [("Platform", 5)]
+        mocker.patch.object(cmd._daily, "get_tags_stats", return_value=data)
+        assert cmd.get_tags_stats(2025) == data
+
+    def test_count_week_folders__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        mocker.patch.object(cmd._daily, "count_week_folders", return_value=42)
+        assert cmd.count_week_folders(2025) == 42
+
+    def test_wip_task_in_daily__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._tasks, "wip_task_in_daily", return_value=True)
+        assert cmd.wip_task_in_daily(fixed_datetime, "my task") is True
+
+    def test_schedule_backup__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        install = mocker.patch.object(cmd.schedule_service, "install")
+        cp = mocker.patch("taskjournal.commands.admin.console.print")
+        cmd.schedule_backup(17, 30)
+        install.assert_called_once_with(17, 30)
+
+    def test_disable_backup_schedule__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        uninstall = mocker.patch.object(cmd.schedule_service, "uninstall")
+        mocker.patch("taskjournal.commands.admin.console.print")
+        cmd.disable_backup_schedule()
+        uninstall.assert_called_once()
+
+    @mark.asyncio
+    async def test_get_jira_tasks__all_mode(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        mocker.patch.object(cmd.jira, "get_current_sprint_tasks", new_callable=AsyncMock, return_value=[])
+        result = await cmd.get_jira_tasks("all")
+        assert result == []
+
+    @mark.asyncio
+    async def test_get_jira_tasks__mine_mode(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        mocker.patch.object(cmd.jira, "get_current_sprint_tasks_all_assigned_to_me", new_callable=AsyncMock, return_value=[])
+        assert await cmd.get_jira_tasks("mine") == []
+
+    @mark.asyncio
+    async def test_get_jira_tasks__code_mode(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        mocker.patch.object(cmd.jira, "get_current_sprint_tasks_in_code_review", new_callable=AsyncMock, return_value=[])
+        assert await cmd.get_jira_tasks("code") == []
+
+    @mark.asyncio
+    async def test_get_jira_tasks__midreview_mode(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        mocker.patch.object(cmd.jira, "get_current_tasks_assigned_to_me_last_6_months", new_callable=AsyncMock, return_value=[])
+        assert await cmd.get_jira_tasks("midreview") == []
+
+    @mark.asyncio
+    async def test_get_jira_tasks__month_mode(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        mocker.patch.object(cmd.jira, "get_current_tasks_assigned_to_me_last_month", new_callable=AsyncMock, return_value=[])
+        assert await cmd.get_jira_tasks("month") == []
+
+    @mark.asyncio
+    async def test_run_ai_prompt__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        mocker.patch.object(cmd.ai_service, "summarize", new_callable=AsyncMock, return_value="AI result")
+        result = await cmd.run_ai_prompt("Summarize this")
+        assert result == "AI result"

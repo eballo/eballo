@@ -130,6 +130,20 @@ def build_app() -> Typer:
                 default=existing["OFFICE_WIFI"] if wifi_current else "",
             )
 
+        # ── Screen Time ───────────────────────────────────────────────────
+        console.print(Panel("[bold]macOS Screen Time[/bold]", expand=False))
+        console.print(
+            "Screen Time reads app-usage data from the macOS Core Data DB.\n"
+            "Requires [bold]Full Disk Access[/bold] granted to your terminal in\n"
+            "System Settings → Privacy & Security → Full Disk Access."
+        )
+        st_current = existing.get("SCREEN_TIME_ENABLED", "false") == "true"
+        st_enabled = confirm(
+            "Enable macOS Screen Time integration?",
+            default=st_current,
+        )
+        values["SCREEN_TIME_ENABLED"] = "true" if st_enabled else "false"
+
         # ── Editor ───────────────────────────────────────────────────────
         console.print(Panel("[bold]Editor[/bold]", expand=False))
         values["EDITOR_APP"] = prompt(
@@ -206,6 +220,8 @@ def _print_summary(service: SetupService, values: dict[str, str]) -> None:
     table.add_section()
     _row("Home WiFi SSID", "HOME_WIFI")
     _row("Office WiFi SSID", "OFFICE_WIFI")
+    table.add_section()
+    _row("Screen Time", "SCREEN_TIME_ENABLED")
     table.add_section()
     _row("Editor app", "EDITOR_APP")
     table.add_section()

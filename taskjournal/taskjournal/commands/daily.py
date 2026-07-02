@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, date as date_t
+from datetime import datetime, timedelta, date as date_t, time as time_t
 from os import makedirs, listdir, walk
 from os.path import basename, dirname, exists, isdir, join
 from pathlib import Path
@@ -13,7 +13,7 @@ from taskjournal.config import (
     BASE_DIR,
     HOLIDAYS_FILE,
 )
-from taskjournal.models.task import Task
+from taskjournal.models.task import Task, Status
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.ai.base import AIService
 from taskjournal.services.file import FileService
@@ -23,6 +23,7 @@ from taskjournal.services.calendar.holidays import HolidayService
 from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.logger import console, logger
 from taskjournal.services.parser import DailyParserService
+from taskjournal.services.recurring import RecurringTasksService
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
 from taskjournal.services.utils import FormatUtils
@@ -40,6 +41,7 @@ class DailyCommands:
         file_service: FileService,
         time_service: TimeService,
         ai_service: AIService,
+        recurring_service: RecurringTasksService | None = None,
         debug: bool = False,
     ) -> None:
         self.debug = debug
@@ -51,6 +53,7 @@ class DailyCommands:
         self.file_service = file_service
         self.time_service = time_service
         self.ai_service = ai_service
+        self._recurring = recurring_service or RecurringTasksService()
 
     def _get_week_folder(self, date: datetime) -> str:
         week_folder = self.file_service.get_week_folder(BASE_DIR, date)
@@ -248,6 +251,7 @@ class DailyCommands:
         firefighter: bool = False,
         work_from: str | None = None,
         offline: bool = False,
+        energy: int | None = None,
     ) -> None:
         daily_notes_file = self._get_daily_notes_file_path(create_datetime)
         template_content = self.file_service.load_template(DAILY_NOTES_TEMPLATE)
@@ -290,7 +294,13 @@ class DailyCommands:
             last_week_pending_tasks = []
 
         previous_pending_tasks = self.task_manager.get_previous_pending_tasks(folder_path, current_file)
-        tasks = TaskManager.unique_tasks(default + last_week_pending_tasks + previous_pending_tasks + pending)
+        recurring_descs = self._recurring.get_for_day(create_datetime)
+        recurring_tasks = [TaskManager.create_task(d) for d in recurring_descs]
+        tasks = TaskManager.unique_tasks(default + last_week_pending_tasks + previous_pending_tasks + pending + recurring_tasks)
+
+        all_tasks = tasks + code_review
+        epic_names = TaskManager.get_unique_epic_names(all_tasks)
+        tags_line = f"Tags: {', '.join(epic_names)}" if epic_names else ""
 
         daily_notes_content = Template(template_content).render(
             day_name=create_datetime.strftime("%A"),
@@ -307,7 +317,8 @@ class DailyCommands:
             summary="",
             firefighter=firefighter,
             firefighter_notes="-",
-            extra="",
+            energy=energy,
+            extra=tags_line,
         )
 
         self.file_service.write_to_file(daily_notes_file, daily_notes_content)
@@ -623,3 +634,184 @@ class DailyCommands:
             console.print(f"  [green]+[/green] {task.description}")
 
         self.file_service.write_lines_to_file(file_path, lines)
+
+    def _iter_daily_notes(self, year: int):  # type: ignore[return]
+        year_dir = join(str(BASE_DIR), str(year))
+        if not exists(year_dir):
+            return
+        for entry in sorted(listdir(year_dir)):
+            week_path = join(year_dir, entry)
+            if not isdir(week_path):
+                continue
+            for file_name in sorted(listdir(week_path)):
+                if not file_name.endswith(f"-DailyNotes.{TEMPLATE_FORMAT}"):
+                    continue
+                date_str = file_name.replace(f"-DailyNotes.{TEMPLATE_FORMAT}", "")
+                try:
+                    day = datetime.strptime(date_str, "%Y-%m-%d")
+                except ValueError:
+                    continue
+                yield day, join(week_path, file_name)
+
+    def get_completion_stats(self, year: int) -> list[tuple[str, int, int]]:
+        results: list[tuple[str, int, int]] = []
+        for day, file_path in self._iter_daily_notes(year):
+            note = self.parser.parse(file_path)
+            if not note:
+                continue
+            tasks = note.planned_tasks
+            if not tasks:
+                continue
+            done = sum(1 for t in tasks if t.status == Status.DONE)
+            results.append((day.strftime("%Y-%m-%d"), done, len(tasks)))
+        return results
+
+    def get_workload_stats(self, year: int) -> list[tuple[str, int]]:
+        from re import compile as re_compile
+        time_rx = re_compile(r"(\d+):(\d+)")
+        weekly: dict[str, int] = {}
+        for day, file_path in self._iter_daily_notes(year):
+            note = self.parser.parse(file_path)
+            if not note or not note.time_spent:
+                continue
+            m = time_rx.search(note.time_spent)
+            if not m:
+                continue
+            seconds = int(m.group(1)) * 3600 + int(m.group(2)) * 60
+            week_key = f"W{day.isocalendar()[1]:02d}"
+            weekly[week_key] = weekly.get(week_key, 0) + seconds
+        return sorted(weekly.items())
+
+    def get_pattern_stats(self, year: int) -> dict[str, object]:
+        from collections import defaultdict
+        day_done: dict[int, list[int]] = defaultdict(list)
+        day_total: dict[int, list[int]] = defaultdict(list)
+        hour_done: dict[int, int] = defaultdict(int)
+        carry: list[tuple[str, set[str]]] = []
+
+        prev_pending: set[str] = set()
+        for day, file_path in self._iter_daily_notes(year):
+            note = self.parser.parse(file_path)
+            if not note:
+                continue
+            tasks = note.planned_tasks
+            done = [t.description for t in tasks if t.status == Status.DONE]
+            pending = {t.description for t in tasks if t.status in (Status.TODO, Status.IN_PROGRESS, Status.BLOCKED)}
+            dow = day.weekday()
+            day_done[dow].append(len(done))
+            day_total[dow].append(len(tasks))
+            if note.start_time:
+                try:
+                    start_hour = datetime.strptime(note.start_time[:5], "%H:%M").hour
+                    hour_done[start_hour] += len(done)
+                except (ValueError, TypeError):
+                    pass
+            carry.append((day.strftime("%Y-%m-%d"), prev_pending & {t.description for t in tasks}))
+            prev_pending = pending
+
+        dow_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        avg_by_day = {
+            dow_names[d]: round(sum(v) / len(v), 1)
+            for d, v in day_done.items() if v and d < 5
+        }
+        best_day = max(avg_by_day, key=lambda k: avg_by_day[k]) if avg_by_day else None
+        best_hour = max(hour_done, key=lambda k: hour_done[k]) if hour_done else None
+
+        total_days = len(carry)
+        carry_days = sum(1 for _, c in carry if c)
+        carry_rate = round(carry_days / total_days * 100) if total_days else 0
+
+        all_done = [n for vals in day_done.values() for n in vals]
+        avg_done = round(sum(all_done) / len(all_done), 1) if all_done else 0
+
+        return {
+            "best_day": best_day,
+            "best_hour": best_hour,
+            "avg_done_per_day": avg_done,
+            "carry_over_rate": carry_rate,
+            "avg_by_day": avg_by_day,
+        }
+
+    def get_tags_stats(self, year: int) -> list[tuple[str, int]]:
+        from re import compile as re_compile
+        tags_rx = re_compile(r"^Tags:\s*(.+)$", flags=8)
+        counts: dict[str, int] = {}
+        for _, file_path in self._iter_daily_notes(year):
+            with open(file_path) as f:
+                for line in f:
+                    m = tags_rx.match(line.strip())
+                    if m:
+                        for tag in m.group(1).split(","):
+                            tag = tag.strip()
+                            if tag:
+                                counts[tag] = counts.get(tag, 0) + 1
+                        break
+        return sorted(counts.items(), key=lambda x: x[1], reverse=True)
+
+    def get_standup(self, today: datetime) -> dict[str, list[str]]:
+        yesterday = today - timedelta(days=1)
+        while yesterday.weekday() >= 5:
+            yesterday -= timedelta(days=1)
+
+        today_file = self._get_daily_notes_file_path(today)
+        yesterday_file = self._get_daily_notes_file_path(yesterday)
+
+        done: list[str] = []
+        today_done: list[str] = []
+        today_tasks: list[str] = []
+        blockers: list[str] = []
+
+        _done_statuses = {Status.DONE}
+        _active_statuses = {Status.TODO, Status.IN_PROGRESS, Status.CODE_REVIEW}
+
+        if exists(yesterday_file):
+            note = self.parser.parse(yesterday_file)
+            if note:
+                done = [t.description for t in note.planned_tasks if t.status in _done_statuses]
+                done += [t.description for t in note.code_review_tasks if t.status in _done_statuses]
+
+        if exists(today_file):
+            note = self.parser.parse(today_file)
+            if note:
+                today_done = [t.description for t in note.planned_tasks if t.status in _done_statuses]
+                today_done += [t.description for t in note.code_review_tasks if t.status in _done_statuses]
+                today_tasks = [t.description for t in note.planned_tasks if t.status in _active_statuses]
+                today_tasks += [t.description for t in note.code_review_tasks if t.status in _active_statuses]
+                blockers = [t.description for t in note.planned_tasks if t.status == Status.BLOCKED]
+                blockers += [t.description for t in note.code_review_tasks if t.status == Status.BLOCKED]
+
+        return {"done": done, "today_done": today_done, "today": today_tasks, "blockers": blockers}
+
+    def add_note_to_daily(self, date: datetime, text: str) -> None:
+        from taskjournal.services.parser import _SECTION_RULES
+
+        file_path = self._get_daily_notes_file_path(date)
+        if not exists(file_path):
+            raise FileNotFoundError(f"No daily notes for {date.strftime('%Y-%m-%d')}")
+
+        lines = self.file_service.get_lines(file_path)
+        timestamp = datetime.now().strftime("%H:%M")
+
+        in_notes = False
+        last_note_idx = section_header_idx = -1
+
+        for i, raw in enumerate(lines):
+            stripped = raw.strip()
+            for sec_name, pat in _SECTION_RULES:
+                if pat.match(stripped):
+                    in_notes = sec_name == "notes"
+                    if in_notes:
+                        section_header_idx = i
+                    break
+            if in_notes and stripped.startswith("-") and not stripped.startswith("---"):
+                last_note_idx = i
+
+        insert_at = last_note_idx if last_note_idx != -1 else section_header_idx
+        if insert_at == -1:
+            raise ValueError("Notes section not found in daily notes.")
+
+        ext = ".md" if file_path.endswith(".md") else ".txt"
+        prefix = " - " if ext == ".md" else ""
+        lines.insert(insert_at + 1, f"{prefix}{timestamp} {text}\n")
+        self.file_service.write_lines_to_file(file_path, lines)
+        console.print(f"[green]✓[/green] Note added: {timestamp} {text}")

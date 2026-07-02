@@ -1,0 +1,55 @@
+# 📊 Q{{quarter_num}} {{year}} Quarterly Review
+
+**📅 Start Date:** {{start_date}}
+**📅 End Date:** {{end_date}}
+
+**🕒 Total Time Spent:** {{total_time}}
+**📅 Total Worked Days:** {{total_worked_days}}
+**🏖️ Vacation Days:** {{vacation_days}}
+**🏢 Days at Office:** {{days_at_office}}
+**🏠 Days at Home:** {{days_at_home}}
+
+---
+
+**Performed a total number of:** {{total_tasks}} tasks
+**Contributed to:** {{total_epics}} projects
+
+---
+
+## 📝 General Summary
+
+{{summary}}
+
+---
+
+## 📌 Projects I Took Part In
+
+{{epics}}
+
+---
+
+## 🐙 GitHub Contributions
+
+{{github_contributions}}
+
+---
+
+## 🌟 Reflection Questions
+
+**1. What are you most proud of accomplishing this past quarter?**
+-
+
+**2. Were you happy with your performance this past quarter? Why or why not?**
+-
+
+**3. Do you feel challenged by the work delegated or assigned to you?**
+-
+
+**4. What obstacles have you encountered, and how have you addressed them?**
+-
+
+**5. Is there anything your manager or lead can do differently to support you?**
+-
+
+**6. Please provide a summary of your focus areas for the upcoming quarter.**
+-

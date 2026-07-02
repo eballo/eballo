@@ -115,6 +115,16 @@ class JiraService(BaseService):
         jql = f"assignee = currentUser() AND updated >= {six_months_ago_str}"
         return await self._get_issues(jql)
 
+    async def get_current_tasks_assigned_to_me_last_quarter(self) -> list[Task]:
+        quarter_ago_str = (datetime.now() - timedelta(days=91)).strftime("%Y-%m-%d")
+        jql = f"assignee = currentUser() AND updated >= {quarter_ago_str}"
+        return await self._get_issues(jql)
+
+    async def get_current_tasks_assigned_to_me_last_year(self) -> list[Task]:
+        year_ago_str = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+        jql = f"assignee = currentUser() AND updated >= {year_ago_str}"
+        return await self._get_issues(jql)
+
     async def _get_tasks_in_sprint(self, extra_jql: str) -> list[Task]:
         active_sprint = self.get_active_sprint()
         if not active_sprint:

@@ -56,8 +56,8 @@ class TestSetupCLI:
         cli_container: AppContainer,
         invoke_cli: Callable[[list[str]], Result],
     ) -> None:
-        # confirms: paths, jira, github, wifi, data_files (AI is now a prompt, not a confirm)
-        confirms = [True, True, True, True, True]
+        # confirms: paths, jira, github, wifi, screen_time, data_files (AI is a prompt)
+        confirms = [True, True, True, True, False, True]
         prompts = ["md", "/notes", "/backup",               # paths
                    "org", "email@x.com", "token", "123",   # jira
                    "gh-token", "org-name",                  # github
@@ -78,9 +78,9 @@ class TestSetupCLI:
         cli_container: AppContainer,
         invoke_cli: Callable[[list[str]], Result],
     ) -> None:
-        # existing config → yes to update, no to paths/jira/github/wifi, yes to data files
+        # existing config → yes to update, no to paths/jira/github/wifi/screen_time, yes to data files
         # AI section is always a prompt (no confirm for it)
-        confirms = [True, False, False, False, False, True]
+        confirms = [True, False, False, False, False, False, True]
         service_mock, _ = self._mock_wizard(mocker, cli_container, env_exists=True, confirm_values=confirms,
                                             prompt_side_effect=["claude_code", "Obsidian", ""])
 
@@ -96,8 +96,8 @@ class TestSetupCLI:
         cli_container: AppContainer,
         invoke_cli: Callable[[list[str]], Result],
     ) -> None:
-        # confirms: paths, no-jira, no-github, no-wifi, no-data_files
-        confirms = [True, False, False, False, False]
+        # confirms: paths, no-jira, no-github, no-wifi, no-screen_time, no-data_files
+        confirms = [True, False, False, False, False, False]
         # First prompt (format) returns invalid then valid, then the rest
         prompts = ["xml", "md", "/notes", "/backup", "claude_code", "Obsidian", ""]
         service_mock, _ = self._mock_wizard(mocker, cli_container, env_exists=False, confirm_values=confirms,

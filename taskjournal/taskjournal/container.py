@@ -20,6 +20,9 @@ from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
 from taskjournal.services.wifi import WifiService
 from taskjournal.services.calendar.working_days import WorkingDaysService
+from taskjournal.services.recurring import RecurringTasksService
+from taskjournal.services.feedback import FeedbackService
+from taskjournal.services.integrations.screentime import ScreenTimeService
 
 
 class AppContainer(containers.DeclarativeContainer):
@@ -70,7 +73,10 @@ class AppContainer(containers.DeclarativeContainer):
 
     setup_service = providers.Singleton(SetupService)
     task_formatter = providers.Singleton(TaskFormatter)
+    recurring_service = providers.Singleton(RecurringTasksService)
     daily_parser = providers.Singleton(DailyParserService)
+    feedback_service = providers.Singleton(FeedbackService, base_dir=str(config.BASE_DIR))
+    screen_time_service = providers.Singleton(ScreenTimeService, enabled=config.SCREEN_TIME_ENABLED)
 
     # Services with runtime dependencies — factories (args passed at call time)
     holiday_service = providers.Factory(HolidayService)
@@ -109,4 +115,7 @@ class AppContainer(containers.DeclarativeContainer):
         schedule_service=schedule_service,
         file_service=file_service,
         time_service=time_service,
+        recurring_service=recurring_service,
+        feedback_service=feedback_service,
+        screen_time_service=screen_time_service,
     )

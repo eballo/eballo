@@ -2,7 +2,6 @@ from typing import Literal, TypedDict
 from uuid import uuid4
 
 from taskjournal.config import TEMPLATE_FORMAT
-from taskjournal.constants import NORMAL_TASKS
 from taskjournal.models.task import Task, Status
 
 
@@ -31,9 +30,6 @@ class ParseFile:
         for line in lines:
             if line.startswith(self.prefix + "["):
                 description = line[self.size :].strip()
-                if description in NORMAL_TASKS:
-                    # Skip tasks that are not in the normal task list
-                    continue
                 task = Task(
                     id=str(uuid4()),
                     description=description,

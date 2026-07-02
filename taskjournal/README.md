@@ -11,12 +11,15 @@ It helps you:
 - create and finalize daily notes from templates
 - track time spent and working days
 - carry pending tasks forward between days/weeks
-- generate weekly, monthly, half-year, retrospective, and 1:1 reports
+- generate weekly, monthly, quarterly, half-year, and yearly reports
+- compare stats across months or quarters side by side
 - generate AI-assisted summaries
 - pull context from Jira and GitHub
 - manage pull request reviews
+- log professional feedback (received and given)
 - compute holidays and working-day statistics
 - track firefighter duty weeks
+- read macOS Screen Time app usage (opt-in)
 - create backups and migrate legacy files
 
 For the full explanation of features, configuration, and command examples, see:
@@ -47,8 +50,18 @@ For the full explanation of features, configuration, and command examples, see:
 - `wk task done <description>` — mark a task as done (partial match)
 - `wk task wip <description>` — mark a task as work in progress
 - `wk task block <description>` — mark a task as blocked
+- `wk task recurring add <description>` — add a recurring task (injected automatically every day)
+- `wk task recurring add <description> --every monday,wednesday` — recurring on specific weekdays
+- `wk task recurring list` — list all recurring tasks
+- `wk task recurring remove <description>` — remove a recurring task
 
 All task commands accept `--date YYYY-MM-DD` to target a specific day.
+
+### Quick capture (`wk note`, `wk standup`)
+
+- `wk note "text"` — append a timestamped note to today's Notes section without opening the file
+- `wk note "text" --date YYYY-MM-DD` — append to a specific day
+- `wk standup` — show standup summary: yesterday done, done today, today planned, blockers
 
 ### Reports (`wk week`, `wk report`)
 
@@ -56,10 +69,18 @@ All task commands accept `--date YYYY-MM-DD` to target a specific day.
 - `wk week list` — list daily notes for a week with status and time logged
 - `wk week recreate-since --date YYYY-MM-DD` — regenerate all weekly reports from a date up to today
 - `wk report month` — create a monthly report
+- `wk report quarter` — create a quarterly report (Q1–Q4) for the quarter containing today
+- `wk report quarter --date YYYY-MM-DD` — create a quarterly report for a specific quarter
+- `wk report year` — create a yearly report for the current year
+- `wk report year --date YYYY-MM-DD` — create a yearly report for a specific year
 - `wk report half-year` — create a half-year report
 - `wk report retro` — create or open a retrospective file for the current sprint
 - `wk report 1on1 create` — create a 1-on-1 meeting note
 - `wk report 1on1 add-topic -t 'topic'` — append a topic to the next 1-on-1 without opening the file
+- `wk report compare months` — compare monthly stats across the full year in a table
+- `wk report compare months --year 2025` — compare months for a specific year
+- `wk report compare quarters` — compare Q1–Q4 stats in a table
+- `wk report compare quarters --year 2025` — compare quarters for a specific year
 
 ### Statistics (`wk statistics`)
 
@@ -67,6 +88,10 @@ All task commands accept `--date YYYY-MM-DD` to target a specific day.
 - `wk statistics progress` — progress through working days so far
 - `wk statistics real` — actual working days including holidays taken
 - `wk statistics streak` — consecutive journaling streak and all-time record
+- `wk statistics completion` — daily task completion rate over time
+- `wk statistics workload` — hours worked per week, with overload warnings
+- `wk statistics patterns` — productivity patterns (best day, carry-over rate, etc.)
+- `wk statistics tags` — days spent per epic tag
 
 ### Calendar (`wk holidays`, `wk fireman`)
 
@@ -83,6 +108,20 @@ All task commands accept `--date YYYY-MM-DD` to target a specific day.
 - `wk fireman list` — list all registered firefighter weeks for the year
 - `wk fireman upcoming` — show upcoming firefighter weeks
 - `wk fireman summary` — summary of done, remaining, and next firefighter week
+
+### Feedback (`wk feedback`)
+
+Log professional feedback for performance reviews and half-year reports:
+
+- `wk feedback received "text" --from "Name"` — log feedback you received
+- `wk feedback received "text" --from "Name" --context "PR #42"` — with optional context
+- `wk feedback given "text" --to "Name"` — log feedback you gave
+- `wk feedback list` — list all feedback for the current year
+- `wk feedback list --quarter 2` — filter by quarter
+- `wk feedback list --from "Name"` — filter by person
+- `wk feedback list --type received|given` — filter by type
+
+All commands accept `--date YYYY-MM-DD` to set the entry date (default: today).
 
 ### Pull requests (`wk pr`)
 
@@ -112,6 +151,7 @@ These commands are useful for diagnostics and standalone queries:
 - `wk services jira` — query Jira tasks (flags: `--mine`, `--all`, `--code`, `--midreview`, `--month`)
 - `wk services git --stats` — show GitHub commit stats for the organisation
 - `wk services claude` — send a test prompt to the active AI service
+- `wk services screentime` — show today's macOS Screen Time app usage (requires `SCREEN_TIME_ENABLED=true`)
 
 ## Configuration
 
@@ -149,6 +189,7 @@ Key variables:
 | `OFFICE_WIFI` | Office WiFi SSID for automatic location detection |
 | `EDITOR_APP` | macOS app to open notes (e.g. `Obsidian`) |
 | `MANAGER_NAME` | Manager's name, used as default for 1-on-1 notes |
+| `SCREEN_TIME_ENABLED` | `true` to enable macOS Screen Time integration (requires Full Disk Access) |
 
 ## Requirements
 

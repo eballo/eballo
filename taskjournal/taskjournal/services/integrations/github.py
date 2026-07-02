@@ -81,9 +81,11 @@ class GithubService(BaseService):
         )
 
         commit_stats: list[RepoCommitStat] = []
+        repo_count = 0
 
         try:
-            async for repo in self.gh.getiter(f"/orgs/{self.org_name}/repos"):
+            async for repo in self.gh.getiter(f"/orgs/{self.org_name}/repos?type=all&per_page=100"):
+                repo_count += 1
                 repo_name = repo["name"]
 
                 try:
@@ -124,8 +126,14 @@ class GithubService(BaseService):
             logger.error(f"Failed to fetch repos for org '{self.org_name}': {e}")
             return None
 
+        logger.debug(f"Scanned {repo_count} repos in org '{self.org_name}'")
         if not commit_stats:
-            logger.info("No contributions found.")
+            logger.info(f"No contributions found across {repo_count} repos.")
+            if repo_count <= 1:
+                logger.warning(
+                    "Only 1 repo visible — GitHub token may be missing 'repo' scope. "
+                    "Regenerate at https://github.com/settings/tokens with 'repo' checked."
+                )
             return None
 
         commit_stats.sort(key=lambda r: r.percentage, reverse=True)
@@ -224,6 +232,20 @@ class GithubService(BaseService):
         last_month = datetime.now() - timedelta(days=30)
         stats = await self.get_org_commit_stats(
             since_date=last_month, only_contributed=True
+        )
+        return self.get_commit_stats_summary(stats)
+
+    async def get_contributions_last_quarter(self) -> str:
+        last_quarter = datetime.now() - timedelta(days=91)
+        stats = await self.get_org_commit_stats(
+            since_date=last_quarter, only_contributed=True
+        )
+        return self.get_commit_stats_summary(stats)
+
+    async def get_contributions_last_year(self) -> str:
+        last_year = datetime.now() - timedelta(days=365)
+        stats = await self.get_org_commit_stats(
+            since_date=last_year, only_contributed=True
         )
         return self.get_commit_stats_summary(stats)
 

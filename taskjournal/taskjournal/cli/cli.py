@@ -17,6 +17,9 @@ from taskjournal.cli.commands.search import build_app as build_search
 from taskjournal.cli.commands.services import build_app as build_services
 from taskjournal.cli.commands.setup import build_app as build_setup
 from taskjournal.cli.commands.statistics import build_app as build_statistics
+from taskjournal.cli.commands.feedback import build_app as build_feedback
+from taskjournal.cli.commands.note import build_app as build_note
+from taskjournal.cli.commands.standup import build_app as build_standup
 from taskjournal.cli.commands.task import build_app as build_task
 from taskjournal.cli.commands.week import build_app as build_week
 from taskjournal.cli.help_order import GroupedHelpOrder
@@ -48,6 +51,9 @@ def create_app(container: AppContainer | None = None) -> Typer:
 
     app.add_typer(build_daily(), name="daily", rich_help_panel="📋 Daily workflow")
     app.add_typer(build_task(), name="task", rich_help_panel="📋 Daily workflow")
+    app.add_typer(build_note(), name="note", rich_help_panel="📋 Daily workflow")
+    app.add_typer(build_standup(), name="standup", rich_help_panel="📋 Daily workflow")
+    app.add_typer(build_feedback(), name="feedback", rich_help_panel="📋 Daily workflow")
     # Reports
     app.add_typer(build_week(), name="week", rich_help_panel="📊 Reports")
     app.add_typer(build_report(), name="report", rich_help_panel="📊 Reports")

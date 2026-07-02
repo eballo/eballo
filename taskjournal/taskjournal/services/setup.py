@@ -26,6 +26,7 @@ _DEFAULTS = {
     "OPENAI_API_KEY": "your-openai-api-key",
     "HOME_WIFI": PLACEHOLDER_HOME_WIFI,
     "OFFICE_WIFI": PLACEHOLDER_OFFICE_WIFI,
+    "SCREEN_TIME_ENABLED": "false",
     "EDITOR_APP": "Obsidian",
     "MANAGER_NAME": "",
 }
@@ -77,6 +78,9 @@ class SetupService(BaseService):
             "# WiFi location detection\n",
             f'HOME_WIFI={values["HOME_WIFI"]}\n',
             f'OFFICE_WIFI={values["OFFICE_WIFI"]}\n',
+            "\n",
+            "# macOS integrations\n",
+            f'SCREEN_TIME_ENABLED={values["SCREEN_TIME_ENABLED"]}\n',
             "\n",
             "# Editor\n",
             f'EDITOR_APP={values["EDITOR_APP"]}\n',

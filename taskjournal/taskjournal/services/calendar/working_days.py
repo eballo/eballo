@@ -1,6 +1,6 @@
 from calendar import monthrange
 from datetime import date as datetime
-from os.path import exists, join  # Keeping your alias convention
+from os.path import exists, join
 from datetime import timedelta
 from typing import Any
 
@@ -235,6 +235,94 @@ class WorkingDaysService(BaseService):
                 vacation_days += 1
 
         return {
+            "start_date": start_date,
+            "end_date": end_date,
+            "total_time_seconds": total_time_seconds,
+            "total_worked_days": total_worked_days,
+            "vacation_days": vacation_days,
+            "days_at_office": days_at_office,
+            "days_at_home": days_at_home,
+            "daily_summaries": all_daily_summaries,
+        }
+
+    def get_quarter_stats(self, custom_date: datetime, base_dir: str) -> dict[str, Any]:
+        year = custom_date.year
+        quarter_num = (custom_date.month - 1) // 3 + 1
+        start_month = (quarter_num - 1) * 3 + 1
+        end_month = start_month + 2
+        _, last_day = monthrange(year, end_month)
+        start_date = datetime(year, start_month, 1)
+        end_date = datetime(year, end_month, last_day)
+
+        total_time_seconds = days_at_office = days_at_home = 0
+        total_worked_days = vacation_days = 0
+        all_daily_summaries: list[str] = []
+
+        current = start_date
+        while current <= end_date:
+            is_weekend = current.weekday() >= 5
+            week_folder = FileService.get_week_folder(base_dir, current)
+            daily_notes_name = TimeService.get_daily_notes_name(current)
+            daily_file_path = join(week_folder, daily_notes_name)
+
+            if exists(daily_file_path):
+                total_worked_days += 1
+                stats = self._process_daily_file(daily_file_path)
+                total_time_seconds += stats["time_seconds"]
+                if stats["is_office"]:
+                    days_at_office += 1
+                elif stats["is_home"]:
+                    days_at_home += 1
+                all_daily_summaries.extend(stats["summary_lines"])
+            elif not is_weekend:
+                vacation_days += 1
+
+            current += timedelta(days=1)
+
+        return {
+            "quarter_num": quarter_num,
+            "year": year,
+            "start_date": start_date,
+            "end_date": end_date,
+            "total_time_seconds": total_time_seconds,
+            "total_worked_days": total_worked_days,
+            "vacation_days": vacation_days,
+            "days_at_office": days_at_office,
+            "days_at_home": days_at_home,
+            "daily_summaries": all_daily_summaries,
+        }
+
+    def get_year_stats(self, year: int, base_dir: str) -> dict[str, Any]:
+        start_date = datetime(year, 1, 1)
+        end_date = datetime(year, 12, 31)
+
+        total_time_seconds = days_at_office = days_at_home = 0
+        total_worked_days = vacation_days = 0
+        all_daily_summaries: list[str] = []
+
+        current = start_date
+        while current <= end_date:
+            is_weekend = current.weekday() >= 5
+            week_folder = FileService.get_week_folder(base_dir, current)
+            daily_notes_name = TimeService.get_daily_notes_name(current)
+            daily_file_path = join(week_folder, daily_notes_name)
+
+            if exists(daily_file_path):
+                total_worked_days += 1
+                stats = self._process_daily_file(daily_file_path)
+                total_time_seconds += stats["time_seconds"]
+                if stats["is_office"]:
+                    days_at_office += 1
+                elif stats["is_home"]:
+                    days_at_home += 1
+                all_daily_summaries.extend(stats["summary_lines"])
+            elif not is_weekend:
+                vacation_days += 1
+
+            current += timedelta(days=1)
+
+        return {
+            "year": year,
             "start_date": start_date,
             "end_date": end_date,
             "total_time_seconds": total_time_seconds,

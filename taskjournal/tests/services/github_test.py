@@ -25,7 +25,7 @@ def make_fake_getiter(
     """
 
     async def fake_getiter(url: str) -> AsyncIterator[dict[str, Any]]:
-        if url.endswith("/repos"):
+        if url.endswith("/repos") or "/repos?" in url:
             for r in repos:
                 yield dict(r)
         else:
@@ -270,7 +270,7 @@ class TestGithub:
         repos = make_fake_repos(["bad", "good"])
 
         async def fake_getiter(url: str) -> AsyncIterator[dict[str, Any]]:
-            if url.endswith("/repos"):
+            if url.endswith("/repos") or "/repos?" in url:
                 for r in repos:
                     yield r
             elif "bad" in url:

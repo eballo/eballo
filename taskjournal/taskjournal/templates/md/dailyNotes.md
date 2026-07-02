@@ -10,6 +10,7 @@
 
 **Work from:** {% if work_from|lower in ["home","remote","wfh"] %}🏠 Home{% elif work_from|lower in ["office","onsite"]
 %}🏢 Office{% else %}🧭 {{ work_from }}{% endif %}
+{% if energy %}**Energy:** {{ energy }}/5{% endif %}
 
 ---
 

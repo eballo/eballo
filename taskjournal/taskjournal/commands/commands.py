@@ -11,10 +11,13 @@ from taskjournal.models.task import Task
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.ai.base import AIService
 from taskjournal.services.backup import BackupService
+from taskjournal.services.feedback import FeedbackService
 from taskjournal.services.file import FileService
 from taskjournal.services.integrations.github import GithubService
 from taskjournal.services.integrations.jira import JiraService
+from taskjournal.services.integrations.screentime import ScreenTimeService
 from taskjournal.services.parser import DailyParserService
+from taskjournal.services.recurring import RecurringTasksService
 from taskjournal.services.schedule import ScheduleService
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
@@ -35,6 +38,9 @@ class CommandManager:
         schedule_service: ScheduleService,
         file_service: FileService,
         time_service: TimeService,
+        recurring_service: RecurringTasksService | None = None,
+        feedback_service: FeedbackService | None = None,
+        screen_time_service: ScreenTimeService | None = None,
         debug: bool = False,
     ) -> None:
         self.jira = jira
@@ -48,6 +54,9 @@ class CommandManager:
         self.backup_service = backup_service
         self.schedule_service = schedule_service
 
+        self._recurring = recurring_service or RecurringTasksService()
+        self._feedback = feedback_service
+        self._screen_time = screen_time_service
         self._daily = DailyCommands(
             jira=jira,
             github=github,
@@ -57,6 +66,7 @@ class CommandManager:
             file_service=file_service,
             time_service=time_service,
             ai_service=ai_service,
+            recurring_service=self._recurring,
             debug=debug,
         )
         self._tasks = TaskCommands(
@@ -98,14 +108,42 @@ class CommandManager:
         firefighter: bool = False,
         work_from: str | None = None,
         offline: bool = False,
+        energy: int | None = None,
     ) -> None:
         return await self._daily.create_daily_notes(
             create_datetime, force=force, firefighter=firefighter,
-            work_from=work_from, offline=offline,
+            work_from=work_from, offline=offline, energy=energy,
         )
 
     async def finalize_daily_notes(self, custom_date: datetime, no_summary: bool = False, force: bool = False) -> None:
         return await self._daily.finalize_daily_notes(custom_date, no_summary=no_summary, force=force)
+
+    def get_standup(self, today: datetime) -> dict[str, list[str]]:
+        return self._daily.get_standup(today)
+
+    def add_recurring_task(self, description: str, days: list[str] | None = None, monthly: bool = False) -> None:
+        self._recurring.add(description, days, monthly)
+
+    def remove_recurring_task(self, description: str) -> bool:
+        return self._recurring.remove(description)
+
+    def list_recurring_tasks(self) -> list[dict[str, object]]:
+        return self._recurring.list_all()
+
+    def get_completion_stats(self, year: int) -> list[tuple[str, int, int]]:
+        return self._daily.get_completion_stats(year)
+
+    def get_workload_stats(self, year: int) -> list[tuple[str, int]]:
+        return self._daily.get_workload_stats(year)
+
+    def get_pattern_stats(self, year: int) -> dict[str, object]:
+        return self._daily.get_pattern_stats(year)
+
+    def get_tags_stats(self, year: int) -> list[tuple[str, int]]:
+        return self._daily.get_tags_stats(year)
+
+    def add_note_to_daily(self, date: datetime, text: str) -> None:
+        return self._daily.add_note_to_daily(date, text)
 
     def daily_time(self, custom_date: datetime) -> None:
         return self._daily.daily_time(custom_date)
@@ -186,6 +224,15 @@ class CommandManager:
     async def create_month_review(self, custom_date: datetime) -> None:
         return await self._reports.create_month_review(custom_date)
 
+    async def create_quarter_review(self, custom_date: datetime) -> None:
+        return await self._reports.create_quarter_review(custom_date)
+
+    async def create_year_review(self, custom_date: datetime) -> None:
+        return await self._reports.create_year_review(custom_date)
+
+    def compare_periods(self, period: str, year: int) -> list[dict[str, object]]:
+        return self._reports.compare_periods(period, year)
+
     def create_retro(self, custom_date: datetime) -> None:
         return self._reports.create_retro(custom_date)
 
@@ -244,3 +291,36 @@ class CommandManager:
 
     async def run_ai_prompt(self, prompt: str) -> str:
         return await self._admin.run_ai_prompt(prompt)
+
+    # ── Feedback ──────────────────────────────────────────────────────────────
+
+    def add_feedback_received(self, text: str, from_person: str, context: str, date: datetime) -> None:
+        if self._feedback:
+            self._feedback.add_received(text, from_person, context, date)
+
+    def add_feedback_given(self, text: str, to_person: str, context: str, date: datetime) -> None:
+        if self._feedback:
+            self._feedback.add_given(text, to_person, context, date)
+
+    def list_feedback(
+        self,
+        year: int,
+        quarter: int | None = None,
+        person: str | None = None,
+        feedback_type: str | None = None,
+    ) -> list[dict[str, object]]:
+        if not self._feedback:
+            return []
+        return self._feedback.list_feedback(year, quarter=quarter, person=person, feedback_type=feedback_type)
+
+    # ── Screen Time ───────────────────────────────────────────────────────────
+
+    def get_screen_time(self, date: datetime) -> list[tuple[str, int]]:
+        if not self._screen_time:
+            return []
+        return self._screen_time.get_usage(date)
+
+    def get_screen_time_formatted(self, date: datetime) -> str:
+        if not self._screen_time:
+            return ""
+        return self._screen_time.format_usage(date)
