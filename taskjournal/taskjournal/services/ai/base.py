@@ -52,6 +52,7 @@ def build_daily_prompt(note: ParsedNote) -> str:
     pr_reviews = [t.description for t in note.code_review_tasks]
     notes_lines = [l for l in note.notes if l.strip() and l.strip() not in ("-", "---")]
     ff_lines = [l for l in note.firefighter if l.strip() and l.strip() not in ("-", "---")]
+    summary_lines = [l for l in note.summary if l.strip() and l.strip() not in ("-", "---")]
 
     system = (
         "You are a senior software engineer writing a brief personal daily work journal entry. "
@@ -74,6 +75,8 @@ def build_daily_prompt(note: ParsedNote) -> str:
 
     parts: list[str] = [ctx, ""]
 
+    if summary_lines:
+        parts.append("Existing summary notes: " + " ".join(summary_lines))
     if done:
         parts.append("Completed: " + "; ".join(done))
     if wip:

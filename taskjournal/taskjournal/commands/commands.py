@@ -104,8 +104,8 @@ class CommandManager:
             work_from=work_from, offline=offline,
         )
 
-    async def finalize_daily_notes(self, custom_date: datetime, no_summary: bool = False) -> None:
-        return await self._daily.finalize_daily_notes(custom_date, no_summary=no_summary)
+    async def finalize_daily_notes(self, custom_date: datetime, no_summary: bool = False, force: bool = False) -> None:
+        return await self._daily.finalize_daily_notes(custom_date, no_summary=no_summary, force=force)
 
     def daily_time(self, custom_date: datetime) -> None:
         return self._daily.daily_time(custom_date)

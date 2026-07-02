@@ -380,14 +380,14 @@ class DailyCommands:
         except Exception as e:
             logger.debug(f"Could not cancel alarm: {e}")
 
-    async def finalize_daily_notes(self, custom_date: datetime, no_summary: bool = False) -> None:
+    async def finalize_daily_notes(self, custom_date: datetime, no_summary: bool = False, force: bool = False) -> None:
         daily_notes_file = self._get_daily_notes_file_path(custom_date)
 
         if not exists(daily_notes_file):
             logger.error(f"Daily notes file does not exist: {daily_notes_file}")
             return None
 
-        if self.file_service.check_finalized_in_file(daily_notes_file):
+        if not force and self.file_service.check_finalized_in_file(daily_notes_file):
             logger.warning(f"File '{daily_notes_file}' is already finalized.")
             return None
 
