@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.59.0
+
+- Feature/schedule backup
+
 ## 0.58.0
 
 - PR review + ascii title
