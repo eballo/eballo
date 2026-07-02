@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.55.0
+
+- consistency
+
 ## 0.54.0
 
 - user output improvements no logger info
