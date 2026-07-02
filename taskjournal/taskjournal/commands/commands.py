@@ -15,6 +15,7 @@ from taskjournal.services.file import FileService
 from taskjournal.services.integrations.github import GithubService
 from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.parser import DailyParserService
+from taskjournal.services.schedule import ScheduleService
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
 
@@ -31,6 +32,7 @@ class CommandManager:
         parser: DailyParserService,
         task_manager: TaskManager,
         backup_service: BackupService,
+        schedule_service: ScheduleService,
         file_service: FileService,
         time_service: TimeService,
         debug: bool = False,
@@ -44,6 +46,7 @@ class CommandManager:
         self.task_manager = task_manager
         self.task_formatter = task_formatter
         self.backup_service = backup_service
+        self.schedule_service = schedule_service
 
         self._daily = DailyCommands(
             jira=jira,
@@ -78,6 +81,7 @@ class CommandManager:
         )
         self._admin = AdminCommands(
             backup_service=backup_service,
+            schedule_service=schedule_service,
             time_service=time_service,
             jira=jira,
             github=github,
@@ -205,6 +209,12 @@ class CommandManager:
 
     def create_backup(self) -> None:
         return self._admin.create_backup()
+
+    def schedule_backup(self, hour: int, minute: int) -> None:
+        return self._admin.schedule_backup(hour, minute)
+
+    def disable_backup_schedule(self) -> None:
+        return self._admin.disable_backup_schedule()
 
     def show_info(self, today: datetime) -> None:
         return self._admin.show_info(today)

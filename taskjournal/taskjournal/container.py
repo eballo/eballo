@@ -14,6 +14,7 @@ from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.migration import MigrationService
 from taskjournal.services.ai.openai import OpenAIService
 from taskjournal.services.parser import DailyParserService
+from taskjournal.services.schedule import ScheduleService
 from taskjournal.services.setup import SetupService
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
@@ -60,6 +61,7 @@ class AppContainer(containers.DeclarativeContainer):
         backup_dir=config.BACKUP_DIR,
         base_dir=config.BASE_DIR,
     )
+    schedule_service = providers.Singleton(ScheduleService)
     wifi_service = providers.Singleton(
         WifiService,
         home_wifi=config.HOME_WIFI,
@@ -104,6 +106,7 @@ class AppContainer(containers.DeclarativeContainer):
         parser=daily_parser,
         task_manager=task_manager,
         backup_service=backup_service,
+        schedule_service=schedule_service,
         file_service=file_service,
         time_service=time_service,
     )

@@ -185,6 +185,7 @@ def cmd(mocker: MockerFixture) -> CommandManager:
         parser=mocker.MagicMock(name="DailyParserServiceMock"),
         task_manager=mocker.MagicMock(name="TaskManagerMock"),
         backup_service=mocker.MagicMock(name="BackupServiceMock"),
+        schedule_service=mocker.MagicMock(name="ScheduleServiceMock"),
         file_service=mocker.MagicMock(name="FileServiceMock"),
         time_service=time_service,
     )

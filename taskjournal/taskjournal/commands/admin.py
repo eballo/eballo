@@ -15,6 +15,7 @@ from taskjournal.services.backup import BackupService
 from taskjournal.services.integrations.github import GithubService
 from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.logger import console, logger
+from taskjournal.services.schedule import ScheduleService
 from taskjournal.services.time import TimeService
 
 
@@ -23,12 +24,14 @@ class AdminCommands:
     def __init__(
         self,
         backup_service: BackupService,
+        schedule_service: ScheduleService,
         time_service: TimeService,
         jira: JiraService,
         github: GithubService,
         ai_service: AIService,
     ) -> None:
         self.backup_service = backup_service
+        self.schedule_service = schedule_service
         self.time_service = time_service
         self.jira = jira
         self.github = github
@@ -37,6 +40,14 @@ class AdminCommands:
     def create_backup(self) -> None:
         backup_file = self.backup_service.create()
         console.print(f"[green]✓[/green] Backup created at: {backup_file}")
+
+    def schedule_backup(self, hour: int, minute: int) -> None:
+        self.schedule_service.install(hour, minute)
+        console.print(f"[green]✓[/green] Backup schedule installed: runs daily at {hour:02d}:{minute:02d}")
+
+    def disable_backup_schedule(self) -> None:
+        self.schedule_service.uninstall()
+        console.print("[green]✓[/green] Backup schedule removed.")
 
     def show_info(self, today: datetime) -> None:
         day_name = today.strftime("%A")
