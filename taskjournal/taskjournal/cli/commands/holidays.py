@@ -5,7 +5,7 @@ from typer import Argument, Typer, Context, Option
 
 from taskjournal.cli.context import get_today, get_debug
 from taskjournal.config import BASE_DIR, HOLIDAYS_FILE
-from taskjournal.services.holidays import HolidayService
+from taskjournal.services.calendar.holidays import HolidayService
 from taskjournal.services.logger import console, logger
 
 

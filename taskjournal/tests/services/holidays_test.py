@@ -5,7 +5,7 @@ from pathlib import Path
 from pytest_mock import MockerFixture
 
 from taskjournal.config import TEMPLATE_FORMAT
-from taskjournal.services.holidays import HolidayService
+from taskjournal.services.calendar.holidays import HolidayService
 
 
 class TestHolidays:
@@ -159,7 +159,7 @@ class TestHolidays:
         mocker: MockerFixture,
         holiday_service_factory: Callable[[str], HolidayService],
     ) -> None:
-        mocker.patch("taskjournal.services.holidays.TEMPLATE_FORMAT", "txt")
+        mocker.patch("taskjournal.services.calendar.holidays.TEMPLATE_FORMAT", "txt")
         service = holiday_service_factory(temp_holiday_file)
         fake_week_dir = tmp_path / "mock_week_folder"
         mocker.patch(
@@ -178,7 +178,7 @@ class TestHolidays:
         holiday_service_factory: Callable[[str], HolidayService],
     ) -> None:
         # given
-        mock_logger = mocker.patch("taskjournal.services.holidays.logger")
+        mock_logger = mocker.patch("taskjournal.services.calendar.holidays.logger")
 
         # when
         service = holiday_service_factory("missing-file-path.md")
@@ -206,8 +206,8 @@ class TestHolidays:
             def today() -> date:
                 return date(2026, 1, 1)
 
-        mocker.patch("taskjournal.services.holidays.datetime", FakeDate)
-        mock_logger = mocker.patch("taskjournal.services.holidays.logger")
+        mocker.patch("taskjournal.services.calendar.holidays.datetime", FakeDate)
+        mock_logger = mocker.patch("taskjournal.services.calendar.holidays.logger")
 
         # when
         service = holiday_service_factory(str(file_path))
@@ -268,7 +268,7 @@ class TestHolidays:
         file_path = tmp_path / "summary_test.txt"
         file_path.write_text(content, encoding="utf-8")
         service = holiday_service_factory(str(file_path))
-        logger = mocker.patch("taskjournal.services.holidays.logger")
+        logger = mocker.patch("taskjournal.services.calendar.holidays.logger")
 
         # when
         service.summary()
@@ -299,7 +299,7 @@ class TestHolidays:
         file_path = tmp_path / "alignment_test.txt"
         file_path.write_text(content, encoding="utf-8")
         service = holiday_service_factory(str(file_path))
-        logger = mocker.patch("taskjournal.services.holidays.logger")
+        logger = mocker.patch("taskjournal.services.calendar.holidays.logger")
 
         # when
         service.summary_all()
@@ -318,7 +318,7 @@ class TestHolidays:
         holiday_service_factory: Callable[[str], HolidayService],
     ) -> None:
         # given
-        logger = mocker.patch("taskjournal.services.holidays.logger")
+        logger = mocker.patch("taskjournal.services.calendar.holidays.logger")
         # when
         service = holiday_service_factory(temp_holiday_file)
 
@@ -341,7 +341,7 @@ class TestHolidays:
             "taskjournal.services.file.FileService.get_week_folder", return_value=str(tmp_path)
         )
         mocker.patch("builtins.open", side_effect=OSError("disk full"))
-        logger = mocker.patch("taskjournal.services.holidays.logger")
+        logger = mocker.patch("taskjournal.services.calendar.holidays.logger")
 
         # when
         service.populate_files()
@@ -361,7 +361,7 @@ class TestHolidays:
         mocker: MockerFixture,
     ) -> None:
         service = holiday_service_factory(temp_holiday_file)
-        mocker.patch("taskjournal.services.holidays.logger")
+        mocker.patch("taskjournal.services.calendar.holidays.logger")
         service.summary_upcoming(sort_by="category")  # must not raise
 
     def test_summary_upcoming_invalid_sort_raises(
@@ -383,7 +383,7 @@ class TestHolidays:
         mocker: MockerFixture,
     ) -> None:
         service = holiday_service_factory(temp_holiday_file)
-        mocker.patch("taskjournal.services.holidays.logger")
+        mocker.patch("taskjournal.services.calendar.holidays.logger")
         service.summary_past(sort_by="category")
 
     def test_summary_past_sort_by_date(
@@ -393,7 +393,7 @@ class TestHolidays:
         mocker: MockerFixture,
     ) -> None:
         service = holiday_service_factory(temp_holiday_file)
-        mocker.patch("taskjournal.services.holidays.logger")
+        mocker.patch("taskjournal.services.calendar.holidays.logger")
         service.summary_past(sort_by="date")
 
     def test_summary_past_invalid_sort_raises(
@@ -415,7 +415,7 @@ class TestHolidays:
         mocker: MockerFixture,
     ) -> None:
         service = holiday_service_factory(temp_holiday_file)
-        mocker.patch("taskjournal.services.holidays.logger")
+        mocker.patch("taskjournal.services.calendar.holidays.logger")
         service.summary_all(sort_by="category")
 
     def test_summary_all_invalid_sort_raises(
@@ -437,7 +437,7 @@ class TestHolidays:
         mocker: MockerFixture,
     ) -> None:
         f = self._make_holiday_file(tmp_path, "# Past\n2000-01-01 - Old\n")
-        mocker.patch("taskjournal.services.holidays.logger")
+        mocker.patch("taskjournal.services.calendar.holidays.logger")
         service = holiday_service_factory(str(f))
         days, next_date, desc = service.get_days_until_next_holiday()
         assert next_date is None
@@ -451,7 +451,7 @@ class TestHolidays:
         mocker: MockerFixture,
     ) -> None:
         f = self._make_holiday_file(tmp_path, "# Empty\n")
-        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        logger_mock = mocker.patch("taskjournal.services.calendar.holidays.logger")
         service = holiday_service_factory(str(f))
         service.summary()
         logger_mock.info.assert_called_with("No holidays found.")
@@ -463,7 +463,7 @@ class TestHolidays:
         mocker: MockerFixture,
     ) -> None:
         f = self._make_holiday_file(tmp_path, "# Past\n2000-01-01 - Old\n")
-        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        logger_mock = mocker.patch("taskjournal.services.calendar.holidays.logger")
         service = holiday_service_factory(str(f))
         service.summary()
         calls = [str(c) for c in logger_mock.info.call_args_list]
@@ -477,7 +477,7 @@ class TestHolidays:
     ) -> None:
         content = "## Personal days\n# placeholder\n"
         f = self._make_holiday_file(tmp_path, content)
-        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        logger_mock = mocker.patch("taskjournal.services.calendar.holidays.logger")
         service = holiday_service_factory(str(f))
 
         service.add_holiday(str(f), "2026-08-15", "Summer day", "Personal days")
@@ -492,7 +492,7 @@ class TestHolidays:
         mocker: MockerFixture,
     ) -> None:
         f = self._make_holiday_file(tmp_path, "## Public holidays\n")
-        mocker.patch("taskjournal.services.holidays.logger")
+        mocker.patch("taskjournal.services.calendar.holidays.logger")
         service = holiday_service_factory(str(f))
 
         service.add_holiday(str(f), "2026-09-11", "New day", "New Category")
@@ -508,7 +508,7 @@ class TestHolidays:
         mocker: MockerFixture,
     ) -> None:
         f = self._make_holiday_file(tmp_path, "")
-        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        logger_mock = mocker.patch("taskjournal.services.calendar.holidays.logger")
         service = holiday_service_factory(str(f))
 
         service.add_holiday(str(f), "not-a-date", "desc")
@@ -521,7 +521,7 @@ class TestHolidays:
         holiday_service_factory: Callable[[str], HolidayService],
         mocker: MockerFixture,
     ) -> None:
-        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        logger_mock = mocker.patch("taskjournal.services.calendar.holidays.logger")
         service = holiday_service_factory(temp_holiday_file)
 
         service.add_holiday(temp_holiday_file, "2026-12-25", "Dup Christmas")
@@ -535,7 +535,7 @@ class TestHolidays:
         mocker: MockerFixture,
     ) -> None:
         f = self._make_holiday_file(tmp_path, "")
-        logger_mock = mocker.patch("taskjournal.services.holidays.logger")
+        logger_mock = mocker.patch("taskjournal.services.calendar.holidays.logger")
         service = holiday_service_factory(str(f))
 
         service.add_holiday("/nonexistent/path/holidays.md", "2026-07-04", "Test")

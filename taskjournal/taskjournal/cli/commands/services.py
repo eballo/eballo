@@ -13,7 +13,7 @@ from taskjournal.constants import (
     JIRA_MODE_MINE,
     JIRA_MODE_MONTH,
 )
-from taskjournal.services.github import GithubService
+from taskjournal.services.integrations.github import GithubService
 from taskjournal.services.logger import console, logger
 
 

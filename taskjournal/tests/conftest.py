@@ -17,15 +17,15 @@ from taskjournal.commands.commands import CommandManager
 from taskjournal.container import AppContainer
 from taskjournal.services.base import HealthCheckResult, ServiceStatus
 from taskjournal.services.file import FileService
-from taskjournal.services.fireman import FiremanService
-from taskjournal.services.github import GithubService
-from taskjournal.services.holidays import HolidayService
-from taskjournal.services.jira import JiraService
+from taskjournal.services.calendar.fireman import FiremanService
+from taskjournal.services.integrations.github import GithubService
+from taskjournal.services.calendar.holidays import HolidayService
+from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.migration import MigrationService
-from taskjournal.services.claude_code import ClaudeCodeService
+from taskjournal.services.ai.claude_code import ClaudeCodeService
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.wifi import WifiService
-from taskjournal.services.working_days import WorkingDaysService
+from taskjournal.services.calendar.working_days import WorkingDaysService
 
 
 @fixture(autouse=True, scope="session")
@@ -253,8 +253,8 @@ def mock_year_structure(tmp_path: Path, mocker: MockerFixture) -> str:
     )
     holiday_file = year_dir / "holidays.txt"
     holiday_file.write_text(content, encoding="utf-8")
-    mocker.patch("taskjournal.services.working_days.BASE_DIR", str(tmp_path))
-    mocker.patch("taskjournal.services.working_days.HOLIDAYS_FILE", "holidays.txt")
+    mocker.patch("taskjournal.services.calendar.working_days.BASE_DIR", str(tmp_path))
+    mocker.patch("taskjournal.services.calendar.working_days.HOLIDAYS_FILE", "holidays.txt")
     return year
 
 
@@ -265,13 +265,13 @@ def mock_today(mocker: MockerFixture) -> date:
         def today(cls) -> "MockDate":
             return cls(2026, 1, 10)
 
-    mocker.patch("taskjournal.services.working_days.datetime", MockDate)
+    mocker.patch("taskjournal.services.calendar.working_days.datetime", MockDate)
     return date(2026, 1, 10)
 
 
 @fixture
 def jira_service(mocker: MockerFixture) -> JiraService:
-    mocker.patch("taskjournal.services.jira.JIRA", return_value=mocker.MagicMock())
+    mocker.patch("taskjournal.services.integrations.jira.JIRA", return_value=mocker.MagicMock())
     return JiraService(api_token="test-token", email="test@test.com", board_id="TEST", organization="testorg")
 
 

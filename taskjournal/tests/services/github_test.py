@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture
 
 from taskjournal.models.github import RepoCommitStat
 from taskjournal.models.task import Task, Status
-from taskjournal.services.github import GithubService
+from taskjournal.services.integrations.github import GithubService
 
 
 def make_fake_repos(names: Sequence[str]) -> list[dict[str, str]]:
@@ -245,7 +245,7 @@ class TestGithub:
         assert github_service.gh is not None
         github_service.gh.getiter = make_fake_getiter(repos, commits_map)
 
-        with patch("taskjournal.services.github.datetime") as mock_dt:
+        with patch("taskjournal.services.integrations.github.datetime") as mock_dt:
             mock_dt.today.return_value = datetime(2025, 8, 16, 12, 0, 0)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
 
@@ -424,9 +424,9 @@ class TestGithub:
     ) -> None:
         # given
         mocker.patch(
-            "taskjournal.services.github.GitHubAPI", side_effect=Exception("boom")
+            "taskjournal.services.integrations.github.GitHubAPI", side_effect=Exception("boom")
         )
-        logger_mock = mocker.patch("taskjournal.services.github.logger")
+        logger_mock = mocker.patch("taskjournal.services.integrations.github.logger")
 
         # when
         service = GithubService(token="t", org_name="o")
@@ -621,7 +621,7 @@ class TestGithub:
         self, mocker: MockerFixture
     ) -> None:
         # given
-        logger = mocker.patch("taskjournal.services.github.logger")
+        logger = mocker.patch("taskjournal.services.integrations.github.logger")
         # when
         GithubService.print_commit_stats(None)
         # then

@@ -5,7 +5,7 @@ from pytest import mark
 from pytest_mock import MockerFixture
 
 from taskjournal.models.parsed_note import ParsedNote
-from taskjournal.services.working_days import WorkingDaysService
+from taskjournal.services.calendar.working_days import WorkingDaysService
 
 
 class TestWorkingDays:
@@ -162,7 +162,7 @@ class TestWorkingDays:
             def today(cls) -> "MockDate":
                 return cls(2025, 12, 31)
 
-        mocker.patch("taskjournal.services.working_days.datetime", MockDate)
+        mocker.patch("taskjournal.services.calendar.working_days.datetime", MockDate)
 
         # when
         progress = service.get_progress()
@@ -193,7 +193,7 @@ class TestWorkingDays:
             def today(cls) -> "MockDate":
                 return cls(2026, 1, 2)
 
-        mocker.patch("taskjournal.services.working_days.datetime", MockDate)
+        mocker.patch("taskjournal.services.calendar.working_days.datetime", MockDate)
 
         # when
         progress = service.get_progress()
@@ -224,7 +224,7 @@ class TestWorkingDays:
         )
         # Mock os.path.exists to return True for Jan 1st and Jan 2nd
         mocker.patch(
-            "taskjournal.services.working_days.exists",
+            "taskjournal.services.calendar.working_days.exists",
             side_effect=lambda p: "2025-01-01" in p or "2025-01-02" in p,
         )
         # Mock TimeService.get_total_time_from_daily_notes
@@ -236,7 +236,7 @@ class TestWorkingDays:
         mock_data_1 = ParsedNote(work_from="office", summary=["Did A"])
         mock_data_2 = ParsedNote(work_from="home", summary=["Did B"])
         mocker.patch(
-            "taskjournal.services.working_days.DailyParserService.parse",
+            "taskjournal.services.calendar.working_days.DailyParserService.parse",
             side_effect=[mock_data_1, mock_data_2],
         )
 
@@ -278,7 +278,7 @@ class TestWorkingDays:
 
         # Mock os.path.exists to return True for Mon and Tue
         mocker.patch(
-            "taskjournal.services.working_days.exists",
+            "taskjournal.services.calendar.working_days.exists",
             side_effect=lambda p: "2025-01-13" in p or "2025-01-14" in p,
         )
 
@@ -292,7 +292,7 @@ class TestWorkingDays:
         mock_data_mon = ParsedNote(work_from="office")
         mock_data_tue = ParsedNote(work_from="home")
         mocker.patch(
-            "taskjournal.services.working_days.DailyParserService.parse",
+            "taskjournal.services.calendar.working_days.DailyParserService.parse",
             side_effect=[mock_data_mon, mock_data_tue],
         )
 

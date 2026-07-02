@@ -4,20 +4,21 @@ import taskjournal.config as config
 from taskjournal.commands.commands import CommandManager
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.backup import BackupService
-from taskjournal.services.claude_code import ClaudeCodeService
+from taskjournal.services.ai.base import NullAIService
+from taskjournal.services.ai.claude_code import ClaudeCodeService
 from taskjournal.services.file import FileService
-from taskjournal.services.fireman import FiremanService
-from taskjournal.services.github import GithubService
-from taskjournal.services.holidays import HolidayService
-from taskjournal.services.jira import JiraService
+from taskjournal.services.calendar.fireman import FiremanService
+from taskjournal.services.integrations.github import GithubService
+from taskjournal.services.calendar.holidays import HolidayService
+from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.migration import MigrationService
-from taskjournal.services.openai import OpenAIService
+from taskjournal.services.ai.openai import OpenAIService
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.setup import SetupService
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
 from taskjournal.services.wifi import WifiService
-from taskjournal.services.working_days import WorkingDaysService
+from taskjournal.services.calendar.working_days import WorkingDaysService
 
 
 class AppContainer(containers.DeclarativeContainer):
@@ -43,13 +44,15 @@ class AppContainer(containers.DeclarativeContainer):
         api_key=config.OPENAI_API_KEY,
     )
     claude_code = providers.Singleton(ClaudeCodeService)
+    null_ai = providers.Singleton(NullAIService)
 
     # Selects the active AI service based on AI_PROVIDER config value
-    # Accepted values: "openai", "claude_code"
+    # Accepted values: "openai", "claude_code", "none"
     ai_service = providers.Selector(
-        lambda: config.AI_PROVIDER,
+        lambda: config.AI_PROVIDER if config.AI_PROVIDER in ("openai", "claude_code") else "none",
         openai=openai,
         claude_code=claude_code,
+        none=null_ai,
     )
 
     backup_service = providers.Singleton(

@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import datetime, date
 
 from taskjournal.config import TEMPLATE_FORMAT
-from taskjournal.services.fireman import FiremanService
+from taskjournal.services.calendar.fireman import FiremanService
 
 
 class TestFireman:
@@ -36,11 +36,11 @@ class TestFireman:
             encoding="utf-8",
         )
 
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", str(base_dir))
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", str(base_dir))
         mocker.patch(
-            "taskjournal.services.fireman.FIREMAN_WEEKS_FILE", fireman_rel_file
+            "taskjournal.services.calendar.fireman.FIREMAN_WEEKS_FILE", fireman_rel_file
         )
-        logger = mocker.patch("taskjournal.services.fireman.logger")
+        logger = mocker.patch("taskjournal.services.calendar.fireman.logger")
 
         # when
         service = fireman_service_factory(datetime(2025, 1, 9, 9, 0, 0))
@@ -59,8 +59,8 @@ class TestFireman:
         fireman_service_factory: Callable[[datetime], FiremanService],
     ) -> None:
         # given
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", "/tmp/does-not-exist")
-        logger = mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", "/tmp/does-not-exist")
+        logger = mocker.patch("taskjournal.services.calendar.fireman.logger")
 
         # when
         service = fireman_service_factory(datetime(2025, 1, 9, 9, 0, 0))
@@ -80,8 +80,8 @@ class TestFireman:
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n", encoding="utf-8")
 
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", str(tmp_path))
+        mocker.patch("taskjournal.services.calendar.fireman.logger")
 
         # when
         true_service = fireman_service_factory(datetime(2025, 1, 8, 10, 0, 0))
@@ -101,8 +101,8 @@ class TestFireman:
         fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("\n".join(weeks) + "\n", encoding="utf-8")
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", str(tmp_path))
+        mocker.patch("taskjournal.services.calendar.fireman.logger")
         return fireman_service_factory(datetime(2025, 1, 1))
 
     def test_get_all_weeks_returns_sorted_mondays(
@@ -173,8 +173,8 @@ class TestFireman:
         fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n", encoding="utf-8")
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", str(tmp_path))
+        mocker.patch("taskjournal.services.calendar.fireman.logger")
 
         svc = fireman_service_factory(datetime(2025, 1, 1))
         svc.add_week("2025-01-20")
@@ -191,8 +191,8 @@ class TestFireman:
         fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n", encoding="utf-8")
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        logger_mock = mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", str(tmp_path))
+        logger_mock = mocker.patch("taskjournal.services.calendar.fireman.logger")
 
         svc = fireman_service_factory(datetime(2025, 1, 1))
         svc.add_week("2025-01-08")  # same week as 2025-01-06
@@ -209,8 +209,8 @@ class TestFireman:
         fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("", encoding="utf-8")
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        logger_mock = mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", str(tmp_path))
+        logger_mock = mocker.patch("taskjournal.services.calendar.fireman.logger")
 
         svc = fireman_service_factory(datetime(2025, 1, 1))
         svc.add_week("not-a-date")
@@ -223,8 +223,8 @@ class TestFireman:
         mocker: MockerFixture,
         fireman_service_factory: Callable[[datetime], FiremanService],
     ) -> None:
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        logger_mock = mocker.patch("taskjournal.services.fireman.logger")
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", str(tmp_path))
+        logger_mock = mocker.patch("taskjournal.services.calendar.fireman.logger")
 
         svc = fireman_service_factory(datetime(2025, 1, 1))
         svc.add_week("2025-03-10")
@@ -237,9 +237,9 @@ class TestFireman:
         mocker: MockerFixture,
         fireman_service_factory: Callable[[datetime], FiremanService],
     ) -> None:
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        mocker.patch("taskjournal.services.fireman.logger")
-        cp = mocker.patch("taskjournal.services.fireman.console.print")
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", str(tmp_path))
+        mocker.patch("taskjournal.services.calendar.fireman.logger")
+        cp = mocker.patch("taskjournal.services.calendar.fireman.console.print")
 
         svc = fireman_service_factory(datetime(2025, 1, 1))
         svc.summary(date(2025, 6, 1))
@@ -255,9 +255,9 @@ class TestFireman:
         fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n2025-01-20\n2025-02-03\n", encoding="utf-8")
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        mocker.patch("taskjournal.services.fireman.logger")
-        cp = mocker.patch("taskjournal.services.fireman.console.print")
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", str(tmp_path))
+        mocker.patch("taskjournal.services.calendar.fireman.logger")
+        cp = mocker.patch("taskjournal.services.calendar.fireman.console.print")
 
         svc = fireman_service_factory(datetime(2025, 1, 1))
         svc.summary(date(2025, 1, 14))  # after week of Jan 6, before Jan 20
@@ -276,9 +276,9 @@ class TestFireman:
         fireman_file = tmp_path / "2025" / "fireman" / f"fireman_weeks.{TEMPLATE_FORMAT}"
         fireman_file.parent.mkdir(parents=True, exist_ok=True)
         fireman_file.write_text("2025-01-06\n", encoding="utf-8")
-        mocker.patch("taskjournal.services.fireman.BASE_DIR", str(tmp_path))
-        mocker.patch("taskjournal.services.fireman.logger")
-        cp = mocker.patch("taskjournal.services.fireman.console.print")
+        mocker.patch("taskjournal.services.calendar.fireman.BASE_DIR", str(tmp_path))
+        mocker.patch("taskjournal.services.calendar.fireman.logger")
+        cp = mocker.patch("taskjournal.services.calendar.fireman.console.print")
 
         svc = fireman_service_factory(datetime(2025, 1, 1))
         svc.summary(date(2025, 12, 31))

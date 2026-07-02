@@ -8,11 +8,11 @@ from taskjournal.commands.tasks import TaskCommands
 from taskjournal.models.github import RepoCommitStat
 from taskjournal.models.task import Task
 from taskjournal.repositories.task_formatter import TaskFormatter
-from taskjournal.services.ai_service import AIService
+from taskjournal.services.ai.base import AIService
 from taskjournal.services.backup import BackupService
 from taskjournal.services.file import FileService
-from taskjournal.services.github import GithubService
-from taskjournal.services.jira import JiraService
+from taskjournal.services.integrations.github import GithubService
+from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.parser import DailyParserService
 from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
