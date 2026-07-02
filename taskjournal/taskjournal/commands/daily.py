@@ -466,7 +466,7 @@ class DailyCommands:
         )
         if end_idx is None:
             return
-        new_content = content[:end_idx] + [f"\n**AI:** {summary_text}\n", "\n"] + content[end_idx:]
+        new_content = content[:end_idx] + [f"\n{summary_text}\n", "\n"] + content[end_idx:]
         self.file_service.write_lines_to_file(file_path, new_content)
 
     def _read_breaks_seconds(self, content: list[str]) -> int:
