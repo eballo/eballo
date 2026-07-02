@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.56.0
+
+- abstraction
+
 ## 0.55.0
 
 - consistency
