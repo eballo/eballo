@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.61.0
+
+- Feature/daily AI summary (#2.14)
+
 ## 0.60.0
 
 - update readme
