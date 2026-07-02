@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.60.0
+
+- update readme
+
 ## 0.59.0
 
 - Feature/schedule backup
