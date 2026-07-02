@@ -1233,7 +1233,7 @@ wheels = [
 
 [[package]]
 name = "taskjournal"
-version = "0.56.0"
+version = "0.57.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1245,7 +1245,6 @@ dependencies = [
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "rich" },
-    { name = "shellingham" },
     { name = "typer" },
 ]
 
@@ -1275,7 +1274,6 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.3" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "rich", specifier = ">=13.9.4" },
-    { name = "shellingham", specifier = ">=1.5.4" },
     { name = "typer", specifier = ">=0.15.2" },
 ]
 

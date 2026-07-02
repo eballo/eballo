@@ -2,10 +2,11 @@ from datetime import datetime
 
 from taskjournal.commands.admin import AdminCommands
 from taskjournal.commands.daily import DailyCommands
+from taskjournal.commands.pr import PRCommands
 from taskjournal.commands.reports import ReportCommands
 from taskjournal.commands.search import SearchCommands
 from taskjournal.commands.tasks import TaskCommands
-from taskjournal.models.github import RepoCommitStat
+from taskjournal.models.github import PullRequest, RepoCommitStat
 from taskjournal.models.task import Task
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.ai.base import AIService
@@ -70,6 +71,11 @@ class CommandManager:
             debug=debug,
         )
         self._search = SearchCommands()
+        self._pr = PRCommands(
+            github=github,
+            task_commands=self._tasks,
+            task_manager=task_manager,
+        )
         self._admin = AdminCommands(
             backup_service=backup_service,
             time_service=time_service,
@@ -213,6 +219,17 @@ class CommandManager:
         org_name: str,
     ) -> list[RepoCommitStat] | None:
         return await self._admin.get_github_stats(since_date, only_contributed, org_name)
+
+    def get_wifi_location(self) -> str | None:
+        return self.task_manager.get_wifi_location()
+
+    # ── PR ────────────────────────────────────────────────────────────────────
+
+    async def list_prs(self) -> list[PullRequest]:
+        return await self._pr.list_prs()
+
+    async def sync_prs(self, date: datetime) -> int:
+        return await self._pr.sync_prs(date)
 
     async def run_ai_prompt(self, prompt: str) -> str:
         return await self._admin.run_ai_prompt(prompt)
