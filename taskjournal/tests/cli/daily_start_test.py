@@ -27,7 +27,7 @@ class TestDailyStart:
         # then
         assert result.exit_code == 0
         cli_manager.create_daily_notes.assert_called_once_with(
-            datetime(2025, 1, 19, 10, 0, 0), False, False, None, False
+            datetime(2025, 1, 19, 10, 0, 0), False, False, None, False, energy=None
         )
 
     @freeze_time("2025-01-19 10:00:00")
@@ -47,7 +47,7 @@ class TestDailyStart:
         # then
         assert result.exit_code == 0
         cli_manager.create_daily_notes.assert_called_once_with(
-            datetime(2025, 1, 19, 10, 0, 0), False, False, None, False
+            datetime(2025, 1, 19, 10, 0, 0), False, False, None, False, energy=None
         )
         assert "date=None, force=False, offline=False, debug=True" in caplog.text
 
@@ -68,7 +68,7 @@ class TestDailyStart:
         # then
         assert result.exit_code == 0
         cli_manager.create_daily_notes.assert_called_once_with(
-            datetime(2025, 1, 19, 10, 0, 0), True, False, None, False
+            datetime(2025, 1, 19, 10, 0, 0), True, False, None, False, energy=None
         )
         assert (
             "Force option is enabled. Existing daily notes file will be overwritten."
@@ -91,7 +91,7 @@ class TestDailyStart:
         # then
         assert result.exit_code == 0
         cli_manager.create_daily_notes.assert_called_once_with(
-            datetime(2025, 1, 20, 10, 0, 0), False, False, None, False
+            datetime(2025, 1, 20, 10, 0, 0), False, False, None, False, energy=None
         )
 
     @freeze_time("2025-01-19 10:00:00")
@@ -111,7 +111,7 @@ class TestDailyStart:
         # then
         assert result.exit_code == 0
         cli_manager.create_daily_notes.assert_called_once_with(
-            datetime(2025, 1, 20, 10, 0, 0), True, False, None, False
+            datetime(2025, 1, 20, 10, 0, 0), True, False, None, False, energy=None
         )
         assert (
             "Force option is enabled. Existing daily notes file will be overwritten."
@@ -134,7 +134,7 @@ class TestDailyStart:
         # then
         assert result.exit_code == 0
         cli_manager.create_daily_notes.assert_called_once_with(
-            datetime(2025, 1, 19, 10, 0, 0), False, True, None, False
+            datetime(2025, 1, 19, 10, 0, 0), False, True, None, False, energy=None
         )
 
     @freeze_time("2025-01-19 10:00:00")
@@ -153,7 +153,7 @@ class TestDailyStart:
         # then
         assert result.exit_code == 0
         cli_manager.create_daily_notes.assert_called_once_with(
-            datetime(2025, 1, 19, 10, 0, 0), False, False, "home", False
+            datetime(2025, 1, 19, 10, 0, 0), False, False, "home", False, energy=None
         )
 
     def test_daily_start_date__no_valid_value(

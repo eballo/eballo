@@ -25,10 +25,10 @@ Contributed to: {{total_epics}} projects in the last 6 months
 
 🌟 Reflection Questions
 
-1. What are you most proud of accomplishing in the past month?
+1. What are you most proud of accomplishing in the past 6 months?
 -
 
-2. Were you happy with your performance this past month? Why or why not?
+2. Were you happy with your performance this past half year? Why or why not?
 -
 
 3. Do you feel challenged by the work delegated or assigned to you?
@@ -40,7 +40,7 @@ Contributed to: {{total_epics}} projects in the last 6 months
 5. Is there anything your manager or lead can do differently to support you?
 -
 
-6. Please provide a summary of your focus areas for the upcoming month.
+6. Please provide a summary of your focus areas for the upcoming half year.
 -
 
 ---

@@ -5,8 +5,6 @@ from uuid import uuid4
 
 from taskjournal.config import TEMPLATE_FORMAT
 from taskjournal.constants import (
-    BASE_TASKS,
-    EXTENDED_TASKS,
     WORK_OFFICE_DAYS,
     WORK_LOCATION_HOME,
     WORK_LOCATION_OFFICE,
@@ -77,23 +75,7 @@ class TaskManager(BaseService):
 
     @staticmethod
     def get_default_tasks() -> list[Task]:
-        """Return the default tasks based on the day of the week."""
-        tasks: list[Task] = [TaskManager.create_task(desc) for desc in BASE_TASKS]
-
-        now = datetime.now()
-        day_of_week = now.strftime("%A")
-        week_number = now.isocalendar()[1]
-
-        if day_of_week == "Monday":
-            tasks.append(TaskManager.create_task(EXTENDED_TASKS[3]))
-        elif day_of_week == "Wednesday":
-            tasks.append(TaskManager.create_task(EXTENDED_TASKS[0]))
-        elif day_of_week == "Thursday" and week_number % 2 == 0:
-            tasks.append(TaskManager.create_task(EXTENDED_TASKS[1]))
-        elif day_of_week == "Friday":
-            tasks.append(TaskManager.create_task(EXTENDED_TASKS[2]))
-
-        return tasks
+        return []
 
     def get_previous_pending_tasks(
         self,
@@ -152,4 +134,12 @@ class TaskManager(BaseService):
         for task in tasks:
             if task.epic and task.epic.key not in seen:
                 seen[task.epic.key] = task.epic
+        return list(seen.values())
+
+    @staticmethod
+    def get_unique_epic_names(tasks: list[Task]) -> list[str]:
+        seen: dict[str, str] = {}
+        for task in tasks:
+            if task.epic and task.epic.key not in seen:
+                seen[task.epic.key] = task.epic.summary
         return list(seen.values())

@@ -13,6 +13,8 @@ from taskjournal.config import (
     RETRO_TEMPLATE,
     HALF_YEAR_REVIEW_TEMPLATE,
     MONTH_REVIEW_TEMPLATE,
+    QUARTER_REVIEW_TEMPLATE,
+    YEAR_REVIEW_TEMPLATE,
     ONE_ON_ONE_TEMPLATE,
 )
 from taskjournal.services.ai.base import AIService
@@ -190,6 +192,120 @@ class ReportCommands:
 
         self.file_service.write_to_file(month_review_file, month_content)
         console.print(f"[green]✓[/green] Month review created: {month_review_file}")
+
+    async def create_quarter_review(self, custom_date: datetime) -> None:
+        week_folder = self._get_week_folder(custom_date)
+        quarter_review_file = join(week_folder, f"quarter.{TEMPLATE_FORMAT}")
+        quarter_content = self.file_service.load_template(QUARTER_REVIEW_TEMPLATE)
+
+        working_days_service = WorkingDaysService(year=custom_date.year, parser=self.parser, debug=self.debug)
+        stats = working_days_service.get_quarter_stats(custom_date, str(BASE_DIR))
+
+        tasks = await self.jira.get_current_tasks_assigned_to_me_last_quarter()
+        epics = TaskManager.get_unique_epics(tasks)
+
+        async with self.github:
+            github_contributions = await self.github.get_contributions_last_quarter()
+
+        summary = await self.ai_service.summarize(
+            stats["daily_summaries"], stats=stats, is_fireman_week=False, period="quarterly"
+        )
+
+        total_hours, total_minutes = self.time_service.seconds_to_hours_minutes(stats["total_time_seconds"])
+        total_time_str = f"{total_hours}h {total_minutes}m"
+
+        quarter_content = Template(quarter_content).render(
+            quarter_num=str(stats["quarter_num"]),
+            year=str(stats["year"]),
+            start_date=stats["start_date"].strftime("%Y-%m-%d"),
+            end_date=stats["end_date"].strftime("%Y-%m-%d"),
+            total_time=total_time_str,
+            total_worked_days=str(stats["total_worked_days"]),
+            vacation_days=str(stats["vacation_days"]),
+            days_at_office=str(stats["days_at_office"]),
+            days_at_home=str(stats["days_at_home"]),
+            total_tasks=str(len(tasks)),
+            total_epics=str(len(epics)),
+            github_contributions=github_contributions,
+            epics="\n".join(f"{epic}" for epic in epics),
+            summary=summary,
+        )
+
+        self.file_service.write_to_file(quarter_review_file, quarter_content)
+        console.print(f"[green]✓[/green] Quarter review created: {quarter_review_file}")
+
+    async def create_year_review(self, custom_date: datetime) -> None:
+        week_folder = self._get_week_folder(custom_date)
+        year_review_file = join(week_folder, f"year.{TEMPLATE_FORMAT}")
+        year_content = self.file_service.load_template(YEAR_REVIEW_TEMPLATE)
+
+        year = custom_date.year
+        working_days_service = WorkingDaysService(year=year, parser=self.parser, debug=self.debug)
+        stats = working_days_service.get_year_stats(year, str(BASE_DIR))
+
+        tasks = await self.jira.get_current_tasks_assigned_to_me_last_year()
+        epics = TaskManager.get_unique_epics(tasks)
+
+        async with self.github:
+            github_contributions = await self.github.get_contributions_last_year()
+
+        summary = await self.ai_service.summarize(
+            stats["daily_summaries"], stats=stats, is_fireman_week=False, period="yearly"
+        )
+
+        total_hours, total_minutes = self.time_service.seconds_to_hours_minutes(stats["total_time_seconds"])
+        total_time_str = f"{total_hours}h {total_minutes}m"
+
+        year_content = Template(year_content).render(
+            year=str(year),
+            start_date=stats["start_date"].strftime("%Y-%m-%d"),
+            end_date=stats["end_date"].strftime("%Y-%m-%d"),
+            total_time=total_time_str,
+            total_worked_days=str(stats["total_worked_days"]),
+            vacation_days=str(stats["vacation_days"]),
+            days_at_office=str(stats["days_at_office"]),
+            days_at_home=str(stats["days_at_home"]),
+            total_tasks=str(len(tasks)),
+            total_epics=str(len(epics)),
+            github_contributions=github_contributions,
+            epics="\n".join(f"{epic}" for epic in epics),
+            summary=summary,
+        )
+
+        self.file_service.write_to_file(year_review_file, year_content)
+        console.print(f"[green]✓[/green] Year review created: {year_review_file}")
+
+    def compare_periods(self, period: str, year: int) -> list[dict[str, object]]:
+        """Return stats for each month or quarter in the given year for side-by-side display."""
+        working_days_service = WorkingDaysService(year=year, parser=self.parser, debug=self.debug)
+        results: list[dict[str, object]] = []
+
+        if period == "quarter":
+            for q in range(1, 5):
+                anchor = datetime(year, (q - 1) * 3 + 1, 15)
+                stats = working_days_service.get_quarter_stats(anchor, str(BASE_DIR))
+                results.append({
+                    "label": f"Q{q} {year}",
+                    "total_worked_days": stats["total_worked_days"],
+                    "vacation_days": stats["vacation_days"],
+                    "days_at_office": stats["days_at_office"],
+                    "days_at_home": stats["days_at_home"],
+                    "total_time_seconds": stats["total_time_seconds"],
+                })
+        else:
+            for month in range(1, 13):
+                anchor = datetime(year, month, 15)
+                stats = working_days_service.get_month_stats(anchor, str(BASE_DIR))
+                results.append({
+                    "label": anchor.strftime("%b %Y"),
+                    "total_worked_days": stats["total_worked_days"],
+                    "vacation_days": stats["vacation_days"],
+                    "days_at_office": stats["days_at_office"],
+                    "days_at_home": stats["days_at_home"],
+                    "total_time_seconds": stats["total_time_seconds"],
+                })
+
+        return results
 
     def create_retro(self, custom_date: datetime) -> None:
         week_folder = self._get_week_folder(custom_date)

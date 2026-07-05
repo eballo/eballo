@@ -8,7 +8,7 @@
 
 These improvements add no visible functionality but make the code more robust, consistent, and easier to maintain.
 
-### 1.1 More robust parser
+### ✅ 1.1 More robust parser
 
 **Current problem:** `DailyParserService._parse_content` detects sections by substring matching (`"Planned Tasks" in line`). If the template changes slightly, the parser fails silently.
 
@@ -16,7 +16,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.2 Template system consistency
+### ✅ 1.2 Template system consistency
 
 **Current problem:** The project mixes two substitution systems:
 - `Jinja2` for `daily start` (daily notes)
@@ -26,7 +26,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.3 `GithubService` as a context manager
+### ✅ 1.3 `GithubService` as a context manager
 
 **Current problem:** `GithubService` creates an `httpx.AsyncClient` in `__init__` and requires calling `await self.github.close()` manually. Some commands call it (month, half-year) but others don't, and it's easy to forget.
 
@@ -34,7 +34,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.4 Incomplete task statuses in the parser
+### ✅ 1.4 Incomplete task statuses in the parser
 
 **Current problem:** The parser maps `[ ]` → TODO, `[x]` → DONE and `[-]` → BLOCKED, but there is no textual representation for `IN_PROGRESS` or `CODE_REVIEW`. Tasks with these statuses cannot be correctly persisted in the file and are lost when reading.
 
@@ -42,7 +42,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.5 "Legacy" ID in the parser
+### ✅ 1.5 "Legacy" ID in the parser
 
 **Current problem:** When the parser creates `Task` objects, it assigns `id="legacy"` (string literal) instead of a real UUID (`services/parser.py:152`).
 
@@ -50,7 +50,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.6 AI service abstraction
+### ✅ 1.6 AI service abstraction
 
 **Current problem:** `OpenAIService` directly calls `api.openai.com` with the model `gpt-4o-mini` hardcoded. If you want to switch providers (Claude, Gemini, Ollama for local use) you need to modify the class.
 
@@ -58,7 +58,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.7 Improve `wk info`
+### ✅ 1.7 Improve `wk info`
 
 **Current problem:** `wk info` only shows the day and week number.
 
@@ -66,7 +66,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.8 Previous-day completion check on `wk daily start`
+### ✅ 1.8 Previous-day completion check on `wk daily start`
 
 **Current problem:** `wk daily start` creates a new note even if the previous day's note was never finalised (missing end time or daily summary). This silently allows gaps in the journal.
 
@@ -74,7 +74,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.9 Incomplete-day warnings in `wk week report`
+### ✅ 1.9 Incomplete-day warnings in `wk week report`
 
 **Current problem:** `wk week report` generates the report regardless of whether all daily notes for the week are fully finalised, silently producing incomplete summaries.
 
@@ -82,7 +82,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.10 Smarter deduplication when carrying tasks forward
+### ✅ 1.10 Smarter deduplication when carrying tasks forward
 
 **Current problem:** When `wk daily start` carries tasks forward it calls `TaskManager.unique_tasks()`, which deduplicates only by exact description match. Duplicates still slip through when:
 - A Jira task pulled from the API has a slightly different description than the same task already in the previous day's note (e.g. trailing whitespace, casing, or Jira key prefix stripped).
@@ -93,7 +93,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.11 CLI command reorganisation
+### ✅ 1.11 CLI command reorganisation
 
 **Current problem:** The CLI has grown organically and now shows several structural issues:
 
@@ -140,7 +140,7 @@ These improvements add no visible functionality but make the code more robust, c
 
 ---
 
-### 1.12 Split `CommandManager` into domain-specific classes
+### ✅ 1.12 Split `CommandManager` into domain-specific classes
 
 **Current problem:** `commandmanager` in `commands/commands.py` is a ~900-line God Object handling every domain of the application: daily notes, weekly/monthly/half-year reports, 1on1s, retros, search, statistics, streaks, Jira sync, GitHub integration, backup, AI summaries... Every new feature adds more methods to the same class. Finding relevant code requires scrolling through an oversized file with no clear boundaries.
 
@@ -161,7 +161,7 @@ Each class receives only the services it actually needs. `AppContainer` wires th
 
 ---
 
-### 1.13 Parser should return typed models, not raw dicts
+### ✅ 1.13 Parser should return typed models, not raw dicts
 
 **Current problem:** `DailyParserService.parse()` returns `dict[str, Any]`. Callers access fields like `data.get("time_spent", "")`, `data.get("summary", [])`, `data.get("tasks", [])` with string keys and no type safety. A typo in a key silently returns `None`; there is no autocomplete or static analysis support.
 
@@ -181,7 +181,7 @@ class ParsedNote:
 
 ---
 
-### 1.14 Unify the async model
+### ✅ 1.14 Unify the async model
 
 **Current problem:** The codebase mixes sync and async inconsistently:
 - `create_daily_notes` is `async` (needs Jira/GitHub)
@@ -195,7 +195,7 @@ This makes it hard to reason about blocking behaviour and complicates adding new
 
 ---
 
-### 1.15 Register `HolidayService` in the DI container
+### ✅ 1.15 Register `HolidayService` in the DI container
 
 **Current problem:** `HolidayService` is instantiated manually inside `CommandManager` methods using a local `holiday_cache` dict to avoid re-reading the file on each call (e.g. `commands.py:751`). This bypasses the DI container entirely: the service cannot receive injected config, cannot be mocked in tests without patching internals, and the caching logic is duplicated across methods.
 
@@ -203,7 +203,7 @@ This makes it hard to reason about blocking behaviour and complicates adding new
 
 ---
 
-### 1.17 Full `.txt` format support and test coverage
+### ✅ 1.17 Full `.txt` format support and test coverage
 
 **Current problem:** `TEMPLATE_FORMAT` can be `md` or `txt` but `.txt` mode is broken in several places and has no dedicated tests. The project appears to have migrated from `.txt` to `.md` as the default (there is even a `migration.py` that converts `.txt` → `.md`), but the `.txt` path was never fully cleaned up or verified.
 
@@ -236,7 +236,7 @@ This makes it hard to reason about blocking behaviour and complicates adding new
 
 ---
 
-### 1.18 Template review and reorganisation
+### ✅ 1.18 Template review and reorganisation
 
 A full audit of all 12 template files (6 templates × md + txt) revealed multiple problems that need fixing independently of any new feature work.
 
@@ -336,7 +336,7 @@ Current content is confusing ("Proposal topics", "Doing self-review" as body tex
 
 ---
 
-### 1.19 Separate user output from logger
+### ✅ 1.19 Separate user output from logger
 
 **Current problem:** `logger.info()` is used throughout the codebase for messages that are the direct response to the user — confirmations, results, summaries:
 
@@ -373,7 +373,7 @@ These are not operational logs — they are user-facing output. Using `logger.in
 
 Features that bring direct value to the daily workflow.
 
-### 2.1 `wk daily status`
+### ✅ 2.1 `wk daily status`
 
 Show a summary of the current day's status: elapsed time, completed vs. pending tasks, and whether the day has been finalised.
 
@@ -386,7 +386,7 @@ wk daily status
 
 ---
 
-### 2.2 `wk daily task add` and `wk daily task done`
+### ✅ 2.2 `wk daily task add` and `wk daily task done`
 
 Manage tasks from the CLI without opening the file manually.
 
@@ -400,7 +400,7 @@ The command modifies the current day's note file directly.
 
 ---
 
-### 2.3 `wk search`
+### ✅ 2.3 `wk search`
 
 Search by keyword across all note and report files.
 
@@ -414,7 +414,7 @@ Useful for recovering context from past decisions or finding when something was 
 
 ---
 
-### 2.4 `wk statistics streak`
+### ✅ 2.4 `wk statistics streak`
 
 Show the streak of consecutive days of recorded work, the all-time record, and consistency statistics.
 
@@ -426,7 +426,7 @@ wk statistics streak
 
 ---
 
-### 2.5 `wk 1on1 add-topic`
+### ✅ 2.5 `wk report 1on1 add-topic`
 
 Add a topic to the next 1:1 session from the CLI, without opening the file.
 
@@ -439,7 +439,7 @@ Accumulates topics in the current open 1:1 file or creates a new one if it doesn
 
 ---
 
-### 2.6 Explicit offline mode
+### ✅ 2.6 Explicit offline mode
 
 **Current problem:** When Jira or GitHub are not configured, they fail silently and return empty lists. There is no way to know if it's a configuration problem or if there is simply no data.
 
@@ -451,7 +451,7 @@ wk daily start --offline
 
 ---
 
-### 2.7 `wk week list`
+### ✅ 2.7 `wk week list`
 
 List the files for the current week (or a given date) with their status (open, finalised).
 
@@ -465,7 +465,7 @@ wk week list --date 2026-06-01
 
 ---
 
-### 2.8 `wk daily check`
+### ✅ 2.8 `wk daily check`
 
 Validate that the day's note file has the correct format: metadata fields present, task section parseable, consistent times.
 
@@ -479,7 +479,7 @@ wk daily check
 
 ---
 
-### 2.9 `wk daily audit`
+### ✅ 2.9 `wk daily audit`
 
 Scan all finished daily notes and report which ones are missing a start time, end time, or daily summary. Useful for finding gaps in historical records.
 
@@ -495,7 +495,7 @@ wk daily audit --fix   # open each offending file in $EDITOR
 
 ---
 
-### 2.10 macOS alarm on `wk daily start`
+### ✅ 2.10 macOS alarm on `wk daily start`
 
 When `wk daily start` creates a new daily note, schedule a macOS alarm (via `osascript` or `at`) set to fire at the calculated end time so the user gets a system notification when the workday is expected to finish.
 
@@ -509,7 +509,7 @@ The alarm time is derived from the start time plus the configured working hours.
 
 ---
 
-### 2.12 `wk daily sync`
+### ✅ 2.12 `wk daily sync`
 
 Pull the latest Jira tasks assigned to the user and add any that are missing from the current day's note. Keeps the note in sync without manual copy-paste.
 
@@ -525,7 +525,7 @@ Only adds tasks with status `In Progress` or `To Do` by default; a `--all` flag 
 
 ---
 
-### 2.13 `wk doctor`
+### ✅ 2.13 `wk doctor`
 
 Run a full health check of the tool's configuration and external integrations, then print a final summary of what is working, what is misconfigured, and what is missing.
 
@@ -559,7 +559,7 @@ A `--fix` flag can open the `.env` file in `$EDITOR` to resolve missing variable
 
 ---
 
-### 2.14 AI-generated daily summary on `wk daily finish`
+### ✅ 2.14 AI-generated daily summary on `wk daily finish`
 
 **Current problem:** `wk daily finish` only writes the end time and time spent. The `Summary` section of the daily note is left blank, causing `wk daily audit` to flag every finalized note as `"missing summary"`. The `AIService` and `ClaudeCodeService` exist but are never called from `daily finish`.
 
@@ -598,7 +598,7 @@ wk daily finish --no-summary
 
 Features that extend and deepen the existing workflow.
 
-### 2B.1 `wk standup`
+### ✅ 2B.1 `wk standup`
 
 Generate standup text automatically from yesterday's completed tasks and today's planned ones.
 
@@ -613,7 +613,7 @@ wk standup --post   # post directly to Slack
 
 ---
 
-### 2B.2 `wk note`
+### ✅ 2B.2 `wk note`
 
 Append a quick note to today's Notes section without opening the file. The text is a direct positional argument — no subcommand — to make it as fast as possible to capture a thought mid-work.
 
@@ -629,7 +629,7 @@ The note is appended as a timestamped bullet in the Notes section of the daily f
 
 ---
 
-### 2B.3 `wk daily open`
+### ✅ 2B.3 `wk daily open`
 
 Open today's daily note in `$EDITOR` directly.
 
@@ -640,7 +640,7 @@ wk daily open --date 2026-06-28
 
 ---
 
-### 2B.4 `wk quarter report`
+### ✅ 2B.4 `wk quarter report`
 
 Generate a quarterly summary (Q1–Q4) analogous to the half-year report: total hours, tasks, epics, GitHub contributions, and an AI-generated summary.
 
@@ -653,7 +653,7 @@ wk quarter report --quarter 2 --year 2026
 
 ---
 
-### 2B.5 `wk year report`
+### ✅ 2B.5 `wk year report`
 
 Annual summary: hours per month, tasks completed, epics contributed, GitHub contributions, streak record, and a full AI-generated narrative for the year.
 
@@ -666,7 +666,7 @@ wk year report --year 2025
 
 ---
 
-### 2B.6 `wk report compare`
+### ✅ 2B.6 `wk report compare`
 
 Compare two periods side by side to detect workload trends.
 
@@ -678,7 +678,7 @@ wk report compare --from 2026-01 --to 2026-06
 
 ---
 
-### 2B.7 `wk statistics completion`
+### ✅ 2B.7 `wk statistics completion`
 
 Show daily task completion rate over time: how many tasks are planned vs completed each day, best/worst days, and weekly average.
 
@@ -692,7 +692,7 @@ wk statistics completion
 
 ---
 
-### 2B.8 `wk statistics workload`
+### ✅ 2B.8 `wk statistics workload`
 
 Show hours worked per week over time. Detects overload patterns and prints a warning if multiple consecutive weeks exceed a configurable threshold (default 45h).
 
@@ -706,7 +706,7 @@ wk statistics workload --year 2026
 
 ---
 
-### 2B.9 `wk statistics patterns`
+### ✅ 2B.9 `wk statistics patterns`
 
 Identify productivity patterns: best day of the week, most productive time of day, average tasks per day, carry-over rate (tasks that repeat across multiple days without being completed).
 
@@ -719,7 +719,7 @@ wk statistics patterns
 
 ---
 
-### 2B.10 Mood / energy tracking
+### ✅ 2B.10 Mood / energy tracking
 
 Add an optional Energy field (1–5) to the daily notes. Surface it in reports to correlate workload with energy levels.
 
@@ -732,7 +732,7 @@ Visible in `wk statistics workload` and month/quarter reports.
 
 ---
 
-### 2B.11 Recurring tasks
+### ✅ 2B.11 Recurring tasks
 
 Mark a task as recurring so it is automatically included every day (or on specific weekdays) without needing to carry it forward manually.
 
@@ -745,35 +745,7 @@ wk task recurring remove "Check monitoring alerts"
 
 ---
 
-### 2B.12 Time tracking per task
-
-Track time spent on individual tasks. `wk task start` / `wk task stop` log elapsed time against a task description or Jira key, and the data appears in daily and weekly reports.
-
-```bash
-wk task start PROJ-101
-wk task stop
-# PROJ-101: 1h 23m logged
-
-wk task start "Write architecture doc"
-wk task stop
-```
-
----
-
-### 2B.13 Jira bidirectional sync
-
-When a task is marked as done in `wk`, optionally update its status in Jira automatically.
-
-```bash
-wk daily task done PROJ-101          # marks done locally
-# Jira: PROJ-101 moved → Done ✓
-```
-
-Controlled by a config flag `JIRA_SYNC_ON_DONE=true` to avoid accidental updates.
-
----
-
-### 2B.14 `wk pr review`
+### ✅ 2B.14 `wk pr review` (implemented as `wk pr list`)
 
 List open pull requests from your GitHub org that are waiting for your review, directly in the terminal.
 
@@ -785,7 +757,7 @@ wk pr review
 
 ---
 
-### 2B.15 `wk backup schedule`
+### ✅ 2B.15 `wk backup schedule`
 
 Set up an automated periodic backup using `launchd` (macOS) or `cron`.
 
@@ -797,7 +769,7 @@ wk backup schedule --disable
 
 ---
 
-### 2B.16 Epic tags per daily note
+### ✅ 2B.16 Epic tags per daily note
 
 Add a `Tags:` section at the end of each daily note listing the epic names of the Jira tasks worked on that day. This allows tracking approximately how many days were spent on each epic over time.
 
@@ -837,7 +809,7 @@ wk search --tag "Authentication Refactor"
 
 ---
 
-### 2B.17 macOS Screen Time integration
+### ✅ 2B.17 macOS Screen Time integration
 
 Add an optional `App usage` section to the daily note and week report, populated from the macOS Screen Time database.
 
@@ -873,7 +845,7 @@ Zoom               0h 30m   █░░░░░░░░░░░░░░
 
 ---
 
-### 2B.18 `wk feedback` — capture received and given feedback
+### ✅ 2B.18 `wk feedback` — capture received and given feedback
 
 A dedicated command for logging professional feedback throughout the year, so performance reviews and half-year reports have specific, dated evidence to draw from.
 
@@ -1084,8 +1056,6 @@ Fallback: if the API is unreachable (timeout 5s), pick from a local hardcoded li
 | 2B.9 | `wk statistics patterns` | Medium | Medium |
 | 2B.10 | Mood / energy tracking | Low | Medium |
 | 2B.11 | Recurring tasks | Medium | High |
-| 2B.12 | Time tracking per task | High | High |
-| 2B.13 | Jira bidirectional sync | Medium | Medium |
 | 2B.14 | `wk pr review` | Low | Medium |
 | 2B.15 | `wk backup schedule` | Medium | Low |
 | 2B.16 | Epic tags per daily note + `wk statistics tags` | Medium | High |

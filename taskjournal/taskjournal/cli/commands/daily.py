@@ -1,6 +1,8 @@
 from asyncio import run
 from datetime import datetime
+from os import environ
 from os.path import exists
+from subprocess import run as subprocess_run
 from sys import exit as sys_exit
 from typing import Any
 
@@ -106,6 +108,14 @@ def build_app() -> Typer:
             help="Skip all Jira and GitHub calls (no internet required).",
             show_default=True,
         ),
+        energy: int | None = Option(
+            None,
+            "--energy",
+            "-e",
+            help="Energy level for today (1–5).",
+            min=1,
+            max=5,
+        ),
     ) -> None:
         m = get_manager(ctx)
         creation_date = get_today(ctx)
@@ -142,7 +152,7 @@ def build_app() -> Typer:
             else:
                 work_from = choice
 
-        run(m.create_daily_notes(creation_date, force, firefighter, work_from, offline))
+        run(m.create_daily_notes(creation_date, force, firefighter, work_from, offline, energy=energy))
 
     @app.command(
         "finish",
@@ -422,7 +432,7 @@ def build_app() -> Typer:
                 console.print()
 
         console.print()
-        from datetime import date as _date
+        from datetime import date as _date  # noqa: PLC0415
         current_iso = _date.today().isocalendar()
         current_week = current_iso[1] if current_iso[0] == target_year else 0
         expected_complete = current_week - 1 if current_week else 52
@@ -455,5 +465,26 @@ def build_app() -> Typer:
             console.print(Panel(f"[bold]Coverage gaps[/bold] — {week_summary}", expand=False))
             console.print(coverage_table)
             console.print(f"[yellow]⚠[/yellow] Coverage: {len(coverage_gaps)} week(s) with missing files.")
+
+    @app.command(
+        "open",
+        help=(
+            "Open today's daily note in $EDITOR.\n\n"
+            "Examples:\n"
+            "  wk daily open\n"
+            "  wk daily open --date 2026-06-25\n"
+        ),
+    )
+    def daily_open(
+        ctx: Context,
+        date: str | None = Option(None, "--date", help="Date: 'YYYY-MM-DD'."),
+    ) -> None:
+        today = parse_date(date) if date else get_today(ctx)
+        daily_file, _ = TimeService.resolve_daily_notes_file(today)
+        if not exists(daily_file):
+            logger.error(f"No daily notes found for {today.strftime('%Y-%m-%d')}.")
+            sys_exit(1)
+        editor = environ.get("EDITOR", "open")
+        subprocess_run([editor, daily_file])
 
     return app

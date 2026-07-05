@@ -1,9 +1,11 @@
 from asyncio import run
+from datetime import datetime
 
 from sys import exit as sys_exit
+from rich.table import Table
 from typer import Typer, Context, Option
 
-from taskjournal.cli.context import get_manager, get_debug, parse_date
+from taskjournal.cli.context import get_manager, get_debug, get_today, parse_date
 from taskjournal.config import GIT_HUB_ORGANIZATION_NAME
 from taskjournal.constants import (
     JIRA_MODE_ALL,
@@ -118,6 +120,47 @@ def build_app() -> Typer:
                 )
             )
             GithubService.print_commit_stats(commit_stats)
+
+    @app.command(
+        "screentime",
+        help=(
+            "Show macOS Screen Time usage for a given day.\n\n"
+            "Requires SCREEN_TIME_ENABLED=true in .env and Full Disk Access granted to Terminal.\n\n"
+            "Examples:\n"
+            "  wk services screentime\n"
+            "  wk services screentime --date 2026-07-01\n"
+        ),
+    )
+    def screentime(
+        ctx: Context,
+        date: str = Option(None, "--date", help="Date: 'YYYY-MM-DD' (default: today)."),
+    ) -> None:
+        m = get_manager(ctx)
+        target_date = parse_date(date) if date else get_today(ctx)
+        usage = m.get_screen_time(target_date)
+
+        if not usage:
+            console.print("[dim]No Screen Time data available for this date.[/dim]")
+            console.print("[dim]Make sure SCREEN_TIME_ENABLED=true and Full Disk Access is granted.[/dim]")
+            return
+
+        total_seconds = sum(s for _, s in usage)
+        total_h, total_m = divmod(total_seconds // 60, 60)
+        console.print(f"[bold]Screen Time for {target_date.strftime('%Y-%m-%d')}[/bold] — Total: {total_h}h {total_m}m\n")
+
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("App", min_width=20)
+        table.add_column("Time", justify="right", width=10)
+        table.add_column("Share", width=20)
+
+        for app_name, seconds in usage[:15]:
+            h, m = divmod(seconds // 60, 60)
+            share = seconds / total_seconds if total_seconds else 0
+            bar_len = max(1, int(share * 18))
+            bar = "█" * bar_len + "░" * (18 - bar_len)
+            table.add_row(app_name, f"{h}h {m:02d}m", bar)
+
+        console.print(table)
 
     @app.command(
         "claude",

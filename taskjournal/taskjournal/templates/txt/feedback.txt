@@ -1,0 +1,18 @@
+{{date}}
+
+{% if received %}
+Received:
+
+{% for entry in received %}- From: {{entry.from_person}}{% if entry.context %} | Context: {{entry.context}}{% endif %}
+  "{{entry.text}}"
+
+{% endfor %}
+{% endif %}
+{% if given %}
+Given:
+
+{% for entry in given %}- To: {{entry.to_person}}{% if entry.context %} | Context: {{entry.context}}{% endif %}
+  "{{entry.text}}"
+
+{% endfor %}
+{% endif %}

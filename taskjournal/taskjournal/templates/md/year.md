@@ -1,19 +1,29 @@
-# 🗓️ Half Year Review
+# 🗓️ {{year}} Year in Review
+
+**📅 Period:** {{start_date}} → {{end_date}}
+
+**🕒 Total Time Spent:** {{total_time}}
+**📅 Total Worked Days:** {{total_worked_days}}
+**🏖️ Vacation Days:** {{vacation_days}}
+**🏢 Days at Office:** {{days_at_office}}
+**🏠 Days at Home:** {{days_at_home}}
+
+---
 
 **Performed a total number of:** {{total_tasks}} tasks
-**Contributed to:** {{total_epics}} projects in the last 6 months
+**Contributed to:** {{total_epics}} projects
+
+---
+
+## 📝 General Summary
+
+{{summary}}
 
 ---
 
 ## 📌 Projects I Took Part In
 
 {{epics}}
-
----
-
-## ✅ Tasks I Completed
-
-{{tasks}}
 
 ---
 
@@ -25,22 +35,22 @@
 
 ## 🌟 Reflection Questions
 
-**1. What are you most proud of accomplishing in the past 6 months?**
+**1. What are you most proud of accomplishing this year?**
 -
 
-**2. Were you happy with your performance this past half year? Why or why not?**
+**2. Were you happy with your performance this year? Why or why not?**
 -
 
-**3. Do you feel challenged by the work delegated or assigned to you?**
+**3. What were the most important things you learned this year?**
 -
 
 **4. What obstacles have you encountered, and how have you addressed them?**
 -
 
-**5. Is there anything your manager or lead can do differently to support you?**
+**5. What would you do differently if you could redo this year?**
 -
 
-**6. Please provide a summary of your focus areas for the upcoming half year.**
+**6. Please provide a summary of your focus areas for the upcoming year.**
 -
 
 ---
@@ -96,21 +106,14 @@
 
 ---
 
-## 🗣️ 8. Communication
-
-- **Meeting Contributions:**
-- **Written Communication:**
-
----
-
-## 🎯 9. Goals and Progress
+## 🎯 8. Goals and Progress
 
 - **Personal Goals:**
 - **Team Goals:**
 
 ---
 
-## 🎉 10. Notable Events
+## 🎉 9. Notable Events
 
 - **Critical Events:**
 - **Recognition:**

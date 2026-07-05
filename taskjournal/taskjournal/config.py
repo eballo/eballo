@@ -37,12 +37,24 @@ RETRO_TEMPLATE = os.path.join(BASE_PROJECT, f"{TEMPLATES_DIR}/retro.{TEMPLATE_FO
 ONE_ON_ONE_TEMPLATE = os.path.join(
     BASE_PROJECT, f"{TEMPLATES_DIR}/1on1.{TEMPLATE_FORMAT}"
 )
+QUARTER_REVIEW_TEMPLATE = os.path.join(
+    BASE_PROJECT, f"{TEMPLATES_DIR}/quarter.{TEMPLATE_FORMAT}"
+)
+YEAR_REVIEW_TEMPLATE = os.path.join(
+    BASE_PROJECT, f"{TEMPLATES_DIR}/year.{TEMPLATE_FORMAT}"
+)
+FEEDBACK_TEMPLATE = os.path.join(
+    BASE_PROJECT, f"{TEMPLATES_DIR}/feedback.{TEMPLATE_FORMAT}"
+)
 HOLIDAYS_TEMPLATE = os.path.join(
     BASE_PROJECT, f"{TEMPLATES_DIR}/holidays.{TEMPLATE_FORMAT}"
 )
 FIREMAN_WEEKS_TEMPLATE = os.path.join(
     BASE_PROJECT, f"{TEMPLATES_DIR}/fireman_weeks.{TEMPLATE_FORMAT}"
 )
+
+# Screen Time
+SCREEN_TIME_ENABLED = os.getenv("SCREEN_TIME_ENABLED", "false").lower() == "true"
 
 # Jira
 JIRA_ORGANIZATION = os.getenv("JIRA_ORGANIZATION", "organization")
