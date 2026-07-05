@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.62.0
+
+- Features/horizon 2
+
 ## 0.61.0
 
 - Feature/daily AI summary (#2.14)
