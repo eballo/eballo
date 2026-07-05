@@ -11,6 +11,7 @@ from rich.prompt import Prompt
 from rich.table import Table
 from typer import Context, Option, Typer
 
+from taskjournal.cli.animations import run_marquee
 from taskjournal.cli.context import get_debug, get_manager, get_today, parse_date
 from taskjournal.models.task import Status
 from taskjournal.services.file import FileService
@@ -154,6 +155,10 @@ def build_app() -> Typer:
 
         run(m.create_daily_notes(creation_date, force, firefighter, work_from, offline, energy=energy))
 
+        week = creation_date.isocalendar()[1]
+        day_label = creation_date.strftime("%A %Y-%m-%d")
+        run_marquee(f"Good morning! Week {week} · {day_label} · Let's make it count 🚀", duration=3.0)
+
     @app.command(
         "finish",
         help=(
@@ -193,6 +198,9 @@ def build_app() -> Typer:
             custom_date = parse_date(date, _DATETIME_FMT)
 
         run(m.finalize_daily_notes(custom_date, no_summary=no_summary, force=force))
+
+        day_label = custom_date.strftime("%A %Y-%m-%d")
+        run_marquee(f"Day complete · {day_label} · Great work today! 🎉", style="bold magenta", duration=3.5)
 
     @app.command(
         "time",

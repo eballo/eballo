@@ -1,6 +1,8 @@
 from importlib.metadata import version, PackageNotFoundError
 from os.path import exists, isdir
 
+from taskjournal.cli.animations import run_marquee
+
 from rich.panel import Panel
 from rich.table import Table
 from typer import Typer, Context, Option
@@ -135,5 +137,9 @@ def build_app() -> Typer:
         table.add_row("Manager", MANAGER_NAME or "[dim]not set[/dim]")
 
         console.print(table)
+
+        week = today.isocalendar()[1]
+        day_label = today.strftime("%A, %d %B %Y")
+        run_marquee(f"📅 Week {week} · {day_label} · wk v{pkg_version}", style="dim", duration=2.5)
 
     return app
