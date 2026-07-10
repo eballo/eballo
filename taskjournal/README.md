@@ -43,6 +43,17 @@ For the full explanation of features, configuration, and command examples, see:
 - `wk daily audit` — scan all notes for a year and list incomplete ones
 - `wk daily audit --fix` — interactively fix incomplete notes (set end time, summary)
 
+`wk daily start` and `wk daily finish` display a brief animated marquee after completing (transient — leaves no trace in the terminal).
+
+### Alarm management (`wk alarm`)
+
+`wk daily start` automatically creates two macOS Reminders: a calm-down notice 30 minutes before the estimated finish, and a wrap-up notice at the estimated finish. `wk daily finish` cancels both. This feature can be toggled via `wk setup` or by setting `DAILY_ALARMS_ENABLED=false` in `.env`.
+
+- `wk alarm list` — list tracked end-of-day alarms for the past 4 weeks (shows date, time, message, and status)
+- `wk alarm set --time HH:MM [--date YYYY-MM-DD] [--message "text"]` — set or reschedule an alarm for a given date
+- `wk alarm cancel [--date YYYY-MM-DD]` — cancel the alarm for a given date (defaults to today)
+- `wk alarm cancel --all` — cancel every tracked alarm, including stale ones
+
 ### Task management (`wk task`)
 
 - `wk task list` — list all tasks for today with status icons
@@ -123,6 +134,10 @@ Log professional feedback for performance reviews and half-year reports:
 
 All commands accept `--date YYYY-MM-DD` to set the entry date (default: today).
 
+### Fun (`wk joke`)
+
+- `wk joke` — fetch and display a random joke from jokeapi.dev (with a spinner between setup and punchline); falls back to a local list if offline
+
 ### Pull requests (`wk pr`)
 
 - `wk pr list` — list open PRs waiting for your review
@@ -190,6 +205,7 @@ Key variables:
 | `EDITOR_APP` | macOS app to open notes (e.g. `Obsidian`) |
 | `MANAGER_NAME` | Manager's name, used as default for 1-on-1 notes |
 | `SCREEN_TIME_ENABLED` | `true` to enable macOS Screen Time integration (requires Full Disk Access) |
+| `DAILY_ALARMS_ENABLED` | `true` (default) to create macOS Reminders on `wk daily start`; set to `false` to disable |
 
 ## Requirements
 

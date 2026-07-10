@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, date as date_t, time as time_t
-from os import makedirs, listdir, walk
-from os.path import basename, dirname, exists, isdir, join
+from os import makedirs, listdir, walk, getuid
+from os.path import basename, dirname, exists, expanduser, isdir, join
 from pathlib import Path
+from re import match as re_match
 from subprocess import run as subprocess_run
 from sys import platform
 
@@ -28,6 +29,12 @@ from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
 from taskjournal.services.utils import FormatUtils
 
+_LAUNCH_AGENTS_DIR = expanduser("~/Library/LaunchAgents")  # for backward-compat cancel of old launchd alarms
+_APPLESCRIPT_MONTHS = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+)
+
 
 class DailyCommands:
 
@@ -42,9 +49,11 @@ class DailyCommands:
         time_service: TimeService,
         ai_service: AIService,
         recurring_service: RecurringTasksService | None = None,
+        daily_alarms_enabled: bool = True,
         debug: bool = False,
     ) -> None:
         self.debug = debug
+        self._alarms_enabled = daily_alarms_enabled
         self.jira = jira
         self.github = github
         self.task_formatter = task_formatter
@@ -329,7 +338,7 @@ class DailyCommands:
         days_before_today = min(weekday, 5)
         expected_seconds = days_before_today * 8 * 3600
         extra_seconds = accumulated_seconds - expected_seconds
-        today_work_seconds = max(0, 8 * 3600 - extra_seconds)
+        today_work_seconds = min(8 * 3600, max(0, 8 * 3600 - extra_seconds))
         finish = self.time_service.estimated_finish_time(create_datetime, accumulated_seconds, days_before_today)
 
         accumulated_h, accumulated_m = TimeService.seconds_to_hours_minutes(accumulated_seconds)
@@ -352,25 +361,45 @@ class DailyCommands:
             f"Today: {today_h}h {today_m:02d}m work + 1h lunch"
             f"  →  estimated finish {finish.strftime('%H:%M')}"
         )
-        alarm_file = join(week_folder, f".alarm_job_{create_datetime.strftime('%Y-%m-%d')}")
-        self._schedule_macos_alarm(finish, alarm_file)
+        if self._alarms_enabled:
+            date_str = create_datetime.strftime("%Y-%m-%d")
+            calm_time = finish - timedelta(minutes=30)
+            calm_file = join(week_folder, f".alarm_job_{date_str}_{calm_time.strftime('%H%M')}")
+            finish_file = join(week_folder, f".alarm_job_{date_str}_{finish.strftime('%H%M')}")
+            self._schedule_macos_alarm(calm_time, calm_file, "It is time to calm down")
+            self._schedule_macos_alarm(finish, finish_file, "Time to wrap up!")
         return None
 
-    def _schedule_macos_alarm(self, finish_time: datetime, alarm_file: str) -> None:
+    def _schedule_macos_alarm(
+        self, finish_time: datetime, alarm_file: str, message: str = "Time to wrap up!"
+    ) -> None:
         if platform != "darwin":
             return
         finish_str = finish_time.strftime("%H:%M")
-        script = 'osascript -e \'display notification "Time to wrap up!" with title "wk journal"\''
+        date_str = finish_time.strftime("%Y-%m-%d")
+        tag = f"wk:{date_str}:{finish_str}"
+        seconds = finish_time.hour * 3600 + finish_time.minute * 60
+        month_name = _APPLESCRIPT_MONTHS[finish_time.month - 1]
+        script = (
+            f'tell application "Reminders"\n'
+            f'    set theDate to current date\n'
+            f'    set year of theDate to {finish_time.year}\n'
+            f'    set day of theDate to 1\n'
+            f'    set month of theDate to {month_name}\n'
+            f'    set day of theDate to {finish_time.day}\n'
+            f'    set time of theDate to {seconds}\n'
+            f'    make new reminder at end of default list'
+            f' with properties {{name:"{message}", body:"{tag}", due date:theDate}}\n'
+            f'end tell'
+        )
         try:
-            from re import compile as re_compile
-            result = subprocess_run(["at", finish_str], input=script.encode(), capture_output=True)
+            result = subprocess_run(["osascript", "-e", script], capture_output=True, timeout=10)
             if result.returncode == 0:
-                console.print(f"[dim]Alarm set for {finish_str} — end of scheduled workday[/dim]")
-                m = re_compile(r"job\s+(\d+)").search(result.stderr.decode())
-                if m:
-                    Path(alarm_file).write_text(m.group(1))
+                Path(alarm_file).write_text(f"reminder|{date_str}|{finish_str}|{message}")
+                day_label = finish_time.strftime("%a %d %b")
+                console.print(f"[dim]Alarm set for {day_label} at {finish_str} — {message}[/dim]")
             else:
-                logger.debug(f"Could not schedule alarm: {result.stderr.decode().strip()}")
+                logger.debug(f"Could not create reminder: {result.stderr.decode().strip()}")
         except Exception as e:
             logger.debug(f"Could not schedule alarm: {e}")
 
@@ -381,15 +410,154 @@ class DailyCommands:
         if not alarm_path.exists():
             return
         try:
-            job_id = alarm_path.read_text().strip()
-            result = subprocess_run(["atrm", job_id], capture_output=True)
-            alarm_path.unlink()
-            if result.returncode == 0:
-                console.print(f"[dim]Alarm cancelled (job {job_id})[/dim]")
+            content = alarm_path.read_text().strip()
+            if content.startswith("reminder|"):
+                parts = content.split("|", 3)
+                second = parts[1] if len(parts) > 1 else ""
+                # New format: reminder|YYYY-MM-DD|HH:MM|message  (tag = wk:date:HH:MM)
+                # Old format: reminder|wk — ... (name-based)
+                if re_match(r"\d{4}-\d{2}-\d{2}", second):
+                    time_part = parts[2] if len(parts) > 2 else ""
+                    tag = f"wk:{second}:{time_part}"
+                    script = (
+                        f'tell application "Reminders"\n'
+                        f'    set toDelete to (every reminder whose body is "{tag}")\n'
+                        f'    repeat with r in toDelete\n'
+                        f'        delete r\n'
+                        f'    end repeat\n'
+                        f'end tell'
+                    )
+                else:
+                    script = (
+                        f'tell application "Reminders"\n'
+                        f'    set toDelete to (every reminder whose name is "{second}")\n'
+                        f'    repeat with r in toDelete\n'
+                        f'        delete r\n'
+                        f'    end repeat\n'
+                        f'end tell'
+                    )
+                subprocess_run(["osascript", "-e", script], capture_output=True, timeout=10)
+            elif "|" in content:
+                label = content.split("|")[0]
+                plist_path = join(_LAUNCH_AGENTS_DIR, f"{label}.plist")
+                subprocess_run(["launchctl", "bootout", f"gui/{getuid()}", label], capture_output=True)
+                Path(plist_path).unlink(missing_ok=True)
             else:
-                logger.debug(f"Could not cancel alarm job {job_id}: {result.stderr.decode().strip()}")
+                subprocess_run(["kill", content.split(":")[0]], capture_output=True)
+            alarm_path.unlink()
+            console.print("[dim]Alarm cancelled[/dim]")
         except Exception as e:
             logger.debug(f"Could not cancel alarm: {e}")
+
+    def _pending_wk_tags(self) -> set[str]:
+        script = (
+            'tell application "Reminders"\n'
+            '    set bs to {}\n'
+            '    repeat with r in (every reminder whose completed is false)\n'
+            '        set b to body of r\n'
+            '        if b starts with "wk:" then set end of bs to b\n'
+            '    end repeat\n'
+            '    return bs\n'
+            'end tell'
+        )
+        try:
+            result = subprocess_run(
+                ["osascript", "-e", script], capture_output=True, text=True, timeout=10
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                return set()
+            return {t.strip() for t in result.stdout.strip().split(",")}
+        except Exception:
+            return set()
+
+    def list_alarms(self, weeks_back: int = 4) -> list[dict[str, object]]:
+        now = datetime.now()
+        pending_tags = self._pending_wk_tags()
+        results: list[dict[str, object]] = []
+        seen: set[str] = set()
+        for offset in range(weeks_back + 1):
+            day = now - timedelta(weeks=offset)
+            folder = self.file_service.get_week_folder(BASE_DIR, day)
+            try:
+                for fname in sorted(listdir(folder)):
+                    if not fname.startswith(".alarm_job_"):
+                        continue
+                    date_str = fname[len(".alarm_job_"):len(".alarm_job_") + 10]
+                    if fname in seen:
+                        continue
+                    seen.add(fname)
+                    try:
+                        content = Path(join(folder, fname)).read_text().strip()
+                    except OSError:
+                        continue
+                    scheduled_time: str | None
+                    message: str | None = None
+                    if content.startswith("reminder|"):
+                        parts = content.split("|", 3)
+                        second = parts[1] if len(parts) > 1 else ""
+                        if re_match(r"\d{4}-\d{2}-\d{2}", second):
+                            job_id = second
+                            scheduled_time = parts[2] if len(parts) > 2 else None
+                            message = parts[3] if len(parts) > 3 else None
+                            tag = f"wk:{job_id}:{scheduled_time}" if scheduled_time else f"wk:{job_id}"
+                            is_alive = tag in pending_tags
+                        else:
+                            job_id = second
+                            scheduled_time = parts[2] if len(parts) > 2 else None
+                            is_alive = job_id in {t.replace("wk:", "") for t in pending_tags}
+                    elif "|" in content:
+                        job_id, scheduled_time = content.split("|", 1)
+                        is_alive = subprocess_run(
+                            ["launchctl", "list", job_id], capture_output=True, timeout=5
+                        ).returncode == 0
+                    else:
+                        parts_c = content.split(":", 1)
+                        job_id = parts_c[0]
+                        scheduled_time = parts_c[1] if len(parts_c) > 1 else None
+                        is_alive = subprocess_run(
+                            ["kill", "-0", job_id], capture_output=True
+                        ).returncode == 0
+                    try:
+                        is_past = datetime.strptime(date_str, "%Y-%m-%d").date() < now.date()
+                    except ValueError:
+                        is_past = False
+                    results.append({
+                        "date": date_str,
+                        "job_id": job_id,
+                        "scheduled": scheduled_time,
+                        "message": message,
+                        "is_past": is_past,
+                        "is_alive": is_alive,
+                    })
+            except (FileNotFoundError, OSError):
+                pass
+        results.sort(key=lambda x: str(x["date"]))
+        return results
+
+    def set_alarm(
+        self, date: datetime, alarm_time: datetime, message: str = "Time to wrap up!"
+    ) -> None:
+        time_suffix = alarm_time.strftime("%H%M")
+        alarm_file = join(
+            self._get_week_folder(date),
+            f".alarm_job_{date.strftime('%Y-%m-%d')}_{time_suffix}",
+        )
+        if Path(alarm_file).exists():
+            self._cancel_macos_alarm(alarm_file)
+        self._schedule_macos_alarm(alarm_time, alarm_file, message)
+
+    def cancel_alarm_for_date(self, date: datetime) -> bool:
+        folder = self.file_service.get_week_folder(BASE_DIR, date)
+        prefix = f".alarm_job_{date.strftime('%Y-%m-%d')}"
+        found = False
+        try:
+            for fname in listdir(folder):
+                if fname.startswith(prefix):
+                    self._cancel_macos_alarm(join(folder, fname))
+                    found = True
+        except (FileNotFoundError, OSError):
+            pass
+        return found
 
     async def finalize_daily_notes(self, custom_date: datetime, no_summary: bool = False, force: bool = False) -> None:
         daily_notes_file = self._get_daily_notes_file_path(custom_date)
@@ -429,8 +597,7 @@ class DailyCommands:
 
         console.print(f"[green]✓[/green] End time: {final_time.strftime('%H:%M')}  |  Time spent: {int(hours):02}:{int(minutes):02}")
 
-        alarm_file = join(dirname(daily_notes_file), f".alarm_job_{final_time.strftime('%Y-%m-%d')}")
-        self._cancel_macos_alarm(alarm_file)
+        self.cancel_alarm_for_date(final_time)
 
         await self._generate_and_write_summary(daily_notes_file, no_summary)
 
@@ -635,7 +802,7 @@ class DailyCommands:
 
         self.file_service.write_lines_to_file(file_path, lines)
 
-    def _iter_daily_notes(self, year: int):  # type: ignore[return]
+    def _iter_daily_notes(self, year: int):  # type: ignore[no-untyped-def]
         year_dir = join(str(BASE_DIR), str(year))
         if not exists(year_dir):
             return

@@ -4,6 +4,7 @@ from typer import Exit, Typer, Context, Option
 
 from taskjournal.cli import version as app_version
 from taskjournal.container import AppContainer
+from taskjournal.cli.commands.alarm import build_app as build_alarm
 from taskjournal.cli.commands.backup import build_app as build_backup
 from taskjournal.cli.commands.daily import build_app as build_daily
 from taskjournal.cli.commands.doctor import build_app as build_doctor
@@ -51,6 +52,7 @@ def create_app(container: AppContainer | None = None) -> Typer:
     )
 
     app.add_typer(build_daily(), name="daily", rich_help_panel="📋 Daily workflow")
+    app.add_typer(build_alarm(), name="alarm", rich_help_panel="📋 Daily workflow")
     app.add_typer(build_task(), name="task", rich_help_panel="📋 Daily workflow")
     app.add_typer(build_note(), name="note", rich_help_panel="📋 Daily workflow")
     app.add_typer(build_standup(), name="standup", rich_help_panel="📋 Daily workflow")
