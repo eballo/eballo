@@ -1540,3 +1540,169 @@ class TestCommands:
         mocker.patch.object(cmd.ai_service, "summarize", new_callable=AsyncMock, return_value="AI result")
         result = await cmd.run_ai_prompt("Summarize this")
         assert result == "AI result"
+
+    def test_list_alarms__delegates(self, cmd: CommandManager, mocker: MockerFixture) -> None:
+        expected = [{"date": "2025-01-15", "job_id": "abc"}]
+        mocker.patch.object(cmd._daily, "list_alarms", return_value=expected)
+        result = cmd.list_alarms(weeks_back=2)
+        assert result == expected
+        cmd._daily.list_alarms.assert_called_once_with(2)
+
+    def test_set_alarm__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        set_alarm = mocker.patch.object(cmd._daily, "set_alarm")
+        alarm_time = fixed_datetime.replace(hour=17, minute=30)
+        cmd.set_alarm(fixed_datetime, alarm_time, "Go home!")
+        set_alarm.assert_called_once_with(fixed_datetime, alarm_time, "Go home!")
+
+    def test_cancel_alarm_for_date__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._daily, "cancel_alarm_for_date", return_value=True)
+        result = cmd.cancel_alarm_for_date(fixed_datetime)
+        assert result is True
+
+    @mark.asyncio
+    async def test_create_quarter_review__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        create = mocker.patch.object(
+            cmd._reports, "create_quarter_review", new_callable=AsyncMock
+        )
+        await cmd.create_quarter_review(fixed_datetime)
+        create.assert_awaited_once_with(fixed_datetime)
+
+    @mark.asyncio
+    async def test_create_year_review__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        create = mocker.patch.object(
+            cmd._reports, "create_year_review", new_callable=AsyncMock
+        )
+        await cmd.create_year_review(fixed_datetime)
+        create.assert_awaited_once_with(fixed_datetime)
+
+    def test_compare_periods__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        expected = [{"label": "Q1 2025", "total_worked_days": 60}]
+        mocker.patch.object(cmd._reports, "compare_periods", return_value=expected)
+        result = cmd.compare_periods("quarter", 2025)
+        assert result == expected
+        cmd._reports.compare_periods.assert_called_once_with("quarter", 2025)
+
+    def test_get_wifi_location__delegates_to_task_manager(
+        self, cmd: CommandManager
+    ) -> None:
+        cmd.task_manager.get_wifi_location.return_value = "Home"
+        result = cmd.get_wifi_location()
+        assert result == "Home"
+
+    @mark.asyncio
+    async def test_list_prs__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        list_prs = mocker.patch.object(cmd._pr, "list_prs", new_callable=AsyncMock, return_value=[])
+        result = await cmd.list_prs()
+        assert result == []
+        list_prs.assert_awaited_once()
+
+    @mark.asyncio
+    async def test_sync_prs__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        sync = mocker.patch.object(cmd._pr, "sync_prs", new_callable=AsyncMock, return_value=3)
+        result = await cmd.sync_prs(fixed_datetime)
+        assert result == 3
+        sync.assert_awaited_once_with(fixed_datetime)
+
+    def test_add_feedback_received__noop_when_no_feedback_service(
+        self, cmd: CommandManager, fixed_datetime: datetime
+    ) -> None:
+        cmd._feedback = None
+        cmd.add_feedback_received("Great work", "Alice", "sprint review", fixed_datetime)
+
+    def test_add_feedback_received__delegates_when_service_present(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        feedback_svc = mocker.MagicMock(name="FeedbackServiceMock")
+        cmd._feedback = feedback_svc
+        cmd.add_feedback_received("Great work", "Alice", "sprint review", fixed_datetime)
+        feedback_svc.add_received.assert_called_once_with(
+            "Great work", "Alice", "sprint review", fixed_datetime
+        )
+
+    def test_add_feedback_given__noop_when_no_feedback_service(
+        self, cmd: CommandManager, fixed_datetime: datetime
+    ) -> None:
+        cmd._feedback = None
+        cmd.add_feedback_given("Keep it up", "Bob", "1on1", fixed_datetime)
+
+    def test_add_feedback_given__delegates_when_service_present(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        feedback_svc = mocker.MagicMock(name="FeedbackServiceMock")
+        cmd._feedback = feedback_svc
+        cmd.add_feedback_given("Keep it up", "Bob", "1on1", fixed_datetime)
+        feedback_svc.add_given.assert_called_once_with(
+            "Keep it up", "Bob", "1on1", fixed_datetime
+        )
+
+    def test_list_feedback__returns_empty_when_no_service(
+        self, cmd: CommandManager
+    ) -> None:
+        cmd._feedback = None
+        result = cmd.list_feedback(2025)
+        assert result == []
+
+    def test_list_feedback__delegates_when_service_present(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        feedback_svc = mocker.MagicMock(name="FeedbackServiceMock")
+        feedback_svc.list_feedback.return_value = [{"text": "Good job"}]
+        cmd._feedback = feedback_svc
+        result = cmd.list_feedback(2025, quarter=1, person="Alice", feedback_type="received")
+        assert result == [{"text": "Good job"}]
+        feedback_svc.list_feedback.assert_called_once_with(
+            2025, quarter=1, person="Alice", feedback_type="received"
+        )
+
+    def test_get_screen_time__returns_empty_when_no_service(
+        self, cmd: CommandManager, fixed_datetime: datetime
+    ) -> None:
+        cmd._screen_time = None
+        result = cmd.get_screen_time(fixed_datetime)
+        assert result == []
+
+    def test_get_screen_time__delegates_when_service_present(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        screen_svc = mocker.MagicMock(name="ScreenTimeServiceMock")
+        screen_svc.get_usage.return_value = [("Safari", 3600)]
+        cmd._screen_time = screen_svc
+        result = cmd.get_screen_time(fixed_datetime)
+        assert result == [("Safari", 3600)]
+
+    def test_get_screen_time_formatted__returns_empty_when_no_service(
+        self, cmd: CommandManager, fixed_datetime: datetime
+    ) -> None:
+        cmd._screen_time = None
+        result = cmd.get_screen_time_formatted(fixed_datetime)
+        assert result == ""
+
+    def test_get_screen_time_formatted__delegates_when_service_present(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        screen_svc = mocker.MagicMock(name="ScreenTimeServiceMock")
+        screen_svc.format_usage.return_value = "Safari: 1h"
+        cmd._screen_time = screen_svc
+        result = cmd.get_screen_time_formatted(fixed_datetime)
+        assert result == "Safari: 1h"
+
+    def test_create_one_on_one__delegates(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        create = mocker.patch.object(cmd._reports, "create_one_on_one")
+        cmd.create_one_on_one(fixed_datetime, person_name="Alice")
+        create.assert_called_once_with(fixed_datetime, person_name="Alice")

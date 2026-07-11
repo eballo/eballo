@@ -12,6 +12,129 @@ from typer.testing import Result
 from taskjournal.models.task import Status, Task
 
 
+class TestFixFileInteractively:
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_fix_file_called_from_audit_when_user_says_yes(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.audit_daily_notes.return_value = [
+            ("2026-01-05", "/day.md", ["missing summary"]),
+        ]
+        cli_manager.count_week_folders.return_value = 1
+        cli_manager.audit_weekly_coverage.return_value = []
+
+        mocker.patch("builtins.input", side_effect=["A great day of work"])
+
+        result = invoke_cli(["daily", "audit", "--fix"])
+
+        assert result.exit_code == 0
+        cli_manager.fix_summary.assert_called_once_with("/day.md", "A great day of work")
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_fix_file_missing_end_time_sets_it(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.audit_daily_notes.return_value = [
+            ("2026-01-05", "/day.md", ["missing end time"]),
+        ]
+        cli_manager.count_week_folders.return_value = 1
+        cli_manager.audit_weekly_coverage.return_value = []
+
+        mocker.patch("builtins.input", side_effect=["17:30"])
+
+        result = invoke_cli(["daily", "audit", "--fix"])
+
+        assert result.exit_code == 0
+        cli_manager.fix_end_time_and_time_spent.assert_called_once()
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_fix_file_invalid_end_time_format(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.audit_daily_notes.return_value = [
+            ("2026-01-05", "/day.md", ["missing end time"]),
+        ]
+        cli_manager.count_week_folders.return_value = 1
+        cli_manager.audit_weekly_coverage.return_value = []
+
+        mocker.patch("builtins.input", side_effect=["not-valid"])
+
+        result = invoke_cli(["daily", "audit", "--fix"])
+
+        assert result.exit_code == 0
+        cli_manager.fix_end_time_and_time_spent.assert_not_called()
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_fix_file_missing_time_spent_fixes_from_file(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.audit_daily_notes.return_value = [
+            ("2026-01-05", "/day.md", ["missing time spent"]),
+        ]
+        cli_manager.count_week_folders.return_value = 1
+        cli_manager.audit_weekly_coverage.return_value = []
+        cli_manager.fix_time_spent_from_file.return_value = True
+
+        result = invoke_cli(["daily", "audit", "--fix"])
+
+        assert result.exit_code == 0
+        cli_manager.fix_time_spent_from_file.assert_called_once_with("/day.md")
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_fix_file_missing_time_spent_asks_for_end_time_when_no_end(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.audit_daily_notes.return_value = [
+            ("2026-01-05", "/day.md", ["missing time spent"]),
+        ]
+        cli_manager.count_week_folders.return_value = 1
+        cli_manager.audit_weekly_coverage.return_value = []
+        cli_manager.fix_time_spent_from_file.return_value = False
+
+        mocker.patch("builtins.input", side_effect=["17:45"])
+
+        result = invoke_cli(["daily", "audit", "--fix"])
+
+        assert result.exit_code == 0
+        cli_manager.fix_end_time_and_time_spent.assert_called_once()
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_fix_file_blank_summary_skips(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.audit_daily_notes.return_value = [
+            ("2026-01-05", "/day.md", ["missing summary"]),
+        ]
+        cli_manager.count_week_folders.return_value = 1
+        cli_manager.audit_weekly_coverage.return_value = []
+
+        mocker.patch("builtins.input", side_effect=[""])
+
+        result = invoke_cli(["daily", "audit", "--fix"])
+
+        assert result.exit_code == 0
+        cli_manager.fix_summary.assert_not_called()
+
+
 class TestDailyStatus:
 
     @freeze_time("2026-01-19 10:00:00")
@@ -345,11 +468,183 @@ class TestDailyAudit:
             ("2026-01-05", "/day.md", ["missing end time"]),
             ("2026-01-06", "/day2.md", []),
         ]
+        cli_manager.count_week_folders.return_value = 3
+        cli_manager.audit_weekly_coverage.return_value = []
 
         result = invoke_cli(["daily", "audit"])
 
         assert result.exit_code == 0
         cli_manager.audit_daily_notes.assert_called_once()
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_daily_audit_with_coverage_gaps(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.audit_daily_notes.return_value = [
+            ("2026-01-06", "/day.md", []),
+        ]
+        cli_manager.count_week_folders.return_value = 2
+        cli_manager.audit_weekly_coverage.return_value = [
+            ("week02", ["2026-01-07", "2026-01-08"]),
+        ]
+
+        result = invoke_cli(["daily", "audit"])
+
+        assert result.exit_code == 0
+        assert "2026-01-07" in result.output or "week02" in result.output
+
+    def test_daily_audit_past_year_no_current_week(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.audit_daily_notes.return_value = [
+            ("2024-06-01", "/day.md", []),
+        ]
+        cli_manager.count_week_folders.return_value = 52
+        cli_manager.audit_weekly_coverage.return_value = []
+
+        result = invoke_cli(["daily", "audit", "--year", "2024"])
+
+        assert result.exit_code == 0
+
+
+class TestDailyCheck:
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_daily_check_with_no_tasks(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        mocker: MockerFixture,
+    ) -> None:
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.get_week_folder_and_daily_notes_file",
+                     return_value=("/day.md", "/week"))
+        mocker.patch("taskjournal.cli.commands.daily.exists", return_value=True)
+        mocker.patch("taskjournal.cli.commands.daily.FileService.get_lines", return_value=["line\n"])
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.get_start_time",
+                     return_value=(0, datetime(2026, 1, 19, 9, 0)))
+        mocker.patch("taskjournal.cli.commands.daily.FileService.check_finalized_in_file",
+                     return_value=True)
+        cli_manager.parser.parse.return_value = ParsedNote(
+            planned_tasks=[],
+            summary=["Some summary"],
+        )
+
+        result = invoke_cli(["daily", "check"])
+
+        assert result.exit_code == 0
+        assert "No tasks found" in result.output
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_daily_check_all_pass_shows_success(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        mocker: MockerFixture,
+    ) -> None:
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.get_week_folder_and_daily_notes_file",
+                     return_value=("/day.md", "/week"))
+        mocker.patch("taskjournal.cli.commands.daily.exists", return_value=True)
+        mocker.patch("taskjournal.cli.commands.daily.FileService.get_lines", return_value=["line\n"])
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.get_start_time",
+                     return_value=(0, datetime(2026, 1, 19, 9, 0)))
+        mocker.patch("taskjournal.cli.commands.daily.FileService.check_finalized_in_file",
+                     return_value=True)
+        task = Task(id="1", description="Done task", status=Status.DONE)
+        cli_manager.parser.parse.return_value = ParsedNote(
+            planned_tasks=[task],
+            summary=["Great day!"],
+        )
+
+        result = invoke_cli(["daily", "check"])
+
+        assert result.exit_code == 0
+        assert "All checks passed" in result.output
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_daily_check_multiple_issues_shows_plural(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        mocker: MockerFixture,
+        caplog: LogCaptureFixture,
+    ) -> None:
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.get_week_folder_and_daily_notes_file",
+                     return_value=("/day.md", "/week"))
+        mocker.patch("taskjournal.cli.commands.daily.exists", return_value=True)
+        mocker.patch("taskjournal.cli.commands.daily.FileService.get_lines",
+                     side_effect=ValueError("no start time"))
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.get_start_time",
+                     side_effect=ValueError("no start time"))
+        mocker.patch("taskjournal.cli.commands.daily.FileService.check_finalized_in_file",
+                     return_value=False)
+        cli_manager.parser.parse.return_value = ParsedNote(
+            planned_tasks=[],
+            summary=[],
+        )
+
+        result = invoke_cli(["daily", "check"])
+
+        assert result.exit_code == 0
+        assert "issues" in caplog.text
+
+
+class TestDailyStatus:
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_daily_status_shows_all_timing_details(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        mocker: MockerFixture,
+    ) -> None:
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.get_week_folder_and_daily_notes_file",
+                     return_value=("/day.md", "/week"))
+        mocker.patch("taskjournal.cli.commands.daily.exists", return_value=True)
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.calculate_working_hours",
+                     return_value=(datetime(2026, 1, 19, 9, 0), 2.5, datetime(2026, 1, 19, 18, 0)))
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.seconds_to_hours_minutes",
+                     return_value=(2, 30))
+        mocker.patch("taskjournal.cli.commands.daily.FileService.check_finalized_in_file",
+                     return_value=False)
+        tasks = [
+            Task(id="1", description="Done", status=Status.DONE),
+            Task(id="2", description="Pending", status=Status.TODO),
+            Task(id="3", description="Blocked", status=Status.BLOCKED),
+        ]
+        cli_manager.parser.parse.return_value = ParsedNote(planned_tasks=tasks)
+
+        result = invoke_cli(["daily", "status"])
+
+        assert result.exit_code == 0
+        assert "09:00" in result.output
+        assert "18:00" in result.output
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_daily_status_finalized_shows_correct_state(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        mocker: MockerFixture,
+    ) -> None:
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.get_week_folder_and_daily_notes_file",
+                     return_value=("/day.md", "/week"))
+        mocker.patch("taskjournal.cli.commands.daily.exists", return_value=True)
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.calculate_working_hours",
+                     return_value=(None, None, None))
+        mocker.patch("taskjournal.cli.commands.daily.TimeService.seconds_to_hours_minutes",
+                     return_value=(0, 0))
+        mocker.patch("taskjournal.cli.commands.daily.FileService.check_finalized_in_file",
+                     return_value=True)
+        cli_manager.parser.parse.return_value = ParsedNote(planned_tasks=[])
+
+        result = invoke_cli(["daily", "status"])
+
+        assert result.exit_code == 0
+        assert "Finalized" in result.output
 
 
 class TestDailyOpen:
