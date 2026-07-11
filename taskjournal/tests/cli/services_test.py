@@ -1,6 +1,8 @@
+from asyncio import run
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from collections.abc import Callable
+from freezegun import freeze_time
 from typer.testing import Result
 
 from taskjournal.constants import JIRA_MODE_ALL, JIRA_MODE_DEFAULT, JIRA_MODE_MINE
@@ -134,3 +136,46 @@ class TestServices:
         # then
         assert result.exit_code == 0
         cli_manager.get_github_stats.assert_awaited_once()
+
+    @freeze_time("2025-01-15 10:00:00")
+    def test_services_screentime_no_data(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.get_screen_time.return_value = []
+
+        result = invoke_cli(["services", "screentime"])
+
+        assert result.exit_code == 0
+        assert "No Screen Time" in result.output
+
+    @freeze_time("2025-01-15 10:00:00")
+    def test_services_screentime_with_data(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.get_screen_time.return_value = [
+            ("Safari", 3600),
+            ("Xcode", 7200),
+            ("Terminal", 1800),
+        ]
+
+        result = invoke_cli(["services", "screentime"])
+
+        assert result.exit_code == 0
+        assert "Safari" in result.output or "Xcode" in result.output
+
+    @freeze_time("2025-01-15 10:00:00")
+    def test_services_claude_prints_result(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager.run_ai_prompt = AsyncMock(return_value="Hello from Claude!")
+
+        result = invoke_cli(["services", "claude"])
+
+        assert result.exit_code == 0
+        assert "Hello from Claude!" in result.output

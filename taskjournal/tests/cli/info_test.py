@@ -233,6 +233,89 @@ class TestInfoCommand:
         assert "firefighter" in result.output.lower()
 
     @freeze_time("2025-01-15 10:00:00")
+    def test_show_info_alarms_enabled_with_today_alarms(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        self._patch_info_dependencies(mocker)
+        mocker.patch("taskjournal.cli.commands.info.DAILY_ALARMS_ENABLED", True)
+        cli_manager.list_alarms.return_value = [
+            {
+                "date": "2025-01-15",
+                "scheduled": "09:00",
+                "message": "Wrap up",
+                "is_alive": True,
+                "is_past": False,
+            },
+            {
+                "date": "2025-01-15",
+                "scheduled": "09:30",
+                "message": "Pack up",
+                "is_alive": False,
+                "is_past": True,
+            },
+            {
+                "date": "2025-01-15",
+                "scheduled": None,
+                "message": None,
+                "is_alive": False,
+                "is_past": False,
+            },
+        ]
+
+        result = invoke_cli(["info", "show"])
+
+        assert result.exit_code == 0
+        assert "active" in result.output or "expired" in result.output or "stopped" in result.output
+
+    @freeze_time("2025-01-15 10:00:00")
+    def test_show_info_alarms_disabled_shows_disabled(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        self._patch_info_dependencies(mocker)
+        mocker.patch("taskjournal.cli.commands.info.DAILY_ALARMS_ENABLED", False)
+
+        result = invoke_cli(["info", "show"])
+
+        assert result.exit_code == 0
+        assert "disabled" in result.output
+
+    @freeze_time("2025-01-15 10:00:00")
+    def test_show_info_fireman_not_this_week_no_next(
+        self,
+        mocker: MockerFixture,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        mocker.patch("taskjournal.cli.commands.info.exists", return_value=False)
+        mocker.patch(
+            "taskjournal.cli.commands.info.TimeService.resolve_daily_notes_file",
+            return_value=("/fake/2025-01-15-DailyNotes.md", "/fake/week3"),
+        )
+        mocker.patch(
+            "taskjournal.cli.commands.info.TimeService.get_accumulated_week_seconds",
+            return_value=0,
+        )
+        mocker.patch(
+            "taskjournal.cli.commands.info.HolidayService",
+            side_effect=Exception("no holidays"),
+        )
+        from datetime import date as _date
+        mock_fireman_svc = MagicMock()
+        mock_fireman_svc.is_fireman_week.return_value = False
+        mock_fireman_svc.get_next_week.return_value = (0, None)
+        mocker.patch("taskjournal.cli.commands.info.FiremanService", return_value=mock_fireman_svc)
+
+        result = invoke_cli(["info", "show"])
+
+        assert result.exit_code == 0
+
+    @freeze_time("2025-01-15 10:00:00")
     def test_show_info_package_not_found_uses_dev_version(
         self,
         mocker: MockerFixture,

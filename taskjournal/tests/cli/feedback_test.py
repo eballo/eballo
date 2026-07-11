@@ -128,3 +128,34 @@ class TestFeedbackCLI:
         cli_manager.list_feedback.assert_called_once_with(
             year=2026, quarter=None, person=None, feedback_type="received"
         )
+
+    def test_received_errors_when_feedback_service_not_configured(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager._feedback = None
+        result = invoke_cli([
+            "feedback", "received", "some text", "--from", "Bob",
+        ])
+        assert result.exit_code == 1
+
+    def test_given_errors_when_feedback_service_not_configured(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager._feedback = None
+        result = invoke_cli([
+            "feedback", "given", "some text", "--to", "Alice",
+        ])
+        assert result.exit_code == 1
+
+    def test_list_errors_when_feedback_service_not_configured(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        cli_manager._feedback = None
+        result = invoke_cli(["feedback", "list"])
+        assert result.exit_code == 1

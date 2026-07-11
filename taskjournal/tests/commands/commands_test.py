@@ -1706,3 +1706,237 @@ class TestCommands:
         create = mocker.patch.object(cmd._reports, "create_one_on_one")
         cmd.create_one_on_one(fixed_datetime, person_name="Alice")
         create.assert_called_once_with(fixed_datetime, person_name="Alice")
+
+    @mark.asyncio
+    async def test_create_quarter_review__writes_stats_and_summary(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        fixed_datetime: datetime,
+        temp_week_folder: str,
+    ) -> None:
+        mocker.patch.object(cmd._reports, "_get_week_folder", return_value=temp_week_folder)
+        cmd.file_service.load_template.return_value = (
+            "q={{quarter_num}}, year={{year}}, time={{total_time}}, "
+            "worked={{total_worked_days}}, tasks={{total_tasks}}, summary={{summary}}"
+        )
+        mock_stats = {
+            "start_date": datetime(2025, 1, 1),
+            "end_date": datetime(2025, 3, 31),
+            "total_time_seconds": 7200,
+            "total_worked_days": 60,
+            "vacation_days": 5,
+            "days_at_office": 30,
+            "days_at_home": 30,
+            "quarter_num": 1,
+            "year": 2025,
+            "daily_summaries": ["Shipped feature X"],
+        }
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.WorkingDaysService.get_quarter_stats",
+            return_value=mock_stats,
+        )
+        mocker.patch.object(
+            cmd.jira,
+            "get_current_tasks_assigned_to_me_last_quarter",
+            new_callable=AsyncMock,
+            return_value=["Q-1", "Q-2"],
+        )
+        mocker.patch(
+            "taskjournal.services.task_manager.TaskManager.get_unique_epics",
+            return_value=["QE-1"],
+        )
+        mocker.patch.object(
+            cmd.github,
+            "get_contributions_last_quarter",
+            new_callable=AsyncMock,
+            return_value=50,
+        )
+        mocker.patch.object(
+            cmd.ai_service,
+            "summarize",
+            new_callable=AsyncMock,
+            return_value="Q1 Summary",
+        )
+        cmd.time_service.seconds_to_hours_minutes.return_value = (2, 0)
+
+        await cmd.create_quarter_review(fixed_datetime)
+
+        content: str = cmd.file_service.write_to_file.call_args[0][1]
+        assert "q=1" in content
+        assert "year=2025" in content
+        assert "tasks=2" in content
+        assert "summary=Q1 Summary" in content
+
+    @mark.asyncio
+    async def test_create_year_review__writes_stats_and_summary(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        fixed_datetime: datetime,
+        temp_week_folder: str,
+    ) -> None:
+        mocker.patch.object(cmd._reports, "_get_week_folder", return_value=temp_week_folder)
+        cmd.file_service.load_template.return_value = (
+            "year={{year}}, time={{total_time}}, worked={{total_worked_days}}, "
+            "tasks={{total_tasks}}, summary={{summary}}"
+        )
+        mock_stats = {
+            "start_date": datetime(2025, 1, 1),
+            "end_date": datetime(2025, 12, 31),
+            "total_time_seconds": 14400,
+            "total_worked_days": 250,
+            "vacation_days": 20,
+            "days_at_office": 120,
+            "days_at_home": 130,
+            "daily_summaries": ["Year highlights"],
+        }
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.WorkingDaysService.get_year_stats",
+            return_value=mock_stats,
+        )
+        mocker.patch.object(
+            cmd.jira,
+            "get_current_tasks_assigned_to_me_last_year",
+            new_callable=AsyncMock,
+            return_value=["Y-1"],
+        )
+        mocker.patch(
+            "taskjournal.services.task_manager.TaskManager.get_unique_epics",
+            return_value=["YE-1"],
+        )
+        mocker.patch.object(
+            cmd.github,
+            "get_contributions_last_year",
+            new_callable=AsyncMock,
+            return_value=300,
+        )
+        mocker.patch.object(
+            cmd.ai_service,
+            "summarize",
+            new_callable=AsyncMock,
+            return_value="Year Summary",
+        )
+        cmd.time_service.seconds_to_hours_minutes.return_value = (4, 0)
+
+        await cmd.create_year_review(fixed_datetime)
+
+        content: str = cmd.file_service.write_to_file.call_args[0][1]
+        assert "year=2025" in content
+        assert "tasks=1" in content
+        assert "summary=Year Summary" in content
+
+    def test_compare_periods_returns_quarter_stats(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+    ) -> None:
+        mock_stats = {
+            "total_worked_days": 60,
+            "vacation_days": 5,
+            "days_at_office": 30,
+            "days_at_home": 30,
+            "total_time_seconds": 7200,
+        }
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.WorkingDaysService.get_quarter_stats",
+            return_value=mock_stats,
+        )
+
+        results = cmd.compare_periods("quarter", 2025)
+
+        assert len(results) == 4
+        assert results[0]["label"] == "Q1 2025"
+        assert results[3]["label"] == "Q4 2025"
+        assert results[0]["total_worked_days"] == 60
+
+    def test_compare_periods_returns_monthly_stats(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+    ) -> None:
+        mock_stats = {
+            "total_worked_days": 20,
+            "vacation_days": 2,
+            "days_at_office": 10,
+            "days_at_home": 10,
+            "total_time_seconds": 3600,
+        }
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.WorkingDaysService.get_month_stats",
+            return_value=mock_stats,
+        )
+
+        results = cmd.compare_periods("month", 2025)
+
+        assert len(results) == 12
+        assert "Jan 2025" in results[0]["label"]
+        assert "Dec 2025" in results[11]["label"]
+
+    def test_report_commands_note_issues_for_complete_note(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        temp_week_folder: str,
+    ) -> None:
+        cmd.file_service.get_lines.return_value = [
+            "**Start Time:** 09:00:00\n",
+            "**Date:** 2025-01-15\n",
+        ]
+        cmd.file_service.check_finalized_in_file.return_value = True
+        note = mocker.MagicMock()
+        note.time_spent = "08:00"
+        note.summary = ["Work done today"]
+        cmd.parser.parse.return_value = note
+
+        issues = cmd._reports._note_issues("/fake/2025-01-15-DailyNotes.md")
+
+        assert issues == []
+
+    def test_report_commands_note_issues_for_incomplete_note(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+    ) -> None:
+        cmd.file_service.get_lines.side_effect = FileNotFoundError("missing")
+        cmd.file_service.check_finalized_in_file.return_value = False
+        cmd.parser.parse.return_value = None
+
+        issues = cmd._reports._note_issues("/fake/missing.md")
+
+        assert "missing start time" in issues
+        assert "missing end time" in issues
+
+    def test_report_commands_warn_incomplete_week_notes(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        temp_week_folder: str,
+    ) -> None:
+        mocker.patch("taskjournal.commands.reports.exists", return_value=True)
+        cmd.time_service.get_daily_notes_name.side_effect = (
+            lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md"
+        )
+        cmd.file_service.get_lines.side_effect = ValueError("bad")
+        cmd.file_service.check_finalized_in_file.return_value = False
+        cmd.parser.parse.return_value = None
+        mock_logger = mocker.patch("taskjournal.commands.reports.logger")
+
+        target = datetime(2025, 1, 15)  # Wednesday
+        cmd._reports._warn_incomplete_week_notes(target, temp_week_folder)
+
+        mock_logger.warning.assert_called()
+
+    def test_report_commands_get_week_folder_creates_dir(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        fixed_datetime: datetime,
+    ) -> None:
+        cmd.file_service.get_week_folder.return_value = "/fake/week"
+        makedirs_mock = mocker.patch("taskjournal.commands.reports.makedirs")
+
+        result = cmd._reports._get_week_folder(fixed_datetime)
+
+        assert result == "/fake/week"
+        makedirs_mock.assert_called_once_with("/fake/week", exist_ok=True)
