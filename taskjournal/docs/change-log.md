@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.64.0
+
+- fix github action warnings
+
 ## 0.63.0
 
 - horizon f
