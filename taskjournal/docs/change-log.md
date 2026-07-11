@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.65.0
+
+- fix github action warnings
+
 ## 0.64.0
 
 - fix github action warnings
