@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.66.0
+
+- Feature/code coverage
+
 ## 0.65.0
 
 - fix github action warnings
