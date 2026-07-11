@@ -136,11 +136,11 @@ class TestTime:
         assert result == created + timedelta(hours=5)
 
     def test_estimated_finish_time__behind_schedule(self) -> None:
-        # Friday, 4 days before → expected=32h, accumulated=28h, extra=-4h → today=12h + 1h lunch
+        # Friday, 4 days before → expected=32h, accumulated=28h, extra=-4h → today=8h (capped) + 1h lunch
         created = datetime(2025, 1, 24, 9, 0, 0)
         accumulated = 28 * 3600
         result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated, days_before_today=4)
-        assert result == created + timedelta(hours=13)
+        assert result == created + timedelta(hours=9)
 
     def test_estimated_finish_time__over_target_clamps_to_lunch(self) -> None:
         # So far ahead that today's work = 0, only 1h lunch remains

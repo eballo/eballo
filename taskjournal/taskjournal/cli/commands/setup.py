@@ -144,6 +144,13 @@ def build_app() -> Typer:
         )
         values["SCREEN_TIME_ENABLED"] = "true" if st_enabled else "false"
 
+        alarms_current = existing.get("DAILY_ALARMS_ENABLED", "true") == "true"
+        alarms_enabled = confirm(
+            "Enable end-of-day alarms via macOS Reminders (set automatically on wk daily start)?",
+            default=alarms_current,
+        )
+        values["DAILY_ALARMS_ENABLED"] = "true" if alarms_enabled else "false"
+
         # ── Editor ───────────────────────────────────────────────────────
         console.print(Panel("[bold]Editor[/bold]", expand=False))
         values["EDITOR_APP"] = prompt(
@@ -222,6 +229,7 @@ def _print_summary(service: SetupService, values: dict[str, str]) -> None:
     _row("Office WiFi SSID", "OFFICE_WIFI")
     table.add_section()
     _row("Screen Time", "SCREEN_TIME_ENABLED")
+    _row("Daily alarms", "DAILY_ALARMS_ENABLED")
     table.add_section()
     _row("Editor app", "EDITOR_APP")
     table.add_section()

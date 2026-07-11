@@ -78,7 +78,7 @@ class TimeService(BaseService):
     ) -> datetime:
         expected_seconds = days_before_today * 8 * 3600
         extra_seconds = accumulated_seconds - expected_seconds
-        today_work_seconds = max(0, 8 * 3600 - extra_seconds)
+        today_work_seconds = min(8 * 3600, max(0, 8 * 3600 - extra_seconds))
         lunch_seconds = 3600
         return created_time + timedelta(seconds=today_work_seconds + lunch_seconds)
 

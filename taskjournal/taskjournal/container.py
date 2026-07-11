@@ -118,4 +118,5 @@ class AppContainer(containers.DeclarativeContainer):
         recurring_service=recurring_service,
         feedback_service=feedback_service,
         screen_time_service=screen_time_service,
+        daily_alarms_enabled=config.DAILY_ALARMS_ENABLED,
     )

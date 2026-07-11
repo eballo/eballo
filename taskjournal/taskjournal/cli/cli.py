@@ -4,6 +4,7 @@ from typer import Exit, Typer, Context, Option
 
 from taskjournal.cli import version as app_version
 from taskjournal.container import AppContainer
+from taskjournal.cli.commands.alarm import build_app as build_alarm
 from taskjournal.cli.commands.backup import build_app as build_backup
 from taskjournal.cli.commands.daily import build_app as build_daily
 from taskjournal.cli.commands.doctor import build_app as build_doctor
@@ -18,6 +19,7 @@ from taskjournal.cli.commands.services import build_app as build_services
 from taskjournal.cli.commands.setup import build_app as build_setup
 from taskjournal.cli.commands.statistics import build_app as build_statistics
 from taskjournal.cli.commands.feedback import build_app as build_feedback
+from taskjournal.cli.commands.fun import build_app as build_fun
 from taskjournal.cli.commands.note import build_app as build_note
 from taskjournal.cli.commands.standup import build_app as build_standup
 from taskjournal.cli.commands.task import build_app as build_task
@@ -50,6 +52,7 @@ def create_app(container: AppContainer | None = None) -> Typer:
     )
 
     app.add_typer(build_daily(), name="daily", rich_help_panel="📋 Daily workflow")
+    app.add_typer(build_alarm(), name="alarm", rich_help_panel="📋 Daily workflow")
     app.add_typer(build_task(), name="task", rich_help_panel="📋 Daily workflow")
     app.add_typer(build_note(), name="note", rich_help_panel="📋 Daily workflow")
     app.add_typer(build_standup(), name="standup", rich_help_panel="📋 Daily workflow")
@@ -71,6 +74,7 @@ def create_app(container: AppContainer | None = None) -> Typer:
     app.add_typer(build_services(), name="services", rich_help_panel="🗂️ Tools")
     app.add_typer(build_search(), name="search", rich_help_panel="🗂️ Tools")
     app.add_typer(build_info(), name="info", rich_help_panel="🗂️ Tools")
+    app.add_typer(build_fun(), name="joke", rich_help_panel="🗂️ Tools")
 
     if container is None:
         container = AppContainer()

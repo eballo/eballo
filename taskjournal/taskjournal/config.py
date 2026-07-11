@@ -56,6 +56,9 @@ FIREMAN_WEEKS_TEMPLATE = os.path.join(
 # Screen Time
 SCREEN_TIME_ENABLED = os.getenv("SCREEN_TIME_ENABLED", "false").lower() == "true"
 
+# Daily alarms
+DAILY_ALARMS_ENABLED = os.getenv("DAILY_ALARMS_ENABLED", "true").lower() == "true"
+
 # Jira
 JIRA_ORGANIZATION = os.getenv("JIRA_ORGANIZATION", "organization")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN", "your-jira-key")

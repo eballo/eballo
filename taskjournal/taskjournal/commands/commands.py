@@ -41,6 +41,7 @@ class CommandManager:
         recurring_service: RecurringTasksService | None = None,
         feedback_service: FeedbackService | None = None,
         screen_time_service: ScreenTimeService | None = None,
+        daily_alarms_enabled: bool = True,
         debug: bool = False,
     ) -> None:
         self.jira = jira
@@ -67,6 +68,7 @@ class CommandManager:
             time_service=time_service,
             ai_service=ai_service,
             recurring_service=self._recurring,
+            daily_alarms_enabled=daily_alarms_enabled,
             debug=debug,
         )
         self._tasks = TaskCommands(
@@ -189,6 +191,17 @@ class CommandManager:
 
     def _cancel_macos_alarm(self, alarm_file: str) -> None:
         return self._daily._cancel_macos_alarm(alarm_file)
+
+    def list_alarms(self, weeks_back: int = 4) -> list[dict[str, object]]:
+        return self._daily.list_alarms(weeks_back)
+
+    def set_alarm(
+        self, date: datetime, alarm_time: datetime, message: str = "Time to wrap up!"
+    ) -> None:
+        return self._daily.set_alarm(date, alarm_time, message)
+
+    def cancel_alarm_for_date(self, date: datetime) -> bool:
+        return self._daily.cancel_alarm_for_date(date)
 
     def _calculate_time(self, daily_notes_file: str) -> None:
         return self._daily._calculate_time(daily_notes_file)

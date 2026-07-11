@@ -67,6 +67,13 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
+@fixture(autouse=True)
+def _mock_run_marquee(mocker: MockerFixture) -> None:
+    mocker.patch("taskjournal.cli.animations.run_marquee")
+    mocker.patch("taskjournal.cli.commands.daily.run_marquee")
+    mocker.patch("taskjournal.cli.commands.info.run_marquee")
+
+
 @fixture()
 def invoke_cli(app: Typer, runner: CliRunner) -> Callable[[Sequence[str]], Result]:
     def _invoke(args: Sequence[str]) -> Result:
@@ -129,6 +136,9 @@ def week_folder(base_dir: str, today: datetime) -> str:
 def cli_manager(cli_container: AppContainer, mocker: MockerFixture) -> MagicMock:
     manager = mocker.MagicMock(name="CommandManagerMock")
     manager.get_previous_day_issues.return_value = None
+    manager.get_wifi_location.return_value = "Home"
+    manager.get_streak_stats.return_value = {"current": 0, "longest": 0}
+    manager.list_alarms.return_value = []
     cli_container.command_manager.override(providers.Object(manager))
     return manager
 
@@ -188,6 +198,7 @@ def cmd(mocker: MockerFixture) -> CommandManager:
         schedule_service=mocker.MagicMock(name="ScheduleServiceMock"),
         file_service=mocker.MagicMock(name="FileServiceMock"),
         time_service=time_service,
+        daily_alarms_enabled=False,
     )
 
 
