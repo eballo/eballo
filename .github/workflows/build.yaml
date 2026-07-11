@@ -4,12 +4,12 @@ on:
   push:
     paths:
       - "taskjournal/**"
-      - ".github/workflows/taskjournal.yml"
+      - ".github/workflows/build.yaml"
     branches: [ "main" ]
   pull_request:
     paths:
       - "taskjournal/**"
-      - ".github/workflows/taskjournal.yml"
+      - ".github/workflows/build.yaml"
     branches: [ "main" ]
   workflow_call:
     secrets:
@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0  # Important for SonarCloud SCM data
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
@@ -48,7 +48,7 @@ jobs:
         run: poetry run poe coverage
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: sonarsource/sonarqube-scan-action@v6
         with:
           projectBaseDir: taskjournal
         env:
