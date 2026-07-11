@@ -8,6 +8,7 @@ from freezegun import freeze_time
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 from typer.testing import Result
+from pathlib import Path
 
 
 class TestWeekReport:
@@ -200,3 +201,99 @@ class TestWeekReport:
 
         assert result.exit_code == 0
         assert "2026-01-05" in result.output
+
+    @freeze_time("2026-01-21 10:00:00")
+    def test_week_list_open_file_shows_open_status(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        week_folder = str(tmp_path)
+        mocker.patch(
+            "taskjournal.cli.commands.week.TimeService.get_week_folder_and_daily_notes_file",
+            return_value=(week_folder, join(week_folder, "2026-01-19-DailyNotes.md")),
+        )
+        cli_manager.time_service.get_daily_notes_name.side_effect = (
+            lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md"
+        )
+        mocker.patch("taskjournal.cli.commands.week.exists", return_value=True)
+        mocker.patch(
+            "taskjournal.cli.commands.week.FileService.check_finalized_in_file",
+            return_value=False,
+        )
+        mocker.patch(
+            "taskjournal.cli.commands.week.TimeService.calculate_working_hours",
+            return_value=(None, 8.0, None),
+        )
+        mocker.patch(
+            "taskjournal.cli.commands.week.TimeService.seconds_to_hours_minutes",
+            return_value=(8, 0),
+        )
+
+        result = invoke_cli(["week", "list"])
+
+        assert result.exit_code == 0
+        assert "open" in result.output
+
+    @freeze_time("2026-01-21 10:00:00")
+    def test_week_list_exception_in_working_hours_shows_empty_time(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        week_folder = str(tmp_path)
+        mocker.patch(
+            "taskjournal.cli.commands.week.TimeService.get_week_folder_and_daily_notes_file",
+            return_value=(week_folder, join(week_folder, "2026-01-19-DailyNotes.md")),
+        )
+        cli_manager.time_service.get_daily_notes_name.side_effect = (
+            lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md"
+        )
+        mocker.patch("taskjournal.cli.commands.week.exists", return_value=True)
+        mocker.patch(
+            "taskjournal.cli.commands.week.FileService.check_finalized_in_file",
+            return_value=True,
+        )
+        mocker.patch(
+            "taskjournal.cli.commands.week.TimeService.calculate_working_hours",
+            side_effect=Exception("parse error"),
+        )
+
+        result = invoke_cli(["week", "list"])
+
+        assert result.exit_code == 0
+        assert "finalized" in result.output
+
+    @freeze_time("2026-01-21 10:00:00")
+    def test_week_list_none_elapsed_shows_empty_time(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        week_folder = str(tmp_path)
+        mocker.patch(
+            "taskjournal.cli.commands.week.TimeService.get_week_folder_and_daily_notes_file",
+            return_value=(week_folder, join(week_folder, "2026-01-19-DailyNotes.md")),
+        )
+        cli_manager.time_service.get_daily_notes_name.side_effect = (
+            lambda d: f"{d.strftime('%Y-%m-%d')}-DailyNotes.md"
+        )
+        mocker.patch("taskjournal.cli.commands.week.exists", return_value=True)
+        mocker.patch(
+            "taskjournal.cli.commands.week.FileService.check_finalized_in_file",
+            return_value=True,
+        )
+        mocker.patch(
+            "taskjournal.cli.commands.week.TimeService.calculate_working_hours",
+            return_value=(None, None, None),
+        )
+
+        result = invoke_cli(["week", "list"])
+
+        assert result.exit_code == 0

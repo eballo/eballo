@@ -231,3 +231,70 @@ class TestTime:
         assert week_folder == "/tmp/base/2025/week3"
         assert daily_file == "/tmp/base/2025/week3/2025-01-19-DailyNotes.md"
         makedirs.assert_not_called()
+
+    def test_get_accumulated_week_seconds_returns_zero_on_monday(
+        self, mocker: MockerFixture
+    ) -> None:
+        mocker.patch("taskjournal.services.time.TEMPLATE_FORMAT", "md")
+        mocker.patch("taskjournal.services.time.BASE_DIR", "/tmp/base")
+        mocker.patch(
+            "taskjournal.services.time.FileService.get_week_folder",
+            return_value="/tmp/base/2025/week3",
+        )
+        mocker.patch("taskjournal.services.time.makedirs")
+        today = datetime(2025, 1, 20)  # Monday
+        result = TimeService.get_accumulated_week_seconds("/tmp/base/2025/week3", today)
+        assert result == 0
+
+    def test_get_accumulated_week_seconds_sums_previous_days(
+        self, mocker: MockerFixture
+    ) -> None:
+        mocker.patch("taskjournal.services.time.TEMPLATE_FORMAT", "md")
+        mocker.patch("taskjournal.services.time.BASE_DIR", "/tmp/base")
+        mocker.patch(
+            "taskjournal.services.time.FileService.get_week_folder",
+            return_value="/tmp/base/2025/week3",
+        )
+        mocker.patch("taskjournal.services.time.makedirs")
+        mocker.patch("taskjournal.services.time.exists", return_value=True)
+        mocker.patch(
+            "taskjournal.services.time.TimeService.get_total_time_from_daily_notes",
+            return_value=3600,
+        )
+        today = datetime(2025, 1, 22)  # Wednesday — 2 days before (Mon, Tue)
+        result = TimeService.get_accumulated_week_seconds("/tmp/base/2025/week3", today)
+        assert result == 7200  # 2 x 3600
+
+    def test_get_accumulated_week_seconds_skips_missing_files(
+        self, mocker: MockerFixture
+    ) -> None:
+        mocker.patch("taskjournal.services.time.TEMPLATE_FORMAT", "md")
+        mocker.patch("taskjournal.services.time.BASE_DIR", "/tmp/base")
+        mocker.patch(
+            "taskjournal.services.time.FileService.get_week_folder",
+            return_value="/tmp/base/2025/week3",
+        )
+        mocker.patch("taskjournal.services.time.makedirs")
+        mocker.patch("taskjournal.services.time.exists", return_value=False)
+        today = datetime(2025, 1, 24)  # Friday — Mon-Thu before today
+        result = TimeService.get_accumulated_week_seconds("/tmp/base/2025/week3", today)
+        assert result == 0
+
+    def test_get_accumulated_week_seconds_continues_on_parse_error(
+        self, mocker: MockerFixture
+    ) -> None:
+        mocker.patch("taskjournal.services.time.TEMPLATE_FORMAT", "md")
+        mocker.patch("taskjournal.services.time.BASE_DIR", "/tmp/base")
+        mocker.patch(
+            "taskjournal.services.time.FileService.get_week_folder",
+            return_value="/tmp/base/2025/week3",
+        )
+        mocker.patch("taskjournal.services.time.makedirs")
+        mocker.patch("taskjournal.services.time.exists", return_value=True)
+        mocker.patch(
+            "taskjournal.services.time.TimeService.get_total_time_from_daily_notes",
+            side_effect=ValueError("bad file"),
+        )
+        today = datetime(2025, 1, 22)  # Wednesday
+        result = TimeService.get_accumulated_week_seconds("/tmp/base/2025/week3", today)
+        assert result == 0

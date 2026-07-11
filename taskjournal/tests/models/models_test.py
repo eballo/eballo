@@ -4,8 +4,10 @@ from pydantic import ValidationError
 from pytest import raises
 
 from taskjournal.models.task import (
+    Epic,
     Task,
     Status,
+    User,
 )
 
 
@@ -57,3 +59,25 @@ class TestModels:
         # then
         with raises(ValidationError):
             Task(id="4", status=Status.DONE)
+
+    def test_epic_str_with_key(self) -> None:
+        epic = Epic(key="PROJ-1", summary="My epic")
+        assert str(epic) == "[PROJ-1]My epic"
+
+    def test_epic_str_without_key(self) -> None:
+        epic = Epic(key="", summary="No key epic")
+        assert str(epic) == "No key epic"
+
+    def test_task_str_with_key_and_assignee(self) -> None:
+        user = User(name="Alice")
+        task = Task(id="1", key="T-42", description="Do something", assignee=user)
+        result = str(task)
+        assert "[T-42]" in result
+        assert "Do something" in result
+        assert "Alice" in result
+
+    def test_task_str_without_key(self) -> None:
+        task = Task(id="1", description="No key task")
+        result = str(task)
+        assert "No key task" in result
+        assert "None" in result
