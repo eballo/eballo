@@ -6,7 +6,6 @@ _STATUS_CHECKBOX: dict[Status, str] = {
     Status.DONE: "[x]",
     Status.BLOCKED: "[-]",
     Status.IN_PROGRESS: "[>]",
-    Status.CODE_REVIEW: "[~]",
 }
 
 
@@ -14,6 +13,10 @@ class TaskFormatter:
 
     def __init__(self) -> None:
         self.prefix = "" if TEMPLATE_FORMAT == "txt" else " - "
+
+    @staticmethod
+    def status_checkbox_char(status: Status) -> str:
+        return _STATUS_CHECKBOX.get(status, "[ ]")[1]
 
     # FIXME: feature #43 make TaskFormatter compatible for txt (links)
     def format_task(

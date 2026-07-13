@@ -369,6 +369,20 @@ These are not operational logs — they are user-facing output. Using `logger.in
 
 ---
 
+### 1.20 Holidays file: log level i auto-creació a l'audit
+
+**Problema 1 — log sorollós en anys antics:**
+`get_streak_stats` (`commands/daily.py`) escaneja tots els fitxers DailyNotes de tots els anys per calcular el streak. Per cada any trobat intenta carregar `{BASE_DIR}/{year}/holidays/holidays.md`. Si l'any és passat i no té fitxer de holidays (p.ex. 2024), `HolidayService.load_and_parse` registrava `logger.error(...)` tot i que és una situació esperada. Ja corregit: canviat a `logger.warning`.
+
+**Problema 2 — `wk daily audit` no crea el fitxer de holidays si no existeix:**
+`wk daily audit` detecta setmanes sense cobertura però no pot arreglar-ho si no existeix el fitxer `holidays/holidays.md` per aquell any. Si l'usuari executa `wk daily audit` i el fitxer de holidays no existeix, hauria d'oferir creuar-lo (o crear-lo automàticament buit) en lloc de fallar en silenci o mostrar un warning sense acció.
+
+**Proposta:**
+1. ~~`logger.error` → `logger.warning`~~ en `HolidayService.load_and_parse` quan el fitxer no existeix (ja fet).
+2. `wk daily audit` hauria de detectar si `{BASE_DIR}/{year}/holidays/holidays.md` no existeix i oferir crear-lo via `wk setup` o copiar el template. Alternativament, `DailyCommands.audit_weekly_coverage` podria crear el fitxer buit si no existeix, igual que `wk setup` fa quan s'inicialitza el projecte.
+
+---
+
 ## Horizon 2 — New features
 
 Features that bring direct value to the daily workflow.

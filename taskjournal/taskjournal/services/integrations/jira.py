@@ -164,7 +164,7 @@ class JiraService(BaseService):
                 pull_requests = detail.get("pullRequests", [])
                 for pull_request in pull_requests:
                     if (
-                        pull_request["status"] == "OPEN"
+                        pull_request["status"] in ("OPEN", "MERGED")
                         and issue_key in pull_request["name"]
                     ):
                         return str(pull_request["url"])

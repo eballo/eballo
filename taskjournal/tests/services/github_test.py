@@ -506,6 +506,24 @@ class TestGithub:
         assert result is None
 
     @mark.asyncio
+    async def test_has_user_approved_pr_returns_true_when_pr_merged(
+        self, github_service: GithubService, mocker: MockerFixture
+    ) -> None:
+        # given: a merged PR counts as reviewed regardless of who approved it
+        mocker.patch.object(github_service, "get_user", return_value="me")
+
+        assert github_service.gh is not None
+        github_service.gh.getitem = mocker.AsyncMock(return_value={"merged": True})
+
+        # when
+        result = await github_service.has_user_approved_pr(
+            "https://github.com/acme/r/pull/99"
+        )
+
+        # then
+        assert result is True
+
+    @mark.asyncio
     async def test_has_user_approved_pr_returns_false_without_reviews(
         self, github_service: GithubService, mocker: MockerFixture
     ) -> None:
@@ -518,6 +536,7 @@ class TestGithub:
 
         assert github_service.gh is not None
         github_service.gh.getiter = fake_getiter
+        github_service.gh.getitem = mocker.AsyncMock(return_value={"merged": False})
 
         # when
         result = await github_service.has_user_approved_pr(
@@ -548,6 +567,7 @@ class TestGithub:
 
         assert github_service.gh is not None
         github_service.gh.getiter = fake_getiter
+        github_service.gh.getitem = mocker.AsyncMock(return_value={"merged": False})
 
         # when
         result = await github_service.has_user_approved_pr(
@@ -570,10 +590,14 @@ class TestGithub:
                 "user": {"login": "ME"},
                 "state": "APPROVED",
                 "submitted_at": "2025-01-02T10:00:00Z",
+                "commit_id": "sha-current",
             }
 
         assert github_service.gh is not None
         github_service.gh.getiter = fake_getiter
+        github_service.gh.getitem = mocker.AsyncMock(
+            return_value={"head": {"sha": "sha-current"}}
+        )
 
         # when
         result = await github_service.has_user_approved_pr(
@@ -582,6 +606,35 @@ class TestGithub:
 
         # then
         assert result is True
+
+    @mark.asyncio
+    async def test_has_user_approved_pr_returns_false_for_stale_approval(
+        self, github_service: GithubService, mocker: MockerFixture
+    ) -> None:
+        # given: user approved an older commit, but the PR has since moved on
+        mocker.patch.object(github_service, "get_user", return_value="me")
+
+        async def fake_getiter(_url: str) -> AsyncIterator[dict[str, Any]]:
+            yield {
+                "user": {"login": "me"},
+                "state": "APPROVED",
+                "submitted_at": "2025-01-02T10:00:00Z",
+                "commit_id": "sha-old",
+            }
+
+        assert github_service.gh is not None
+        github_service.gh.getiter = fake_getiter
+        github_service.gh.getitem = mocker.AsyncMock(
+            return_value={"head": {"sha": "sha-new"}}
+        )
+
+        # when
+        result = await github_service.has_user_approved_pr(
+            "https://github.com/acme/r/pull/99"
+        )
+
+        # then
+        assert result is False
 
     @mark.asyncio
     async def test_has_user_approved_pr_returns_none_on_review_fetch_error(
@@ -595,6 +648,7 @@ class TestGithub:
             yield
 
         assert github_service.gh is not None
+        github_service.gh.getitem = mocker.AsyncMock(return_value={"merged": False})
         github_service.gh.getiter = bad_getiter
 
         # when
