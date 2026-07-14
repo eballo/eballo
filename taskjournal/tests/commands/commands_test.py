@@ -805,6 +805,20 @@ class TestCommands:
         append.assert_called_once_with("/day.md", "AI text.")
 
     @mark.asyncio
+    async def test_generate_and_write_summary__force_replaces_existing_summary(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        cmd.parser.parse.return_value = ParsedNote(summary=["Existing summary."])
+        cmd._daily.ai_service.summarize_day = AsyncMock(return_value="AI text.")
+        fix = mocker.patch.object(cmd._daily, "fix_summary")
+        append = mocker.patch.object(cmd._daily, "_append_ai_summary")
+
+        await cmd._daily._generate_and_write_summary("/day.md", no_summary=False, force=True)
+
+        fix.assert_called_once_with("/day.md", "AI text.")
+        append.assert_not_called()
+
+    @mark.asyncio
     async def test_generate_and_write_summary__skips_when_no_summary_flag(
         self, cmd: CommandManager
     ) -> None:
