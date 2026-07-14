@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.67.0
+
+- Add task sync
+
 ## 0.66.0
 
 - Feature/code coverage
