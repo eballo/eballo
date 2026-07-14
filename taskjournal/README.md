@@ -34,8 +34,10 @@ For the full explanation of features, configuration, and command examples, see:
 - `wk daily start --ff` — firefighter mode (marks the day accordingly)
 - `wk daily start --w Home|Office` — specify working location (auto-detected via WiFi if configured)
 - `wk daily start --offline` — skip all Jira and GitHub API calls
-- `wk daily finish` — write end time and calculate total time spent
+- `wk daily finish` — sync code-review task statuses, write end time, calculate total time spent (excluding breaks), and generate the AI summary
 - `wk daily finish --date 'YYYY-MM-DD HH:MM'` — finalize a specific day
+- `wk daily finish --force` — re-finalize an already-finalized day: recomputes the end time/time spent as of now and regenerates the AI summary from scratch (replacing the previous one, not stacking on top of it)
+- `wk daily finish --no-summary` — finalize without generating an AI summary
 - `wk daily time` — show elapsed working time for today
 - `wk daily status` — show elapsed time, task breakdown, and finalization state
 - `wk daily check` — validate the structure and completeness of a daily note
