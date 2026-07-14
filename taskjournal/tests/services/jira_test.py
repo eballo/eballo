@@ -277,6 +277,35 @@ class TestJira:
         assert result == "http://pr/77"
 
     @mark.asyncio
+    async def test_fetch_repo_returns_merged_pr_matching_issue_key(
+        self,
+        jira_service: JiraService,
+    ) -> None:
+        # given: a merged PR should still be linked, not just an open one
+        payload = {
+            "detail": [
+                {
+                    "pullRequests": [
+                        {
+                            "status": "MERGED",
+                            "name": "BE-77 feature",
+                            "url": "http://pr/77",
+                        }
+                    ]
+                }
+            ]
+        }
+        client = _FakeAsyncClient(
+            response=_FakeResponse(payload=payload, status_code=200)
+        )
+
+        # when
+        result = await jira_service._fetch_repo_from_dev_status(client, "77", "BE-77")
+
+        # then
+        assert result == "http://pr/77"
+
+    @mark.asyncio
     async def test_fetch_repo_returns_none_when_no_matching_pr(
         self,
         jira_service: JiraService,

@@ -33,7 +33,7 @@ class HolidayService(BaseService):
             with open(filepath, "r", encoding="utf-8") as f:
                 lines = f.readlines()
         except FileNotFoundError:
-            logger.error(f"File '{filepath}' not found.")
+            logger.warning(f"File '{filepath}' not found.")
             return
 
         # Regex pattern for YYYY-MM-DD

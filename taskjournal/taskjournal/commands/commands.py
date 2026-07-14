@@ -223,6 +223,9 @@ class CommandManager:
     def wip_task_in_daily(self, date: datetime, description: str) -> bool:
         return self._tasks.wip_task_in_daily(date, description)
 
+    async def sync_tasks(self, date: datetime) -> tuple[int, int]:
+        return await self._daily.sync_task_statuses(date)
+
     # ── Reports ───────────────────────────────────────────────────────────────
 
     async def create_week_summary(self, custom_date: datetime) -> None:

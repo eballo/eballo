@@ -164,11 +164,11 @@ class GithubService(BaseService):
         pr_url: str | None = None,
     ) -> bool | None:
         """
-        Return True if the (latest) review by 'user_login' on the given PR is APPROVED.
-        Return False if they haven't approved (or later changed to CHANGES_REQUESTED/DISMISSED).
+        Return True if the PR has already been merged, or if the (latest)
+        review by the current user is APPROVED and still matches the PR's
+        current head commit.
+        Return False if it isn't merged and hasn't been (freshly) approved.
         Return None on API/init errors.
-
-        If user_login is None, uses the authenticated user (self.get_user()).
         """
         if not self.gh:
             logger.error("GitHub client not initialized.")
@@ -190,6 +190,13 @@ class GithubService(BaseService):
             return None
 
         try:
+            pr = await self.gh.getitem(f"/repos/{owner}/{repo}/pulls/{number}")
+            if pr.get("merged"):
+                # A merged PR has already gone through its review/merge
+                # process, regardless of whether this user personally
+                # approved it.
+                return True
+
             # Iterate all reviews (handles pagination)
             reviews = []
             async for review in self.gh.getiter(
@@ -206,15 +213,22 @@ class GithubService(BaseService):
 
             # Consider only the *latest* review from that user
             # (Only the most recent state counts)
-            latest = max(
-                reviews,
-                key=lambda r: r.get("submitted_at")
-                or r.get("commit_id")
-                or "",  # fallback tie-breaker
-            )
+            latest = max(reviews, key=lambda r: r.get("submitted_at") or "")
             state = (latest.get("state") or "").upper()
             # Possible values: APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED, PENDING
-            return state == "APPROVED"
+            if state != "APPROVED":
+                return False
+
+            # GitHub does not flip an APPROVED review's state when new commits
+            # are pushed unless "dismiss stale reviews" branch protection is
+            # enabled, so an old approval must be checked against the PR's
+            # current head commit to detect a stale (no longer valid) review.
+            head_sha = (pr.get("head") or {}).get("sha")
+            review_commit_sha = latest.get("commit_id")
+            if head_sha and review_commit_sha and head_sha != review_commit_sha:
+                return False
+
+            return True
 
         except Exception as e:
             logger.error(f"Failed to fetch reviews for {owner}/{repo}#{number}: {e}")

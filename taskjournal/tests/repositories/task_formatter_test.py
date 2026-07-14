@@ -46,6 +46,21 @@ class TestTaskFormatter:
         assert done_result.startswith(" - [x]")
         assert blocked_result.startswith(" - [-]")
 
+    def test_format_task_code_review_renders_as_unchecked(self) -> None:
+        # given: code review only ever shows [ ] (pending) or [x] (reviewed/merged)
+        formatter = TaskFormatter()
+        task = Task(id="1", description="Review PR", status=Status.CODE_REVIEW)
+
+        # when
+        result = formatter.format_task(task, with_name=False, with_status=False)
+
+        # then
+        assert result.startswith(" - [ ]")
+
+    def test_status_checkbox_char_maps_code_review_to_space(self) -> None:
+        assert TaskFormatter.status_checkbox_char(Status.CODE_REVIEW) == " "
+        assert TaskFormatter.status_checkbox_char(Status.DONE) == "x"
+
     def test_format_tasks_joins_lines(self, mocker: MockerFixture) -> None:
         # given
         formatter = TaskFormatter()

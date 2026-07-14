@@ -10,6 +10,7 @@ from pytest_mock import MockerFixture
 from taskjournal.commands.commands import CommandManager
 from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.models.task import Status, Task
+from taskjournal.repositories.task_formatter import TaskFormatter
 
 
 class TestCommands:
@@ -1243,6 +1244,111 @@ class TestCommands:
 
         await cmd.sync_daily_notes(fixed_datetime)
 
+        cmd.file_service.write_lines_to_file.assert_not_called()
+
+    # ── sync_tasks ────────────────────────────────────────────────────────────
+
+    @mark.asyncio
+    async def test_sync_tasks__raises_when_file_missing(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/missing.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
+
+        with raises(FileNotFoundError):
+            await cmd.sync_tasks(fixed_datetime)
+
+    @mark.asyncio
+    async def test_sync_tasks__adds_missing_and_corrects_stale_status(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+
+        real_formatter = TaskFormatter()
+        cmd.task_formatter.status_checkbox_char.side_effect = TaskFormatter.status_checkbox_char
+        cmd.task_formatter.format_task.side_effect = (
+            lambda task, with_name, with_status: real_formatter.format_task(task, with_name, with_status)
+        )
+
+        lines = [
+            "## Planned Tasks\n",
+            " - [ ] [JIRA-2]Old but unrelated\n",
+            "## Code Review Tasks\n",
+            " - [~] [JIRA-3]Review PR that got approved\n",
+        ]
+        cmd.file_service.get_lines.return_value = list(lines)
+
+        # JIRA-1 is a new active task, not yet present anywhere in the notes
+        active_task = Task(id="1", key="JIRA-1", description="New active task", status=Status.IN_PROGRESS)
+        # JIRA-3 is already present in Code Review Tasks but was just approved (should flip to done)
+        code_review_task = Task(id="3", key="JIRA-3", description="Review PR that got approved", status=Status.DONE)
+
+        cmd.jira.get_current_sprint_tasks_not_done_assigned_to_me = AsyncMock(return_value=[active_task])
+        cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[code_review_task])
+        cmd.github.update_status_if_task_reviewed = AsyncMock()
+
+        added, updated = await cmd.sync_tasks(fixed_datetime)
+
+        assert added == 1
+        assert updated == 1
+        written_lines = cmd.file_service.write_lines_to_file.call_args[0][1]
+        assert any("JIRA-1" in line and "[>]" in line for line in written_lines)
+        assert any("JIRA-3" in line and "[x]" in line for line in written_lines)
+
+    @mark.asyncio
+    async def test_sync_tasks__corrects_merged_pr_no_longer_returned_by_jira(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        # given: the Jira ticket already moved past "Code Review" (e.g. the
+        # author moved it to Done right after merging), so it's no longer in
+        # either live Jira query — but the daily note still lists it as
+        # pending review and its PR link shows it's actually merged.
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+
+        lines = [
+            "## Code Review Tasks\n",
+            " - [ ] [BE-3171](https://jira/browse/BE-3171)"
+            "[🐙](https://github.com/acme/albedo/pull/1918)[albedo] Improve apidocs load - Gerard Solé\n",
+        ]
+        cmd.file_service.get_lines.return_value = list(lines)
+
+        cmd.jira.get_current_sprint_tasks_not_done_assigned_to_me = AsyncMock(return_value=[])
+        cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[])
+        cmd.github.update_status_if_task_reviewed = AsyncMock()
+        cmd.github.has_user_approved_pr = AsyncMock(return_value=True)
+
+        added, updated = await cmd.sync_tasks(fixed_datetime)
+
+        assert added == 0
+        assert updated == 1
+        cmd.github.has_user_approved_pr.assert_awaited_once_with(
+            "https://github.com/acme/albedo/pull/1918"
+        )
+        written_lines = cmd.file_service.write_lines_to_file.call_args[0][1]
+        assert any("BE-3171" in line and line.startswith(" - [x]") for line in written_lines)
+
+    @mark.asyncio
+    async def test_sync_tasks__skips_write_when_everything_in_sync(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        cmd.task_formatter.status_checkbox_char.side_effect = TaskFormatter.status_checkbox_char
+
+        cmd.file_service.get_lines.return_value = [
+            "## Planned Tasks\n",
+            " - [>] [JIRA-1]Already tracked\n",
+        ]
+        active_task = Task(id="1", key="JIRA-1", description="Already tracked", status=Status.IN_PROGRESS)
+        cmd.jira.get_current_sprint_tasks_not_done_assigned_to_me = AsyncMock(return_value=[active_task])
+        cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[])
+        cmd.github.update_status_if_task_reviewed = AsyncMock()
+
+        added, updated = await cmd.sync_tasks(fixed_datetime)
+
+        assert (added, updated) == (0, 0)
         cmd.file_service.write_lines_to_file.assert_not_called()
 
     # ── _schedule_macos_alarm ─────────────────────────────────────────────────

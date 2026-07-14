@@ -185,7 +185,7 @@ class TestHolidays:
 
         # then
         assert service.holidays == {}
-        mock_logger.error.assert_called_once()
+        mock_logger.warning.assert_called_once()
 
     def test_load_and_parse_invalid_date_value_error_prints_warning(
         self,
