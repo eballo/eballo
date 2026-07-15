@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.68.0
+
+- Feature/daily finish force
+
 ## 0.67.0
 
 - Add task sync
