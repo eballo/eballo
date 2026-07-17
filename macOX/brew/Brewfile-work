@@ -10,6 +10,9 @@ brew "yarn"
 brew "awscli"
 brew "localstack-cli"
 brew "terraform"             # automate infrastructure [https://www.terraform.io/]
+brew "terragrunt"            # thin wrapper for terraform [https://terragrunt.gruntwork.io/]
+brew "sops"                  # encrypted secrets management [https://github.com/getsops/sops]
+brew "uv"                    # fast python package/project manager [https://github.com/astral-sh/uv]
 
 cask "slack"
 cask "jetbrains-toolbox"
