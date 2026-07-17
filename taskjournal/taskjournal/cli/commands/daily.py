@@ -360,7 +360,8 @@ def build_app() -> Typer:
     @app.command(
         "sync",
         help=(
-            "Pull latest Jira tasks and add any missing ones to today's notes.\n\n"
+            "Pull latest Jira tasks (any status) assigned to you: add any missing "
+            "ones to today's notes and correct the status of any already tracked.\n\n"
             "Examples:\n"
             "  wk daily sync\n"
             "  wk daily sync --date 2026-06-25\n"

@@ -32,6 +32,12 @@ _STATUS_CHAR_MAP: dict[str, Status] = {
     "~": Status.CODE_REVIEW,
 }
 
+# Matches the leading "[KEY](link)" and "[🐙](github_link)" markdown that
+# TaskFormatter.format_task bakes into a rendered line, so re-parsed tasks
+# carry the same key as a freshly-fetched Jira task and dedupe correctly.
+_TASK_KEY_LINK_RE = compile(r"^\[([A-Z][A-Z0-9]*-\d+)\]\(([^)]*)\)")
+_TASK_GITHUB_RE = compile(r"^\[🐙\]\(([^)]*)\)")
+
 
 class ParserService(BaseService):
     def parse(self, file_path: str) -> ParsedNote | None:
@@ -142,8 +148,26 @@ class DailyParserService(ParserService):
 
         if task_match:
             status_char = task_match.group(1).lower()
-            description = task_match.group(2)
+            remainder = task_match.group(2)
             status = _STATUS_CHAR_MAP.get(status_char, Status.TODO)
-            task = Task(id=str(uuid4()), key=None, description=description, status=status)
+
+            key: str | None = None
+            link: str | None = None
+            github: str | None = None
+
+            key_match = _TASK_KEY_LINK_RE.match(remainder)
+            if key_match:
+                key = key_match.group(1)
+                link = key_match.group(2)
+                remainder = remainder[key_match.end():]
+
+            github_match = _TASK_GITHUB_RE.match(remainder)
+            if github_match:
+                github = github_match.group(1)
+                remainder = remainder[github_match.end():]
+
+            task = Task(
+                id=str(uuid4()), key=key, link=link, github=github, description=remainder, status=status
+            )
             section_list: list[Task] = getattr(note, current_section)
             section_list.append(task)

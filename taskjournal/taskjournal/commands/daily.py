@@ -305,9 +305,26 @@ class DailyCommands:
         previous_pending_tasks = self.task_manager.get_previous_pending_tasks(folder_path, current_file)
         recurring_descs = self._recurring.get_for_day(create_datetime)
         recurring_tasks = [TaskManager.create_task(d) for d in recurring_descs]
-        # Previous day's/week's carry-over tasks are appended after today's regular
-        # tasks so the daily notes lead with what's actually planned for today.
-        tasks = TaskManager.unique_tasks(default + pending + recurring_tasks + last_week_pending_tasks + previous_pending_tasks)
+
+        # Jira's "not done" query returns tickets regardless of when work on them
+        # started, so a still-TODO ticket already seen in yesterday's notes reads as
+        # carry-over, not new work — sink it below today's fresh/active tasks instead
+        # of letting it show up first.
+        carried_keys = {
+            key for t in previous_pending_tasks + last_week_pending_tasks if (key := getattr(t, "key", None))
+        }
+        fresh_pending = [
+            t for t in pending if getattr(t, "status", None) != Status.TODO or getattr(t, "key", None) not in carried_keys
+        ]
+        carried_pending = [
+            t for t in pending if getattr(t, "status", None) == Status.TODO and getattr(t, "key", None) in carried_keys
+        ]
+
+        # Recurring checklist items lead the list, followed by all Jira-sourced
+        # tasks (fresh/active ones first, then carry-over) — see comment above.
+        tasks = TaskManager.unique_tasks(
+            default + recurring_tasks + fresh_pending + carried_pending + last_week_pending_tasks + previous_pending_tasks
+        )
 
         all_tasks = tasks + code_review
         epic_names = TaskManager.get_unique_epic_names(all_tasks)
@@ -764,7 +781,7 @@ class DailyCommands:
             raise FileNotFoundError(f"No daily notes for {date.strftime('%Y-%m-%d')}")
 
         logger.debug("Fetching Jira tasks...")
-        pending = await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
+        assigned = await self.jira.get_current_sprint_tasks_all_assigned_to_me()
         code_review = await self.jira.get_current_sprint_tasks_in_code_review()
         async with self.github:
             await self.github.update_status_if_task_reviewed(code_review)
@@ -774,18 +791,23 @@ class DailyCommands:
         existing_descs = [t.description.lower() for t in existing_tasks]
 
         to_add = [
-            t for t in pending
+            t for t in assigned
             if not any(
                 (t.key and t.key in desc) or t.description.strip().lower() in desc
                 for desc in existing_descs
             )
         ]
 
+        lines = self.file_service.get_lines(file_path)
+        updated = self._correct_stale_task_statuses(lines, assigned + code_review)
+
         if not to_add:
-            console.print("[green]✓[/green] All Jira tasks already present in daily notes.")
+            if updated:
+                self.file_service.write_lines_to_file(file_path, lines)
+            else:
+                console.print("[green]✓[/green] All Jira tasks already present in daily notes.")
             return
 
-        lines = self.file_service.get_lines(file_path)
         task_rx = re_compile(r"^\s*-?\s*\[[ xX>~-]\]")
         in_planned = False
         last_task_idx = section_header_idx = -1
