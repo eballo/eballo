@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.70.0
+
+- Add extra tools
+
 ## 0.69.0
 
 - Small improvements
