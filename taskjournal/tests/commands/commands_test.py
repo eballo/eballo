@@ -1252,13 +1252,41 @@ class TestCommands:
         existing = Task(id="1", description="Fix bug", status=Status.TODO)
         cmd.parser.parse.return_value = ParsedNote(planned_tasks=[existing])
         pending = Task(id="1", description="Fix bug", status=Status.TODO)
-        cmd.jira.get_current_sprint_tasks_not_done_assigned_to_me = AsyncMock(return_value=[pending])
+        cmd.jira.get_current_sprint_tasks_all_assigned_to_me = AsyncMock(return_value=[pending])
         cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[])
         cmd.github.update_status_if_task_reviewed = AsyncMock()
 
         await cmd.sync_daily_notes(fixed_datetime)
 
         cmd.file_service.write_lines_to_file.assert_not_called()
+
+    @mark.asyncio
+    async def test_sync_daily_notes__corrects_status_of_task_moved_to_done(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        # given: a task already tracked as in-progress in today's notes has
+        # since been moved to Done (or Rejected/any other status) in Jira.
+        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
+        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
+        cmd.task_formatter.status_checkbox_char.side_effect = TaskFormatter.status_checkbox_char
+
+        lines = [
+            "## Planned Tasks\n",
+            " - [>] [JIRA-1]In progress task\n",
+        ]
+        cmd.file_service.get_lines.return_value = list(lines)
+        existing = Task(id="1", description="In progress task", status=Status.IN_PROGRESS)
+        cmd.parser.parse.return_value = ParsedNote(planned_tasks=[existing])
+
+        finished_task = Task(id="1", key="JIRA-1", description="In progress task", status=Status.DONE)
+        cmd.jira.get_current_sprint_tasks_all_assigned_to_me = AsyncMock(return_value=[finished_task])
+        cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[])
+        cmd.github.update_status_if_task_reviewed = AsyncMock()
+
+        await cmd.sync_daily_notes(fixed_datetime)
+
+        written_lines = cmd.file_service.write_lines_to_file.call_args[0][1]
+        assert any("JIRA-1" in line and "[x]" in line for line in written_lines)
 
     # ── sync_tasks ────────────────────────────────────────────────────────────
 

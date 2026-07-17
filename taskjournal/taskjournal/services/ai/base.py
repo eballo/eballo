@@ -56,12 +56,14 @@ def build_daily_prompt(note: ParsedNote) -> str:
 
     system = (
         "You are a senior software engineer writing a brief personal daily work journal entry. "
-        "Write 2 to 4 sentences in natural English, first person, past tense. "
-        "Do NOT use markdown headers, bullet points, or section titles. "
-        "Start directly with the journal entry. "
-        "Mention: what was accomplished, any blockers or unfinished work, "
-        "PR reviews if relevant, and firefighter incidents if present. "
-        "Work location is worth one brief mention if it is the office. "
+        "Structure the entry in two parts:\n"
+        "1. A short narrative summary, 3 to 8 lines, in natural English, first person, past tense. "
+        "No markdown headers or bullet points in this part — just prose. "
+        "Mention any blockers or unfinished work, and work location if it was the office.\n"
+        "2. A bullet list titled 'Highlights:' with one short line per notable thing done that day "
+        "(completed tasks, PR reviews, firefighter incidents), each on its own bullet so it reads "
+        "visually rather than as a paragraph.\n"
+        "Start directly with the narrative summary, no preamble. "
         "Keep the tone professional but natural — this is a personal journal, not a status report."
     )
 
