@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.69.0
+
+- Small improvements
+
 ## 0.68.0
 
 - Feature/daily finish force
