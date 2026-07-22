@@ -1,6 +1,7 @@
-from datetime import datetime
 from pathlib import Path
 from zipfile import ZipFile
+
+from freezegun import freeze_time
 
 from taskjournal.services.backup import BackupService
 from taskjournal.services.base import ServiceStatus
@@ -56,14 +57,13 @@ class TestBackup:
 
         assert svc.health_check().status == ServiceStatus.OK
 
+    @freeze_time("2026-07-22 10:51:28")
     def test_create_backup_given_files_exist_when_backup_called_then_zip_created(
         self,
         backup_service_instance: BackupService,
     ) -> None:
         # given
-        expected_filename = (
-            f"DailyNotes_backup_{datetime.now().strftime('%Y_%m_%d')}.zip"
-        )
+        expected_filename = "DailyNotes_backup_2026_07_22_10_51_28.zip"
 
         # when
         backup_file = backup_service_instance.create()

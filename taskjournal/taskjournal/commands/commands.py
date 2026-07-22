@@ -159,6 +159,9 @@ class CommandManager:
     def fix_summary(self, file_path: str, summary_text: str) -> None:
         return self._daily.fix_summary(file_path, summary_text)
 
+    async def fix_note_automatically(self, date_str: str, file_path: str, issues: list[str]) -> list[str]:
+        return await self._daily.fix_note_automatically(date_str, file_path, issues)
+
     def audit_daily_notes(self, year: int) -> list[tuple[str, str, list[str]]]:
         return self._daily.audit_daily_notes(year)
 
@@ -174,7 +177,7 @@ class CommandManager:
     def get_streak_stats(self, today: datetime) -> dict[str, object]:
         return self._daily.get_streak_stats(today)
 
-    async def sync_daily_notes(self, date: datetime) -> None:
+    async def sync_daily_notes(self, date: datetime) -> tuple[int, int]:
         return await self._daily.sync_daily_notes(date)
 
     def _get_week_folder(self, date: datetime) -> str:
@@ -222,9 +225,6 @@ class CommandManager:
 
     def wip_task_in_daily(self, date: datetime, description: str) -> bool:
         return self._tasks.wip_task_in_daily(date, description)
-
-    async def sync_tasks(self, date: datetime) -> tuple[int, int]:
-        return await self._daily.sync_task_statuses(date)
 
     # ── Reports ───────────────────────────────────────────────────────────────
 

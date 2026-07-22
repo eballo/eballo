@@ -163,10 +163,8 @@ def build_app() -> Typer:
         friday = monday + timedelta(days=4)
         table.add_row("Dates", f"{monday.strftime('%d %b')} – {friday.strftime('%d %b %Y')}")
 
-        weekday = today.weekday()
-        days_before_today = min(weekday, 5)
         accumulated_s = TimeService.get_accumulated_week_seconds(week_folder, today)
-        expected_s = days_before_today * 8 * 3600
+        expected_s = TimeService.get_expected_week_seconds_before(today)
         extra_s = accumulated_s - expected_s
         acc_h, acc_m = TimeService.seconds_to_hours_minutes(accumulated_s)
         exp_h, exp_m = TimeService.seconds_to_hours_minutes(expected_s)

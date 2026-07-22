@@ -36,7 +36,7 @@ class BackupService(BaseService):
 
     @staticmethod
     def _get_backup_filename() -> str:
-        date_str = datetime.now().strftime("%Y_%m_%d")
+        date_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         return f"DailyNotes_backup_{date_str}.zip"
 
     def create(self) -> Path:

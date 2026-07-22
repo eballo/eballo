@@ -353,12 +353,12 @@ class DailyCommands:
 
         week_folder = self._get_week_folder(create_datetime)
         accumulated_seconds = self.time_service.get_accumulated_week_seconds(week_folder, create_datetime)
-        weekday = create_datetime.weekday()
-        days_before_today = min(weekday, 5)
-        expected_seconds = days_before_today * 8 * 3600
+        days_before_today = min(create_datetime.weekday(), 5)
+        expected_seconds = TimeService.get_expected_week_seconds_before(create_datetime)
         extra_seconds = accumulated_seconds - expected_seconds
-        today_work_seconds = min(8 * 3600, max(0, 8 * 3600 - extra_seconds))
-        finish = self.time_service.estimated_finish_time(create_datetime, accumulated_seconds, days_before_today)
+        today_seconds = TimeService.get_expected_workday_seconds(create_datetime)
+        today_work_seconds = min(today_seconds, max(0, today_seconds - extra_seconds))
+        finish = self.time_service.estimated_finish_time(create_datetime, accumulated_seconds)
 
         accumulated_h, accumulated_m = TimeService.seconds_to_hours_minutes(accumulated_seconds)
         expected_h, expected_m = TimeService.seconds_to_hours_minutes(expected_seconds)
@@ -590,7 +590,7 @@ class DailyCommands:
             return None
 
         try:
-            await self.sync_task_statuses(custom_date)
+            await self.sync_daily_notes(custom_date)
         except Exception as e:
             logger.warning(f"Code review sync failed: {e}")
 
@@ -736,6 +736,32 @@ class DailyCommands:
         self.file_service.write_lines_to_file(file_path, content)
         return True
 
+    async def fix_note_automatically(self, date_str: str, file_path: str, issues: list[str]) -> list[str]:
+        fixed: list[str] = []
+
+        if "missing end time" in issues:
+            lines = self.file_service.get_lines(file_path)
+            _, start_time = self.time_service.get_start_time(lines)
+            end_time = start_time + timedelta(seconds=TimeService.get_expected_workday_seconds(start_time))
+            self.fix_end_time_and_time_spent(file_path, end_time)
+            fixed += ["end time", "time spent"]
+        elif "missing time spent" in issues and self.fix_time_spent_from_file(file_path):
+            fixed.append("time spent")
+
+        if "missing summary" in issues:
+            note = self.parser.parse(file_path)
+            summary = None
+            if note is not None:
+                try:
+                    summary = await self.ai_service.summarize_day(note)
+                except Exception as e:
+                    logger.warning(f"AI summary failed for {date_str}: {e}")
+            if summary and not summary.startswith("⚠️"):
+                self.fix_summary(file_path, summary)
+                fixed.append("summary")
+
+        return fixed
+
     def fix_summary(self, file_path: str, summary_text: str) -> None:
         content = self.file_service.get_lines(file_path)
 
@@ -772,10 +798,13 @@ class DailyCommands:
         else:
             logger.error("Could not calculate working hours.")
 
-    async def sync_daily_notes(self, date: datetime) -> None:
-        from re import compile as re_compile
-        from taskjournal.services.parser import _SECTION_RULES
+    async def sync_daily_notes(self, date: datetime) -> tuple[int, int]:
+        """Reconcile today's notes with live Jira/GitHub state.
 
+        Adds any assigned Jira task (any status) or code-review task that's
+        missing, and corrects the checkbox of any task whose local status has
+        gone stale (e.g. a code-review approval, or a Jira status change).
+        """
         file_path = self._get_daily_notes_file_path(date)
         if not exists(file_path):
             raise FileNotFoundError(f"No daily notes for {date.strftime('%Y-%m-%d')}")
@@ -783,81 +812,15 @@ class DailyCommands:
         logger.debug("Fetching Jira tasks...")
         assigned = await self.jira.get_current_sprint_tasks_all_assigned_to_me()
         code_review = await self.jira.get_current_sprint_tasks_in_code_review()
-        async with self.github:
-            await self.github.update_status_if_task_reviewed(code_review)
-
-        existing_data = self.parser.parse(file_path)
-        existing_tasks = existing_data.planned_tasks if existing_data else []
-        existing_descs = [t.description.lower() for t in existing_tasks]
-
-        to_add = [
-            t for t in assigned
-            if not any(
-                (t.key and t.key in desc) or t.description.strip().lower() in desc
-                for desc in existing_descs
-            )
-        ]
-
-        lines = self.file_service.get_lines(file_path)
-        updated = self._correct_stale_task_statuses(lines, assigned + code_review)
-
-        if not to_add:
-            if updated:
-                self.file_service.write_lines_to_file(file_path, lines)
-            else:
-                console.print("[green]✓[/green] All Jira tasks already present in daily notes.")
-            return
-
-        task_rx = re_compile(r"^\s*-?\s*\[[ xX>~-]\]")
-        in_planned = False
-        last_task_idx = section_header_idx = -1
-
-        for i, raw in enumerate(lines):
-            stripped = raw.strip()
-            for sec_name, pat in _SECTION_RULES:
-                if pat.match(stripped):
-                    in_planned = sec_name == "planned_tasks"
-                    if in_planned:
-                        section_header_idx = i
-                    break
-            if in_planned and task_rx.match(stripped):
-                last_task_idx = i
-
-        insert_at = last_task_idx if last_task_idx != -1 else section_header_idx
-        if insert_at == -1:
-            raise ValueError("Planned Tasks section not found.")
-
-        for offset, task in enumerate(to_add):
-            formatted = self.task_formatter.format_task(task, with_name=True, with_status=False)
-            lines.insert(insert_at + 1 + offset, formatted + "\n")
-            console.print(f"  [green]+[/green] {task.description}")
-
-        self.file_service.write_lines_to_file(file_path, lines)
-
-    async def sync_task_statuses(self, date: datetime) -> tuple[int, int]:
-        """Reconcile today's notes with live Jira/GitHub state.
-
-        Adds the active Jira task if missing and re-checks code-review tasks,
-        correcting the checkbox of any task whose local status has gone stale
-        (e.g. a code-review approval, or a Jira status change) instead of only
-        adding tasks that are entirely missing.
-        """
-        file_path = self._get_daily_notes_file_path(date)
-        if not exists(file_path):
-            raise FileNotFoundError(f"No daily notes for {date.strftime('%Y-%m-%d')}")
-
-        logger.debug("Fetching Jira tasks...")
-        active = await self.jira.get_current_sprint_tasks_not_done_assigned_to_me()
-        code_review = await self.jira.get_current_sprint_tasks_in_code_review()
 
         lines = self.file_service.get_lines(file_path)
 
         async with self.github:
             await self.github.update_status_if_task_reviewed(code_review)
 
-            added = self._insert_missing_tasks_in_section(lines, "planned_tasks", active)
+            added = self._insert_missing_tasks_in_section(lines, "planned_tasks", assigned)
             added += self._insert_missing_tasks_in_section(lines, "code_review_tasks", code_review)
-            updated = self._correct_stale_task_statuses(lines, active + code_review)
+            updated = self._correct_stale_task_statuses(lines, assigned + code_review)
             # A ticket can leave Jira's "Code Review" status/sprint (e.g. moved
             # forward right after merging) before its PR is re-checked here, so
             # already-tracked code-review lines are re-verified directly against

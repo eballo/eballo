@@ -3,6 +3,7 @@ from os import makedirs
 from os.path import exists, join
 
 from taskjournal.config import BASE_DIR, TEMPLATE_FORMAT
+from taskjournal.constants import WORKDAY_HOURS_FRIDAY, WORKDAY_HOURS_MON_TO_THU
 from taskjournal.services.base import BaseService
 from taskjournal.services.file import FileService
 from taskjournal.services.logger import logger
@@ -71,14 +72,28 @@ class TimeService(BaseService):
         return total
 
     @staticmethod
+    def get_expected_workday_seconds(day: datetime | date) -> int:
+        hours = WORKDAY_HOURS_FRIDAY if day.weekday() == 4 else WORKDAY_HOURS_MON_TO_THU
+        return int(hours * 3600)
+
+    @staticmethod
+    def get_expected_week_seconds_before(today: datetime) -> int:
+        start_of_week = today - timedelta(days=today.weekday())
+        days_before_today = min(today.weekday(), 5)  # Mon..Fri, capped for weekend notes
+        return sum(
+            TimeService.get_expected_workday_seconds(start_of_week + timedelta(days=i))
+            for i in range(days_before_today)
+        )
+
+    @staticmethod
     def estimated_finish_time(
         created_time: datetime,
         accumulated_seconds: int = 0,
-        days_before_today: int = 0,
     ) -> datetime:
-        expected_seconds = days_before_today * 8 * 3600
+        expected_seconds = TimeService.get_expected_week_seconds_before(created_time)
         extra_seconds = accumulated_seconds - expected_seconds
-        today_work_seconds = min(8 * 3600, max(0, 8 * 3600 - extra_seconds))
+        today_seconds = TimeService.get_expected_workday_seconds(created_time)
+        today_work_seconds = min(today_seconds, max(0, today_seconds - extra_seconds))
         lunch_seconds = 3600
         return created_time + timedelta(seconds=today_work_seconds + lunch_seconds)
 

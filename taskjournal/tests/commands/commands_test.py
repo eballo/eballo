@@ -895,6 +895,104 @@ class TestCommands:
         with pytest.raises(ValueError, match="Notes section not found"):
             cmd.add_note_to_daily(fixed_datetime, "note")
 
+    # ── fix_note_automatically ───────────────────────────────────────────────
+
+    @mark.asyncio
+    async def test_fix_note_automatically__fixes_missing_end_time_as_start_plus_expected_hours(
+        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
+    ) -> None:
+        # fixed_datetime (2025-01-15) is a Wednesday → 8.5h expected workday
+        cmd.file_service.get_lines.return_value = ["**Start Time:** 09:00:00\n"]
+        cmd.time_service.get_start_time.return_value = (0, fixed_datetime.replace(hour=9, minute=0))
+        fix_end = mocker.patch.object(cmd._daily, "fix_end_time_and_time_spent")
+
+        fixed = await cmd.fix_note_automatically("2026-01-05", "/day.md", ["missing end time"])
+
+        fix_end.assert_called_once_with("/day.md", fixed_datetime.replace(hour=17, minute=30))
+        assert fixed == ["end time", "time spent"]
+
+    @mark.asyncio
+    async def test_fix_note_automatically__fixes_missing_end_time_as_start_plus_6h_on_friday(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        friday = datetime(2025, 1, 17, 9, 0, 0)
+        cmd.file_service.get_lines.return_value = ["**Start Time:** 09:00:00\n"]
+        cmd.time_service.get_start_time.return_value = (0, friday)
+        fix_end = mocker.patch.object(cmd._daily, "fix_end_time_and_time_spent")
+
+        fixed = await cmd.fix_note_automatically("2026-01-05", "/day.md", ["missing end time"])
+
+        fix_end.assert_called_once_with("/day.md", friday.replace(hour=15, minute=0))
+        assert fixed == ["end time", "time spent"]
+
+    @mark.asyncio
+    async def test_fix_note_automatically__fixes_missing_time_spent_from_existing_end(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        fix_spent = mocker.patch.object(cmd._daily, "fix_time_spent_from_file", return_value=True)
+
+        fixed = await cmd.fix_note_automatically("2026-01-05", "/day.md", ["missing time spent"])
+
+        fix_spent.assert_called_once_with("/day.md")
+        assert fixed == ["time spent"]
+
+    @mark.asyncio
+    async def test_fix_note_automatically__skips_time_spent_when_it_cannot_be_derived(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        mocker.patch.object(cmd._daily, "fix_time_spent_from_file", return_value=False)
+
+        fixed = await cmd.fix_note_automatically("2026-01-05", "/day.md", ["missing time spent"])
+
+        assert fixed == []
+
+    @mark.asyncio
+    async def test_fix_note_automatically__fixes_missing_summary_with_ai(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        cmd.parser.parse.return_value = ParsedNote(summary=[])
+        cmd._daily.ai_service.summarize_day = AsyncMock(return_value="AI generated summary.")
+        fix_summary = mocker.patch.object(cmd._daily, "fix_summary")
+
+        fixed = await cmd.fix_note_automatically("2026-01-05", "/day.md", ["missing summary"])
+
+        fix_summary.assert_called_once_with("/day.md", "AI generated summary.")
+        assert fixed == ["summary"]
+
+    @mark.asyncio
+    async def test_fix_note_automatically__skips_summary_when_ai_fails(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        cmd.parser.parse.return_value = ParsedNote(summary=[])
+        cmd._daily.ai_service.summarize_day = AsyncMock(side_effect=RuntimeError("boom"))
+        fix_summary = mocker.patch.object(cmd._daily, "fix_summary")
+
+        fixed = await cmd.fix_note_automatically("2026-01-05", "/day.md", ["missing summary"])
+
+        fix_summary.assert_not_called()
+        assert fixed == []
+
+    @mark.asyncio
+    async def test_fix_note_automatically__skips_summary_when_ai_returns_warning(
+        self, cmd: CommandManager, mocker: MockerFixture
+    ) -> None:
+        cmd.parser.parse.return_value = ParsedNote(summary=[])
+        cmd._daily.ai_service.summarize_day = AsyncMock(return_value="⚠️ No provider configured")
+        fix_summary = mocker.patch.object(cmd._daily, "fix_summary")
+
+        fixed = await cmd.fix_note_automatically("2026-01-05", "/day.md", ["missing summary"])
+
+        fix_summary.assert_not_called()
+        assert fixed == []
+
+    @mark.asyncio
+    async def test_fix_note_automatically__ignores_unfixable_missing_start_time(
+        self, cmd: CommandManager
+    ) -> None:
+        fixed = await cmd.fix_note_automatically("2026-01-05", "/day.md", ["missing start time"])
+
+        assert fixed == []
+
     # ── _note_issues / audit ─────────────────────────────────────────────────
 
     def test_note_issues__returns_empty_for_complete_note(
@@ -1232,6 +1330,9 @@ class TestCommands:
         assert stats["total"] == 3
 
     # ── sync_daily_notes ──────────────────────────────────────────────────────
+    # (unifies what used to be the separate `wk task sync` command: syncing
+    # today's notes against Jira/GitHub always covers any assigned task,
+    # regardless of status, plus code-review link revalidation.)
 
     @mark.asyncio
     async def test_sync_daily_notes__raises_when_file_missing(
@@ -1244,64 +1345,7 @@ class TestCommands:
             await cmd.sync_daily_notes(fixed_datetime)
 
     @mark.asyncio
-    async def test_sync_daily_notes__skips_write_when_all_tasks_present(
-        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
-    ) -> None:
-        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
-        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
-        existing = Task(id="1", description="Fix bug", status=Status.TODO)
-        cmd.parser.parse.return_value = ParsedNote(planned_tasks=[existing])
-        pending = Task(id="1", description="Fix bug", status=Status.TODO)
-        cmd.jira.get_current_sprint_tasks_all_assigned_to_me = AsyncMock(return_value=[pending])
-        cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[])
-        cmd.github.update_status_if_task_reviewed = AsyncMock()
-
-        await cmd.sync_daily_notes(fixed_datetime)
-
-        cmd.file_service.write_lines_to_file.assert_not_called()
-
-    @mark.asyncio
-    async def test_sync_daily_notes__corrects_status_of_task_moved_to_done(
-        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
-    ) -> None:
-        # given: a task already tracked as in-progress in today's notes has
-        # since been moved to Done (or Rejected/any other status) in Jira.
-        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
-        mocker.patch("taskjournal.commands.daily.exists", return_value=True)
-        cmd.task_formatter.status_checkbox_char.side_effect = TaskFormatter.status_checkbox_char
-
-        lines = [
-            "## Planned Tasks\n",
-            " - [>] [JIRA-1]In progress task\n",
-        ]
-        cmd.file_service.get_lines.return_value = list(lines)
-        existing = Task(id="1", description="In progress task", status=Status.IN_PROGRESS)
-        cmd.parser.parse.return_value = ParsedNote(planned_tasks=[existing])
-
-        finished_task = Task(id="1", key="JIRA-1", description="In progress task", status=Status.DONE)
-        cmd.jira.get_current_sprint_tasks_all_assigned_to_me = AsyncMock(return_value=[finished_task])
-        cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[])
-        cmd.github.update_status_if_task_reviewed = AsyncMock()
-
-        await cmd.sync_daily_notes(fixed_datetime)
-
-        written_lines = cmd.file_service.write_lines_to_file.call_args[0][1]
-        assert any("JIRA-1" in line and "[x]" in line for line in written_lines)
-
-    # ── sync_tasks ────────────────────────────────────────────────────────────
-
-    @mark.asyncio
-    async def test_sync_tasks__raises_when_file_missing(
-        self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
-    ) -> None:
-        mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/missing.md")
-        mocker.patch("taskjournal.commands.daily.exists", return_value=False)
-
-        with raises(FileNotFoundError):
-            await cmd.sync_tasks(fixed_datetime)
-
-    @mark.asyncio
-    async def test_sync_tasks__adds_missing_and_corrects_stale_status(
+    async def test_sync_daily_notes__adds_missing_and_corrects_stale_status(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
         mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
@@ -1321,16 +1365,16 @@ class TestCommands:
         ]
         cmd.file_service.get_lines.return_value = list(lines)
 
-        # JIRA-1 is a new active task, not yet present anywhere in the notes
-        active_task = Task(id="1", key="JIRA-1", description="New active task", status=Status.IN_PROGRESS)
+        # JIRA-1 is a new assigned task, not yet present anywhere in the notes
+        assigned_task = Task(id="1", key="JIRA-1", description="New assigned task", status=Status.IN_PROGRESS)
         # JIRA-3 is already present in Code Review Tasks but was just approved (should flip to done)
         code_review_task = Task(id="3", key="JIRA-3", description="Review PR that got approved", status=Status.DONE)
 
-        cmd.jira.get_current_sprint_tasks_not_done_assigned_to_me = AsyncMock(return_value=[active_task])
+        cmd.jira.get_current_sprint_tasks_all_assigned_to_me = AsyncMock(return_value=[assigned_task])
         cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[code_review_task])
         cmd.github.update_status_if_task_reviewed = AsyncMock()
 
-        added, updated = await cmd.sync_tasks(fixed_datetime)
+        added, updated = await cmd.sync_daily_notes(fixed_datetime)
 
         assert added == 1
         assert updated == 1
@@ -1339,7 +1383,7 @@ class TestCommands:
         assert any("JIRA-3" in line and "[x]" in line for line in written_lines)
 
     @mark.asyncio
-    async def test_sync_tasks__corrects_merged_pr_no_longer_returned_by_jira(
+    async def test_sync_daily_notes__corrects_merged_pr_no_longer_returned_by_jira(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
         # given: the Jira ticket already moved past "Code Review" (e.g. the
@@ -1356,12 +1400,12 @@ class TestCommands:
         ]
         cmd.file_service.get_lines.return_value = list(lines)
 
-        cmd.jira.get_current_sprint_tasks_not_done_assigned_to_me = AsyncMock(return_value=[])
+        cmd.jira.get_current_sprint_tasks_all_assigned_to_me = AsyncMock(return_value=[])
         cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[])
         cmd.github.update_status_if_task_reviewed = AsyncMock()
         cmd.github.has_user_approved_pr = AsyncMock(return_value=True)
 
-        added, updated = await cmd.sync_tasks(fixed_datetime)
+        added, updated = await cmd.sync_daily_notes(fixed_datetime)
 
         assert added == 0
         assert updated == 1
@@ -1372,7 +1416,7 @@ class TestCommands:
         assert any("BE-3171" in line and line.startswith(" - [x]") for line in written_lines)
 
     @mark.asyncio
-    async def test_sync_tasks__skips_write_when_everything_in_sync(
+    async def test_sync_daily_notes__skips_write_when_everything_in_sync(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
         mocker.patch.object(cmd._daily, "_get_daily_notes_file_path", return_value="/day.md")
@@ -1383,12 +1427,12 @@ class TestCommands:
             "## Planned Tasks\n",
             " - [>] [JIRA-1]Already tracked\n",
         ]
-        active_task = Task(id="1", key="JIRA-1", description="Already tracked", status=Status.IN_PROGRESS)
-        cmd.jira.get_current_sprint_tasks_not_done_assigned_to_me = AsyncMock(return_value=[active_task])
+        assigned_task = Task(id="1", key="JIRA-1", description="Already tracked", status=Status.IN_PROGRESS)
+        cmd.jira.get_current_sprint_tasks_all_assigned_to_me = AsyncMock(return_value=[assigned_task])
         cmd.jira.get_current_sprint_tasks_in_code_review = AsyncMock(return_value=[])
         cmd.github.update_status_if_task_reviewed = AsyncMock()
 
-        added, updated = await cmd.sync_tasks(fixed_datetime)
+        added, updated = await cmd.sync_daily_notes(fixed_datetime)
 
         assert (added, updated) == (0, 0)
         cmd.file_service.write_lines_to_file.assert_not_called()

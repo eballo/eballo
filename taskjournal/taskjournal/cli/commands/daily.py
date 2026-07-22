@@ -360,20 +360,31 @@ def build_app() -> Typer:
     @app.command(
         "sync",
         help=(
-            "Pull latest Jira tasks (any status) assigned to you: add any missing "
-            "ones to today's notes and correct the status of any already tracked.\n\n"
+            "Pull latest Jira tasks (any status) and code-review tasks assigned to "
+            "you: add whichever are missing to today's notes and correct the "
+            "status of any already tracked (e.g. a code-review approval).\n\n"
             "Examples:\n"
             "  wk daily sync\n"
             "  wk daily sync --date 2026-06-25\n"
+            "  wk daily sync --prs\n"
         ),
     )
     def daily_sync(
         ctx: Context,
         date: str | None = Option(None, "--date", help="Date: 'YYYY-MM-DD'."),
+        prs: bool = Option(
+            False, "--prs", help="Also add PRs pending your review as tasks."
+        ),
     ) -> None:
         today = parse_date(date) if date else get_today(ctx)
         try:
             run(get_manager(ctx).sync_daily_notes(today))
+            if prs:
+                added = run(get_manager(ctx).sync_prs(today))
+                if added == 0:
+                    console.print("[green]✓[/green] All PRs already in daily notes.")
+                else:
+                    console.print(f"[green]✓[/green] Added {added} PR(s) to daily notes.")
         except (FileNotFoundError, ValueError) as e:
             logger.error(str(e))
             sys_exit(1)
@@ -391,7 +402,11 @@ def build_app() -> Typer:
     def daily_audit(
         ctx: Context,
         year: int | None = Option(None, "--year", help="Year to scan (default: current year)."),
-        fix: bool = Option(False, "--fix", help="Open each incomplete file in $EDITOR."),
+        fix: bool = Option(
+            False,
+            "--fix",
+            help="Automatically fix incomplete files (AI summary, end time = start + 8h, computed time spent).",
+        ),
     ) -> None:
         today = get_today(ctx)
         target_year = year or today.year
@@ -437,7 +452,11 @@ def build_app() -> Typer:
             console.print()
             for date_str, file_path, issues in [(d, f, i) for d, f, i in results if i]:
                 console.print(f"[bold cyan]{date_str}[/bold cyan]  [yellow]{' · '.join(issues)}[/yellow]")
-                _fix_file_interactively(manager, date_str, file_path, issues)
+                fixed = run(manager.fix_note_automatically(date_str, file_path, issues))
+                if fixed:
+                    console.print(f"  [green]✓ Fixed: {', '.join(fixed)}[/green]")
+                else:
+                    console.print("  [dim]Nothing could be fixed automatically[/dim]")
                 console.print()
 
         console.print()
