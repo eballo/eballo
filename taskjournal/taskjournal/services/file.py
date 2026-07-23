@@ -55,9 +55,8 @@ class FileService(BaseService):
 
     @staticmethod
     def get_week_folder(base_dir: str | Path, date_obj: datetime | date) -> str:
-        year = date_obj.year
-        week_num = date_obj.isocalendar()[1]
-        week_folder = join(str(base_dir), f"{year}", f"week{week_num}")
+        iso_year, week_num, _ = date_obj.isocalendar()
+        week_folder = join(str(base_dir), f"{iso_year}", f"week{week_num}")
         return week_folder
 
     @staticmethod

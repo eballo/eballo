@@ -20,6 +20,14 @@ class TestFile:
         # then
         assert FileService.get_week_folder(base_dir, date) == expected_folder
 
+    def test_get_week_folder__uses_iso_year_at_year_boundary(
+        self, base_dir: str
+    ) -> None:
+        # 2025-12-29 is a Monday belonging to ISO week 1 of ISO-year 2026.
+        date = datetime(2025, 12, 29)
+        expected_folder = join(base_dir, "2026", "week1")
+        assert FileService.get_week_folder(base_dir, date) == expected_folder
+
     def test_write_to_file(self, mocker: MockerFixture) -> None:
         # given
         mock_file = mocker.mock_open()

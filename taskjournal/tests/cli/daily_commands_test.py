@@ -12,10 +12,10 @@ from typer.testing import Result
 from taskjournal.models.task import Status, Task
 
 
-class TestFixFileInteractively:
+class TestAuditAutoFix:
 
     @freeze_time("2026-01-19 10:00:00")
-    def test_fix_file_called_from_audit_when_user_says_yes(
+    def test_fix_calls_fix_note_automatically_for_each_incomplete_file(
         self,
         mocker: MockerFixture,
         cli_manager: MagicMock,
@@ -26,96 +26,37 @@ class TestFixFileInteractively:
         ]
         cli_manager.count_week_folders.return_value = 1
         cli_manager.audit_weekly_coverage.return_value = []
-
-        mocker.patch("builtins.input", side_effect=["A great day of work"])
+        cli_manager.fix_note_automatically = mocker.AsyncMock(return_value=["summary"])
 
         result = invoke_cli(["daily", "audit", "--fix"])
 
         assert result.exit_code == 0
-        cli_manager.fix_summary.assert_called_once_with("/day.md", "A great day of work")
+        cli_manager.fix_note_automatically.assert_called_once_with(
+            "2026-01-05", "/day.md", ["missing summary"]
+        )
+        assert "Fixed: summary" in result.stdout
 
     @freeze_time("2026-01-19 10:00:00")
-    def test_fix_file_missing_end_time_sets_it(
+    def test_fix_reports_when_nothing_could_be_fixed(
         self,
         mocker: MockerFixture,
         cli_manager: MagicMock,
         invoke_cli: Callable[[list[str]], Result],
     ) -> None:
         cli_manager.audit_daily_notes.return_value = [
-            ("2026-01-05", "/day.md", ["missing end time"]),
+            ("2026-01-05", "/day.md", ["missing start time"]),
         ]
         cli_manager.count_week_folders.return_value = 1
         cli_manager.audit_weekly_coverage.return_value = []
-
-        mocker.patch("builtins.input", side_effect=["17:30"])
+        cli_manager.fix_note_automatically = mocker.AsyncMock(return_value=[])
 
         result = invoke_cli(["daily", "audit", "--fix"])
 
         assert result.exit_code == 0
-        cli_manager.fix_end_time_and_time_spent.assert_called_once()
+        assert "Nothing could be fixed automatically" in result.stdout
 
     @freeze_time("2026-01-19 10:00:00")
-    def test_fix_file_invalid_end_time_format(
-        self,
-        mocker: MockerFixture,
-        cli_manager: MagicMock,
-        invoke_cli: Callable[[list[str]], Result],
-    ) -> None:
-        cli_manager.audit_daily_notes.return_value = [
-            ("2026-01-05", "/day.md", ["missing end time"]),
-        ]
-        cli_manager.count_week_folders.return_value = 1
-        cli_manager.audit_weekly_coverage.return_value = []
-
-        mocker.patch("builtins.input", side_effect=["not-valid"])
-
-        result = invoke_cli(["daily", "audit", "--fix"])
-
-        assert result.exit_code == 0
-        cli_manager.fix_end_time_and_time_spent.assert_not_called()
-
-    @freeze_time("2026-01-19 10:00:00")
-    def test_fix_file_missing_time_spent_fixes_from_file(
-        self,
-        mocker: MockerFixture,
-        cli_manager: MagicMock,
-        invoke_cli: Callable[[list[str]], Result],
-    ) -> None:
-        cli_manager.audit_daily_notes.return_value = [
-            ("2026-01-05", "/day.md", ["missing time spent"]),
-        ]
-        cli_manager.count_week_folders.return_value = 1
-        cli_manager.audit_weekly_coverage.return_value = []
-        cli_manager.fix_time_spent_from_file.return_value = True
-
-        result = invoke_cli(["daily", "audit", "--fix"])
-
-        assert result.exit_code == 0
-        cli_manager.fix_time_spent_from_file.assert_called_once_with("/day.md")
-
-    @freeze_time("2026-01-19 10:00:00")
-    def test_fix_file_missing_time_spent_asks_for_end_time_when_no_end(
-        self,
-        mocker: MockerFixture,
-        cli_manager: MagicMock,
-        invoke_cli: Callable[[list[str]], Result],
-    ) -> None:
-        cli_manager.audit_daily_notes.return_value = [
-            ("2026-01-05", "/day.md", ["missing time spent"]),
-        ]
-        cli_manager.count_week_folders.return_value = 1
-        cli_manager.audit_weekly_coverage.return_value = []
-        cli_manager.fix_time_spent_from_file.return_value = False
-
-        mocker.patch("builtins.input", side_effect=["17:45"])
-
-        result = invoke_cli(["daily", "audit", "--fix"])
-
-        assert result.exit_code == 0
-        cli_manager.fix_end_time_and_time_spent.assert_called_once()
-
-    @freeze_time("2026-01-19 10:00:00")
-    def test_fix_file_blank_summary_skips(
+    def test_fix_not_called_without_fix_flag(
         self,
         mocker: MockerFixture,
         cli_manager: MagicMock,
@@ -126,13 +67,12 @@ class TestFixFileInteractively:
         ]
         cli_manager.count_week_folders.return_value = 1
         cli_manager.audit_weekly_coverage.return_value = []
+        cli_manager.fix_note_automatically = mocker.AsyncMock(return_value=["summary"])
 
-        mocker.patch("builtins.input", side_effect=[""])
-
-        result = invoke_cli(["daily", "audit", "--fix"])
+        result = invoke_cli(["daily", "audit"])
 
         assert result.exit_code == 0
-        cli_manager.fix_summary.assert_not_called()
+        cli_manager.fix_note_automatically.assert_not_called()
 
 
 class TestDailyStatus:
@@ -255,6 +195,52 @@ class TestDailySync:
 
         assert result.exit_code == 1
         assert "no file" in caplog.text
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_daily_sync_without_prs_flag_does_not_sync_prs(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        from unittest.mock import AsyncMock
+        cli_manager.sync_daily_notes = AsyncMock()
+        cli_manager.sync_prs = AsyncMock()
+
+        result = invoke_cli(["daily", "sync"])
+
+        assert result.exit_code == 0
+        cli_manager.sync_prs.assert_not_called()
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_daily_sync_with_prs_flag_also_syncs_prs(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        from unittest.mock import AsyncMock
+        cli_manager.sync_daily_notes = AsyncMock()
+        cli_manager.sync_prs = AsyncMock(return_value=2)
+
+        result = invoke_cli(["daily", "sync", "--prs"])
+
+        assert result.exit_code == 0
+        cli_manager.sync_prs.assert_awaited_once_with(datetime(2026, 1, 19, 10, 0, 0))
+        assert "Added 2 PR(s)" in result.stdout
+
+    @freeze_time("2026-01-19 10:00:00")
+    def test_daily_sync_with_prs_flag_reports_when_none_added(
+        self,
+        cli_manager: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+    ) -> None:
+        from unittest.mock import AsyncMock
+        cli_manager.sync_daily_notes = AsyncMock()
+        cli_manager.sync_prs = AsyncMock(return_value=0)
+
+        result = invoke_cli(["daily", "sync", "--prs"])
+
+        assert result.exit_code == 0
+        assert "All PRs already in daily notes" in result.stdout
 
 
 class TestDailyTask:

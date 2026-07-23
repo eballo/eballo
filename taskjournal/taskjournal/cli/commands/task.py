@@ -1,4 +1,3 @@
-from asyncio import run
 from sys import exit as sys_exit
 
 from rich.table import Table
@@ -110,28 +109,6 @@ def build_app() -> Typer:
             else:
                 logger.warning(f"No matching task found for: {description}")
         except FileNotFoundError as e:
-            logger.error(str(e))
-            sys_exit(1)
-
-    @app.command(
-        "sync",
-        help=(
-            "Check your active Jira task and code-review tasks against today's "
-            "notes: add whichever are missing, and correct the status of any "
-            "that have gone stale (e.g. a code-review approval).\n\n"
-            "Examples:\n"
-            "  wk task sync\n"
-            "  wk task sync --date 2026-06-25\n"
-        ),
-    )
-    def task_sync(
-        ctx: Context,
-        date: str | None = Option(None, "--date", help="Date: 'YYYY-MM-DD'."),
-    ) -> None:
-        today = parse_date(date) if date else get_today(ctx)
-        try:
-            run(get_manager(ctx).sync_tasks(today))
-        except (FileNotFoundError, ValueError) as e:
             logger.error(str(e))
             sys_exit(1)
 

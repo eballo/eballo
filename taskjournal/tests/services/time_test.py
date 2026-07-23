@@ -122,31 +122,47 @@ class TestTime:
         # then
         assert total == 3600
 
+    def test_get_expected_workday_seconds__mon_to_thu_is_8_5h(self) -> None:
+        for day in (datetime(2025, 1, 20), datetime(2025, 1, 21), datetime(2025, 1, 22), datetime(2025, 1, 23)):
+            assert TimeService.get_expected_workday_seconds(day) == int(8.5 * 3600)
+
+    def test_get_expected_workday_seconds__friday_is_6h(self) -> None:
+        friday = datetime(2025, 1, 24)
+        assert TimeService.get_expected_workday_seconds(friday) == 6 * 3600
+
+    def test_get_expected_week_seconds_before__monday_is_zero(self) -> None:
+        monday = datetime(2025, 1, 20, 9, 0, 0)
+        assert TimeService.get_expected_week_seconds_before(monday) == 0
+
+    def test_get_expected_week_seconds_before__friday_sums_four_8_5h_days(self) -> None:
+        friday = datetime(2025, 1, 24, 9, 0, 0)
+        assert TimeService.get_expected_week_seconds_before(friday) == int(4 * 8.5 * 3600)
+
     def test_estimated_finish_time__monday_no_accumulated(self) -> None:
-        # Monday, 0 days before → expected=0, extra=0, today=8h work + 1h lunch
+        # Monday, 0 days before → expected=0, extra=0, today=8.5h work + 1h lunch
         created = datetime(2025, 1, 20, 9, 0, 0)
-        result = TimeService.estimated_finish_time(created, accumulated_seconds=0, days_before_today=0)
-        assert result == created + timedelta(hours=9)
+        result = TimeService.estimated_finish_time(created, accumulated_seconds=0)
+        assert result == created + timedelta(hours=9, minutes=30)
 
     def test_estimated_finish_time__ahead_of_schedule(self) -> None:
-        # Friday, 4 days before → expected=32h, accumulated=36h, extra=+4h → today=4h + 1h lunch
+        # Friday, expected=4*8.5h=34h, accumulated=36h, extra=+2h → today=6h(cap)-2h=4h + 1h lunch
         created = datetime(2025, 1, 24, 9, 0, 0)
         accumulated = 36 * 3600
-        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated, days_before_today=4)
+        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated)
         assert result == created + timedelta(hours=5)
 
     def test_estimated_finish_time__behind_schedule(self) -> None:
-        # Friday, 4 days before → expected=32h, accumulated=28h, extra=-4h → today=8h (capped) + 1h lunch
+        # Friday, expected=34h, accumulated=28h, extra=-6h → today=6h (capped) + 1h lunch
         created = datetime(2025, 1, 24, 9, 0, 0)
         accumulated = 28 * 3600
-        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated, days_before_today=4)
-        assert result == created + timedelta(hours=9)
+        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated)
+        assert result == created + timedelta(hours=7)
 
     def test_estimated_finish_time__over_target_clamps_to_lunch(self) -> None:
         # So far ahead that today's work = 0, only 1h lunch remains
         created = datetime(2025, 1, 24, 9, 0, 0)
-        accumulated = 42 * 3600  # 10h extra over expected 32h
-        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated, days_before_today=4)
+        accumulated = 42 * 3600  # 8h extra over expected 34h
+        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated)
         assert result == created + timedelta(hours=1)
 
     def test_get_total_time_spent_deducts_lunch(self) -> None:
