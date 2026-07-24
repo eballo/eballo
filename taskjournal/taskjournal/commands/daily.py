@@ -330,12 +330,15 @@ class DailyCommands:
         epic_names = TaskManager.get_unique_epic_names(all_tasks)
         tags_line = f"Tags: {', '.join(epic_names)}" if epic_names else ""
 
+        break_h, break_m = TimeService.seconds_to_hours_minutes(
+            TimeService.get_expected_break_seconds(create_datetime)
+        )
         daily_notes_content = Template(template_content).render(
             day_name=create_datetime.strftime("%A"),
             date=create_datetime.strftime("%Y-%m-%d"),
             start_time=create_datetime.strftime("%H:%M:%S"),
             end_time="",
-            break_time="01:00",
+            break_time=f"{break_h:02d}:{break_m:02d}",
             time_spent="",
             work_from=work_from,
             sprint_name=sprint_name,
@@ -354,11 +357,12 @@ class DailyCommands:
         week_folder = self._get_week_folder(create_datetime)
         accumulated_seconds = self.time_service.get_accumulated_week_seconds(week_folder, create_datetime)
         days_before_today = min(create_datetime.weekday(), 5)
-        expected_seconds = TimeService.get_expected_week_seconds_before(create_datetime)
+        expected_seconds = TimeService.get_expected_week_seconds_before(week_folder, create_datetime)
         extra_seconds = accumulated_seconds - expected_seconds
         today_seconds = TimeService.get_expected_workday_seconds(create_datetime)
         today_work_seconds = min(today_seconds, max(0, today_seconds - extra_seconds))
-        finish = self.time_service.estimated_finish_time(create_datetime, accumulated_seconds)
+        break_seconds = TimeService.get_expected_break_seconds(create_datetime)
+        finish = self.time_service.estimated_finish_time(create_datetime, week_folder, accumulated_seconds)
 
         accumulated_h, accumulated_m = TimeService.seconds_to_hours_minutes(accumulated_seconds)
         expected_h, expected_m = TimeService.seconds_to_hours_minutes(expected_seconds)
@@ -376,8 +380,9 @@ class DailyCommands:
         )
         streak = self.get_streak_stats(create_datetime)
         console.print(f"Streak: {streak['current']} day(s)  |  all-time best: {streak['longest']} day(s)")
+        break_label = f"{break_h}h {break_m:02d}m break" if break_seconds else "no break"
         console.print(
-            f"Today: {today_h}h {today_m:02d}m work + 1h lunch"
+            f"Today: {today_h}h {today_m:02d}m work + {break_label}"
             f"  →  estimated finish {finish.strftime('%H:%M')}"
         )
         if self._alarms_enabled:
@@ -742,7 +747,9 @@ class DailyCommands:
         if "missing end time" in issues:
             lines = self.file_service.get_lines(file_path)
             _, start_time = self.time_service.get_start_time(lines)
-            end_time = start_time + timedelta(seconds=TimeService.get_expected_workday_seconds(start_time))
+            expected_seconds = TimeService.get_expected_workday_seconds(start_time)
+            break_seconds = TimeService.get_expected_break_seconds(start_time)
+            end_time = start_time + timedelta(seconds=expected_seconds + break_seconds)
             self.fix_end_time_and_time_spent(file_path, end_time)
             fixed += ["end time", "time spent"]
         elif "missing time spent" in issues and self.fix_time_spent_from_file(file_path):

@@ -12,6 +12,13 @@ WORK_OFFICE_DAYS = ["Tuesday", "Thursday"]
 WORKDAY_HOURS_MON_TO_THU = 8.5
 WORKDAY_HOURS_FRIDAY = 6.0
 
+# Break/lunch hours per weekday — no break on Friday since the workday is already short.
+WORKDAY_BREAK_HOURS_MON_TO_THU = 1.0
+WORKDAY_BREAK_HOURS_FRIDAY = 0.0
+
+# Work-hour equivalent credited for a vacation/holiday day (neutral in the weekly balance).
+WORKDAY_HOURS_IF_HOLIDAY = 8.0
+
 # Work locations
 WORK_LOCATION_HOME = "Home"
 WORK_LOCATION_OFFICE = "Office"

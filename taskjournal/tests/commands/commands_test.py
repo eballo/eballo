@@ -901,20 +901,21 @@ class TestCommands:
     async def test_fix_note_automatically__fixes_missing_end_time_as_start_plus_expected_hours(
         self, cmd: CommandManager, mocker: MockerFixture, fixed_datetime: datetime
     ) -> None:
-        # fixed_datetime (2025-01-15) is a Wednesday → 8.5h expected workday
+        # fixed_datetime (2025-01-15) is a Wednesday → 8.5h work + 1h break
         cmd.file_service.get_lines.return_value = ["**Start Time:** 09:00:00\n"]
         cmd.time_service.get_start_time.return_value = (0, fixed_datetime.replace(hour=9, minute=0))
         fix_end = mocker.patch.object(cmd._daily, "fix_end_time_and_time_spent")
 
         fixed = await cmd.fix_note_automatically("2026-01-05", "/day.md", ["missing end time"])
 
-        fix_end.assert_called_once_with("/day.md", fixed_datetime.replace(hour=17, minute=30))
+        fix_end.assert_called_once_with("/day.md", fixed_datetime.replace(hour=18, minute=30))
         assert fixed == ["end time", "time spent"]
 
     @mark.asyncio
     async def test_fix_note_automatically__fixes_missing_end_time_as_start_plus_6h_on_friday(
         self, cmd: CommandManager, mocker: MockerFixture
     ) -> None:
+        # Friday → 6h work + 0h break
         friday = datetime(2025, 1, 17, 9, 0, 0)
         cmd.file_service.get_lines.return_value = ["**Start Time:** 09:00:00\n"]
         cmd.time_service.get_start_time.return_value = (0, friday)

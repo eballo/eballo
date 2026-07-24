@@ -9,16 +9,17 @@ from taskjournal.services.time import TimeService
 
 class TestTime:
 
-    @freeze_time("2025-01-19 12:00:00")
+    @freeze_time("2025-01-20 12:00:00")
     def test_calculate_working_hours_valid(self, mocker: MockerFixture) -> None:
-        # given
-        created_time = "2025-01-19 09:00:00"
+        # given — Monday, no prior days accumulated this week
+        created_time = "2025-01-20 09:00:00"
         mock_open = mocker.mock_open(read_data=f"Start time: {created_time}\n")
         mocker.patch("builtins.open", mock_open)
         mocker.patch(
             "taskjournal.services.time.TimeService.get_start_time",
             return_value=(0, datetime.strptime(created_time, "%Y-%m-%d %H:%M:%S")),
         )
+        mocker.patch("taskjournal.services.time.exists", return_value=False)
 
         # when
         created, elapsed, finish = TimeService.calculate_working_hours("notes.txt")
@@ -26,7 +27,7 @@ class TestTime:
         # then
         assert created == datetime.strptime(created_time, "%Y-%m-%d %H:%M:%S")
         assert round(elapsed, 1) == 3.0
-        assert finish == created + timedelta(hours=9)
+        assert finish == created + timedelta(hours=9, minutes=30)
 
     def test_calculate_working_hours_no_start_line(self, mocker: MockerFixture) -> None:
         # given
@@ -130,39 +131,69 @@ class TestTime:
         friday = datetime(2025, 1, 24)
         assert TimeService.get_expected_workday_seconds(friday) == 6 * 3600
 
-    def test_get_expected_week_seconds_before__monday_is_zero(self) -> None:
+    def test_get_expected_week_seconds_before__monday_is_zero(self, mocker: MockerFixture) -> None:
+        mocker.patch("taskjournal.services.time.exists", return_value=False)
         monday = datetime(2025, 1, 20, 9, 0, 0)
-        assert TimeService.get_expected_week_seconds_before(monday) == 0
+        assert TimeService.get_expected_week_seconds_before("/tmp/base/2025/week3", monday) == 0
 
-    def test_get_expected_week_seconds_before__friday_sums_four_8_5h_days(self) -> None:
+    def test_get_expected_week_seconds_before__friday_sums_four_8_5h_days(self, mocker: MockerFixture) -> None:
+        mocker.patch("taskjournal.services.time.exists", return_value=False)
         friday = datetime(2025, 1, 24, 9, 0, 0)
-        assert TimeService.get_expected_week_seconds_before(friday) == int(4 * 8.5 * 3600)
+        assert TimeService.get_expected_week_seconds_before("/tmp/base/2025/week3", friday) == int(4 * 8.5 * 3600)
 
-    def test_estimated_finish_time__monday_no_accumulated(self) -> None:
-        # Monday, 0 days before → expected=0, extra=0, today=8.5h work + 1h lunch
+    def test_get_expected_week_seconds_before__holiday_day_counts_as_neutral_8h(
+        self, mocker: MockerFixture
+    ) -> None:
+        # Monday is a holiday (marker file exists) → counted as 8h instead of 8.5h
+        mocker.patch(
+            "taskjournal.services.time.exists",
+            side_effect=lambda path: "Holidays" in path,
+        )
+        tuesday = datetime(2025, 1, 21, 9, 0, 0)
+        result = TimeService.get_expected_week_seconds_before("/tmp/base/2025/week3", tuesday)
+        assert result == 8 * 3600
+
+    def test_estimated_finish_time__monday_no_accumulated(self, mocker: MockerFixture) -> None:
+        # Monday, 0 days before → expected=0, extra=0, today=8.5h work + 1h break
+        mocker.patch("taskjournal.services.time.exists", return_value=False)
         created = datetime(2025, 1, 20, 9, 0, 0)
-        result = TimeService.estimated_finish_time(created, accumulated_seconds=0)
+        result = TimeService.estimated_finish_time(created, "/tmp/base/2025/week3", accumulated_seconds=0)
         assert result == created + timedelta(hours=9, minutes=30)
 
-    def test_estimated_finish_time__ahead_of_schedule(self) -> None:
-        # Friday, expected=4*8.5h=34h, accumulated=36h, extra=+2h → today=6h(cap)-2h=4h + 1h lunch
+    def test_estimated_finish_time__ahead_of_schedule(self, mocker: MockerFixture) -> None:
+        # Friday, expected=4*8.5h=34h, accumulated=36h, extra=+2h → today=6h(cap)-2h=4h + 0h break
+        mocker.patch("taskjournal.services.time.exists", return_value=False)
         created = datetime(2025, 1, 24, 9, 0, 0)
         accumulated = 36 * 3600
-        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated)
-        assert result == created + timedelta(hours=5)
+        result = TimeService.estimated_finish_time(created, "/tmp/base/2025/week3", accumulated_seconds=accumulated)
+        assert result == created + timedelta(hours=4)
 
-    def test_estimated_finish_time__behind_schedule(self) -> None:
-        # Friday, expected=34h, accumulated=28h, extra=-6h → today=6h (capped) + 1h lunch
+    def test_estimated_finish_time__behind_schedule(self, mocker: MockerFixture) -> None:
+        # Friday, expected=34h, accumulated=28h, extra=-6h → today=6h (capped) + 0h break
+        mocker.patch("taskjournal.services.time.exists", return_value=False)
         created = datetime(2025, 1, 24, 9, 0, 0)
         accumulated = 28 * 3600
-        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated)
-        assert result == created + timedelta(hours=7)
+        result = TimeService.estimated_finish_time(created, "/tmp/base/2025/week3", accumulated_seconds=accumulated)
+        assert result == created + timedelta(hours=6)
 
-    def test_estimated_finish_time__over_target_clamps_to_lunch(self) -> None:
-        # So far ahead that today's work = 0, only 1h lunch remains
+    def test_estimated_finish_time__friday_over_target_finishes_immediately(
+        self, mocker: MockerFixture
+    ) -> None:
+        # So far ahead that today's work = 0, and Friday has no break to clamp to
+        mocker.patch("taskjournal.services.time.exists", return_value=False)
         created = datetime(2025, 1, 24, 9, 0, 0)
         accumulated = 42 * 3600  # 8h extra over expected 34h
-        result = TimeService.estimated_finish_time(created, accumulated_seconds=accumulated)
+        result = TimeService.estimated_finish_time(created, "/tmp/base/2025/week3", accumulated_seconds=accumulated)
+        assert result == created
+
+    def test_estimated_finish_time__monday_over_target_clamps_to_break(
+        self, mocker: MockerFixture
+    ) -> None:
+        # Monday-Thursday still keep the 1h break as a floor even when far ahead of schedule
+        mocker.patch("taskjournal.services.time.exists", return_value=False)
+        created = datetime(2025, 1, 21, 9, 0, 0)  # Tuesday
+        accumulated = 20 * 3600  # way more than the 8.5h expected before Tuesday
+        result = TimeService.estimated_finish_time(created, "/tmp/base/2025/week3", accumulated_seconds=accumulated)
         assert result == created + timedelta(hours=1)
 
     def test_get_total_time_spent_deducts_lunch(self) -> None:
@@ -272,7 +303,10 @@ class TestTime:
             return_value="/tmp/base/2025/week3",
         )
         mocker.patch("taskjournal.services.time.makedirs")
-        mocker.patch("taskjournal.services.time.exists", return_value=True)
+        mocker.patch(
+            "taskjournal.services.time.exists",
+            side_effect=lambda path: "Holidays" not in path,
+        )
         mocker.patch(
             "taskjournal.services.time.TimeService.get_total_time_from_daily_notes",
             return_value=3600,
@@ -280,6 +314,25 @@ class TestTime:
         today = datetime(2025, 1, 22)  # Wednesday — 2 days before (Mon, Tue)
         result = TimeService.get_accumulated_week_seconds("/tmp/base/2025/week3", today)
         assert result == 7200  # 2 x 3600
+
+    def test_get_accumulated_week_seconds_holiday_day_counts_as_neutral_8h(
+        self, mocker: MockerFixture
+    ) -> None:
+        mocker.patch("taskjournal.services.time.TEMPLATE_FORMAT", "md")
+        mocker.patch("taskjournal.services.time.BASE_DIR", "/tmp/base")
+        mocker.patch(
+            "taskjournal.services.time.FileService.get_week_folder",
+            return_value="/tmp/base/2025/week3",
+        )
+        mocker.patch("taskjournal.services.time.makedirs")
+        # Monday is a holiday (marker file exists); Tuesday has no notes at all.
+        mocker.patch(
+            "taskjournal.services.time.exists",
+            side_effect=lambda path: "Holidays" in path and "2025-01-20" in path,
+        )
+        wednesday = datetime(2025, 1, 22)
+        result = TimeService.get_accumulated_week_seconds("/tmp/base/2025/week3", wednesday)
+        assert result == 8 * 3600
 
     def test_get_accumulated_week_seconds_skips_missing_files(
         self, mocker: MockerFixture
@@ -306,7 +359,10 @@ class TestTime:
             return_value="/tmp/base/2025/week3",
         )
         mocker.patch("taskjournal.services.time.makedirs")
-        mocker.patch("taskjournal.services.time.exists", return_value=True)
+        mocker.patch(
+            "taskjournal.services.time.exists",
+            side_effect=lambda path: "Holidays" not in path,
+        )
         mocker.patch(
             "taskjournal.services.time.TimeService.get_total_time_from_daily_notes",
             side_effect=ValueError("bad file"),
