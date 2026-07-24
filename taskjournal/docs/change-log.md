@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.72.0
+
+- Small fixes 2
+
 ## 0.71.0
 
 - small tweeks
