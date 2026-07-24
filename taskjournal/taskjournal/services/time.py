@@ -1,9 +1,15 @@
 from datetime import date, datetime, timedelta
 from os import makedirs
-from os.path import exists, join
+from os.path import dirname, exists, join
 
 from taskjournal.config import BASE_DIR, TEMPLATE_FORMAT
-from taskjournal.constants import WORKDAY_HOURS_FRIDAY, WORKDAY_HOURS_MON_TO_THU
+from taskjournal.constants import (
+    WORKDAY_BREAK_HOURS_FRIDAY,
+    WORKDAY_BREAK_HOURS_MON_TO_THU,
+    WORKDAY_HOURS_FRIDAY,
+    WORKDAY_HOURS_IF_HOLIDAY,
+    WORKDAY_HOURS_MON_TO_THU,
+)
 from taskjournal.services.base import BaseService
 from taskjournal.services.file import FileService
 from taskjournal.services.logger import logger
@@ -23,7 +29,9 @@ class TimeService(BaseService):
             lines = FileService.get_lines(daily_notes_file)
             _, created_time = TimeService.get_start_time(lines)
             elapsed_hours = (datetime.now() - created_time).total_seconds() / 3600
-            finish_time = created_time + timedelta(hours=9)
+            week_folder = dirname(daily_notes_file)
+            accumulated_seconds = TimeService.get_accumulated_week_seconds(week_folder, created_time)
+            finish_time = TimeService.estimated_finish_time(created_time, week_folder, accumulated_seconds)
             return created_time, elapsed_hours, finish_time
         except Exception as e:
             logger.error(f"Error calculating working hours: {e}")
@@ -58,11 +66,26 @@ class TimeService(BaseService):
         return total_time
 
     @staticmethod
+    def get_holiday_notes_name(date: datetime | date) -> str:
+        return date.strftime("%Y-%m-%d") + f"-DailyNotes-Holidays.{TEMPLATE_FORMAT}"
+
+    @staticmethod
+    def is_holiday_note(week_folder: str, day: datetime | date) -> bool:
+        return exists(join(week_folder, TimeService.get_holiday_notes_name(day)))
+
+    @staticmethod
+    def get_holiday_equivalent_seconds() -> int:
+        return int(WORKDAY_HOURS_IF_HOLIDAY * 3600)
+
+    @staticmethod
     def get_accumulated_week_seconds(week_folder: str, today: datetime) -> int:
         start_of_week = today - timedelta(days=today.weekday())
         total = 0
         for i in range(min(today.weekday(), 5)):  # Mon up to (not including) today, max Fri
             day = start_of_week + timedelta(days=i)
+            if TimeService.is_holiday_note(week_folder, day):
+                total += TimeService.get_holiday_equivalent_seconds()
+                continue
             daily_file = join(week_folder, TimeService.get_daily_notes_name(day))
             if exists(daily_file):
                 try:
@@ -77,25 +100,35 @@ class TimeService(BaseService):
         return int(hours * 3600)
 
     @staticmethod
-    def get_expected_week_seconds_before(today: datetime) -> int:
+    def get_expected_break_seconds(day: datetime | date) -> int:
+        hours = WORKDAY_BREAK_HOURS_FRIDAY if day.weekday() == 4 else WORKDAY_BREAK_HOURS_MON_TO_THU
+        return int(hours * 3600)
+
+    @staticmethod
+    def get_expected_week_seconds_before(week_folder: str, today: datetime) -> int:
         start_of_week = today - timedelta(days=today.weekday())
         days_before_today = min(today.weekday(), 5)  # Mon..Fri, capped for weekend notes
-        return sum(
-            TimeService.get_expected_workday_seconds(start_of_week + timedelta(days=i))
-            for i in range(days_before_today)
-        )
+        total = 0
+        for i in range(days_before_today):
+            day = start_of_week + timedelta(days=i)
+            if TimeService.is_holiday_note(week_folder, day):
+                total += TimeService.get_holiday_equivalent_seconds()
+            else:
+                total += TimeService.get_expected_workday_seconds(day)
+        return total
 
     @staticmethod
     def estimated_finish_time(
         created_time: datetime,
+        week_folder: str,
         accumulated_seconds: int = 0,
     ) -> datetime:
-        expected_seconds = TimeService.get_expected_week_seconds_before(created_time)
+        expected_seconds = TimeService.get_expected_week_seconds_before(week_folder, created_time)
         extra_seconds = accumulated_seconds - expected_seconds
         today_seconds = TimeService.get_expected_workday_seconds(created_time)
         today_work_seconds = min(today_seconds, max(0, today_seconds - extra_seconds))
-        lunch_seconds = 3600
-        return created_time + timedelta(seconds=today_work_seconds + lunch_seconds)
+        break_seconds = TimeService.get_expected_break_seconds(created_time)
+        return created_time + timedelta(seconds=today_work_seconds + break_seconds)
 
     @staticmethod
     def get_start_time(lines: list[str]) -> tuple[int, datetime]:
