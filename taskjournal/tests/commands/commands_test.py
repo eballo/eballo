@@ -503,6 +503,158 @@ class TestCommands:
         assert "Done (1)" in content
         assert "[BE-1] x" in content
 
+    def test_compare_previous_week__renders_deltas(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        fixed_datetime: datetime,
+    ) -> None:
+        # given
+        cmd.file_service.get_week_folder.return_value = "/prev/week"
+        mocker.patch("taskjournal.commands.reports.exists", return_value=True)
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.WorkingDaysService.get_week_stats",
+            return_value={
+                "start_date": fixed_datetime - timedelta(days=7),
+                "end_date": fixed_datetime - timedelta(days=3),
+                "total_time_seconds": 30 * 3600,
+                "total_worked_days": 4,
+                "days_at_office": 1,
+                "days_at_home": 3,
+            },
+        )
+        cmd.time_service.seconds_to_hours_minutes.side_effect = (
+            lambda s: (s // 3600, (s % 3600) // 60)
+        )
+        mocker.patch.object(
+            cmd._reports, "_count_done_tasks", side_effect=[14, 11]  # current, previous
+        )
+        this_stats = {
+            "total_time_seconds": 38 * 3600,
+            "total_worked_days": 5,
+            "days_at_office": 2,
+            "days_at_home": 3,
+        }
+
+        # when
+        block = cmd._reports._compare_previous_week(
+            fixed_datetime, "/this/week", this_stats
+        )
+
+        # then
+        assert "Time worked:    30h 00m → 38h 00m  (+8h 00m)" in block
+        assert "Worked days:    4 → 5  (+1)" in block
+        assert "Tasks done:     11 → 14  (+3)" in block
+        assert "Days at office: 1 → 2" in block
+
+    def test_compare_previous_week__no_previous_folder_returns_empty(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        fixed_datetime: datetime,
+    ) -> None:
+        cmd.file_service.get_week_folder.return_value = "/prev/week"
+        mocker.patch("taskjournal.commands.reports.exists", return_value=False)
+
+        assert (
+            cmd._reports._compare_previous_week(fixed_datetime, "/this/week", {}) == ""
+        )
+
+    def test_compare_previous_week__previous_week_not_worked_returns_empty(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        fixed_datetime: datetime,
+    ) -> None:
+        cmd.file_service.get_week_folder.return_value = "/prev/week"
+        mocker.patch("taskjournal.commands.reports.exists", return_value=True)
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.WorkingDaysService.get_week_stats",
+            return_value={
+                "start_date": fixed_datetime,
+                "end_date": fixed_datetime,
+                "total_time_seconds": 0,
+                "total_worked_days": 0,
+                "days_at_office": 0,
+                "days_at_home": 0,
+            },
+        )
+
+        assert (
+            cmd._reports._compare_previous_week(fixed_datetime, "/this/week", {}) == ""
+        )
+
+    def test_count_done_tasks__counts_done_across_both_lists(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        temp_week_folder: str,
+    ) -> None:
+        mocker.patch(
+            "taskjournal.commands.reports.listdir",
+            return_value=["2025-01-13-DailyNotes.md", "notes.txt"],
+        )
+        mocker.patch.object(
+            cmd.parser,
+            "parse",
+            return_value=ParsedNote(
+                planned_tasks=[
+                    Task(id="1", description="a", status=Status.DONE),
+                    Task(id="2", description="b", status=Status.TODO),
+                ],
+                code_review_tasks=[
+                    Task(id="3", description="c", status=Status.DONE),
+                ],
+            ),
+        )
+
+        assert cmd._reports._count_done_tasks(temp_week_folder) == 2
+
+    @mark.asyncio
+    async def test_create_week_summary__compare_flag_renders_section(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        fixed_datetime: datetime,
+        temp_week_folder: str,
+    ) -> None:
+        # given
+        mocker.patch.object(cmd._reports, "_get_week_folder", return_value=temp_week_folder)
+        cmd.file_service.load_template.return_value = (
+            "{{summary}}\n{% if comparison %}== COMPARE ==\n{{comparison}}{% endif %}"
+        )
+        mocker.patch("taskjournal.commands.reports.listdir", return_value=[])
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.WorkingDaysService.get_week_stats",
+            return_value={
+                "start_date": fixed_datetime,
+                "end_date": fixed_datetime,
+                "total_time_seconds": 0,
+                "total_worked_days": 0,
+                "vacation_days": 0,
+                "days_at_office": 0,
+                "days_at_home": 0,
+            },
+        )
+        mocker.patch(
+            "taskjournal.services.calendar.fireman.FiremanService.is_fireman_week",
+            return_value=False,
+        )
+        mocker.patch.object(cmd.ai_service, "summarize", AsyncMock(return_value="AI"))
+        cmd.time_service.seconds_to_hours_minutes.return_value = (0, 0)
+        mocker.patch.object(
+            cmd._reports, "_compare_previous_week", return_value="Worked days:    4 → 5  (+1)"
+        )
+
+        # when
+        await cmd.create_week_summary(fixed_datetime, compare=True)
+
+        # then
+        args, _ = cmd.file_service.write_to_file.call_args
+        content: str = args[1]
+        assert "== COMPARE ==" in content
+        assert "Worked days:    4 → 5  (+1)" in content
+
     @mark.asyncio
     async def test_recreate_week_summaries__calls_create_week_summary_for_each_week(
         self,
