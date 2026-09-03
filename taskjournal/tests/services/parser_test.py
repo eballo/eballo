@@ -117,6 +117,75 @@ class TestParser:
         assert note.planned_tasks == []
         assert note.code_review_tasks == []
 
+    def test_daily_parser_parse_tasks_txt_recovers_key_link_github(
+        self, daily_parser_service: DailyParserService
+    ) -> None:
+        # given: a line as rendered by TaskFormatter in txt mode
+        note = ParsedNote()
+        line = (
+            "[x] [BE-1] Implement feature - Enric (Done) "
+            "🔗 https://jira/task/BE-1 🐙 https://github/pr/123"
+        )
+
+        # when
+        daily_parser_service._parse_tasks("planned_tasks", note, line, ".txt")
+
+        # then
+        task = note.planned_tasks[0]
+        assert task.key == "BE-1"
+        assert task.link == "https://jira/task/BE-1"
+        assert task.github == "https://github/pr/123"
+        assert task.status == Status.DONE
+        assert task.description == "Implement feature - Enric (Done)"
+
+    def test_daily_parser_parse_tasks_txt_round_trips_through_formatter(
+        self, daily_parser_service: DailyParserService
+    ) -> None:
+        # given
+        from taskjournal.models.task import Task
+        from taskjournal.repositories.task_formatter import TaskFormatter
+
+        original = Task(
+            id="1",
+            key="BE-42",
+            description="Ship it",
+            status=Status.TODO,
+            link="https://jira/BE-42",
+            github="https://github/pr/9",
+        )
+        rendered = TaskFormatter(template_format="txt").format_task(
+            original, with_name=False, with_status=False
+        )
+        note = ParsedNote()
+
+        # when
+        daily_parser_service._parse_tasks("planned_tasks", note, rendered, ".txt")
+
+        # then
+        parsed = note.planned_tasks[0]
+        assert (parsed.key, parsed.link, parsed.github) == (
+            original.key,
+            original.link,
+            original.github,
+        )
+        assert parsed.description == "Ship it"
+
+    def test_daily_parser_parse_tasks_txt_reads_legacy_markdown_links(
+        self, daily_parser_service: DailyParserService
+    ) -> None:
+        # given: a .txt note written before the format change
+        note = ParsedNote()
+        line = "[ ] [BE-7](https://jira/BE-7)[🐙](https://github/pr/7)Legacy task"
+
+        # when
+        daily_parser_service._parse_tasks("planned_tasks", note, line, ".txt")
+
+        # then
+        task = note.planned_tasks[0]
+        assert task.key == "BE-7"
+        assert task.link == "https://jira/BE-7"
+        assert task.github == "https://github/pr/7"
+
     def test_daily_parser_metadata_line_without_match_is_ignored(
         self, daily_parser_service: DailyParserService
     ) -> None:

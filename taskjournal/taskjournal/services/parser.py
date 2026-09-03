@@ -38,6 +38,13 @@ _STATUS_CHAR_MAP: dict[str, Status] = {
 _TASK_KEY_LINK_RE = compile(r"^\[([A-Z][A-Z0-9]*-\d+)\]\(([^)]*)\)")
 _TASK_GITHUB_RE = compile(r"^\[🐙\]\(([^)]*)\)")
 
+# Plain-text equivalent (see TaskFormatter.format_task): "[KEY] description
+# … 🔗 <link> 🐙 <github>" — the key stays a bare tag and the URLs trail the
+# line behind sentinels the parser strips back out.
+_TXT_TASK_KEY_RE = compile(r"^\[([A-Z][A-Z0-9]*-\d+)\]\s*")
+_TXT_TASK_LINK_RE = compile(r"\s*🔗\s*(\S+)")
+_TXT_TASK_GITHUB_RE = compile(r"\s*🐙\s*(\S+)")
+
 
 class ParserService(BaseService):
     def parse(self, file_path: str) -> ParsedNote | None:
@@ -151,23 +158,69 @@ class DailyParserService(ParserService):
             remainder = task_match.group(2)
             status = _STATUS_CHAR_MAP.get(status_char, Status.TODO)
 
-            key: str | None = None
-            link: str | None = None
-            github: str | None = None
-
-            key_match = _TASK_KEY_LINK_RE.match(remainder)
-            if key_match:
-                key = key_match.group(1)
-                link = key_match.group(2)
-                remainder = remainder[key_match.end():]
-
-            github_match = _TASK_GITHUB_RE.match(remainder)
-            if github_match:
-                github = github_match.group(1)
-                remainder = remainder[github_match.end():]
+            if format_extension == ".md":
+                key, link, github, description = self._extract_md_metadata(remainder)
+            else:
+                key, link, github, description = self._extract_txt_metadata(remainder)
 
             task = Task(
-                id=str(uuid4()), key=key, link=link, github=github, description=remainder, status=status
+                id=str(uuid4()),
+                key=key,
+                link=link,
+                github=github,
+                description=description,
+                status=status,
             )
             section_list: list[Task] = getattr(note, current_section)
             section_list.append(task)
+
+    @staticmethod
+    def _extract_md_metadata(
+        remainder: str,
+    ) -> tuple[str | None, str | None, str | None, str]:
+        key: str | None = None
+        link: str | None = None
+        github: str | None = None
+
+        key_match = _TASK_KEY_LINK_RE.match(remainder)
+        if key_match:
+            key = key_match.group(1)
+            link = key_match.group(2)
+            remainder = remainder[key_match.end():]
+
+        github_match = _TASK_GITHUB_RE.match(remainder)
+        if github_match:
+            github = github_match.group(1)
+            remainder = remainder[github_match.end():]
+
+        return key, link, github, remainder
+
+    @staticmethod
+    def _extract_txt_metadata(
+        remainder: str,
+    ) -> tuple[str | None, str | None, str | None, str]:
+        # Legacy .txt notes were rendered with markdown link syntax; keep
+        # reading those so keys still dedupe after the format change.
+        if _TASK_KEY_LINK_RE.match(remainder):
+            return DailyParserService._extract_md_metadata(remainder)
+
+        key: str | None = None
+        link: str | None = None
+        github: str | None = None
+
+        key_match = _TXT_TASK_KEY_RE.match(remainder)
+        if key_match:
+            key = key_match.group(1)
+            remainder = remainder[key_match.end():]
+
+        link_match = _TXT_TASK_LINK_RE.search(remainder)
+        if link_match:
+            link = link_match.group(1)
+            remainder = remainder[:link_match.start()] + remainder[link_match.end():]
+
+        github_match = _TXT_TASK_GITHUB_RE.search(remainder)
+        if github_match:
+            github = github_match.group(1)
+            remainder = remainder[:github_match.start()] + remainder[github_match.end():]
+
+        return key, link, github, remainder.strip()
