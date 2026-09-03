@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.73.0
+
+- Make TaskFormatter txt-compatible for links (#43)
+
 ## 0.72.0
 
 - Small fixes 2
