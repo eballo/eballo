@@ -22,3 +22,10 @@
 
 {{tickets}}
 {% endif %}
+{% if comparison %}
+---
+
+## 📊 vs Last Week
+
+{{comparison}}
+{% endif %}

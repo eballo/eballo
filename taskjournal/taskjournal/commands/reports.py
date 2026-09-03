@@ -3,6 +3,7 @@ from os import makedirs, listdir
 from os.path import exists, join
 from pathlib import Path
 from re import compile as re_compile, Pattern
+from typing import Any
 
 from jinja2 import Template
 
@@ -99,7 +100,9 @@ class ReportCommands:
             for line in incomplete:
                 logger.warning(f"  ⚠  {line}")
 
-    async def create_week_summary(self, custom_date: datetime, tickets: bool = False) -> None:
+    async def create_week_summary(
+        self, custom_date: datetime, tickets: bool = False, compare: bool = False
+    ) -> None:
         week_folder = self._get_week_folder(custom_date)
         summary_file = join(week_folder, f"week-summary.{TEMPLATE_FORMAT}")
         week_summary_content = self.file_service.load_template(WEEK_SUMMARY_TEMPLATE)
@@ -131,10 +134,83 @@ class ReportCommands:
             is_fireman_week="Yes" if is_fireman_week else "No",
             summary=summary_ai,
             tickets=self._collect_week_tickets(week_folder) if tickets else "",
+            comparison=(
+                self._compare_previous_week(custom_date, week_folder, stats)
+                if compare
+                else ""
+            ),
         )
 
         self.file_service.write_to_file(summary_file, week_summary_content)
         console.print(f"[green]✓[/green] Week summary created: {summary_file}")
+
+    def _count_done_tasks(self, week_folder: str) -> int:
+        count = 0
+        for file_name in sorted(listdir(week_folder)):
+            if not file_name.endswith(f"-DailyNotes.{TEMPLATE_FORMAT}"):
+                continue
+            note = self.parser.parse(join(week_folder, file_name))
+            if note is None:
+                continue
+            count += sum(
+                1
+                for task in [*note.planned_tasks, *note.code_review_tasks]
+                if task.status == Status.DONE
+            )
+        return count
+
+    def _compare_previous_week(
+        self, custom_date: datetime, week_folder: str, stats: dict[str, Any]
+    ) -> str:
+        prev_date = custom_date - timedelta(days=7)
+        prev_folder = self.file_service.get_week_folder(BASE_DIR, prev_date)
+        if not exists(prev_folder):
+            return ""
+
+        prev_stats = WorkingDaysService(
+            year=prev_date.year, parser=self.parser
+        ).get_week_stats(prev_date, prev_folder)
+        if prev_stats["total_worked_days"] == 0:
+            return ""
+
+        cur_secs = int(stats["total_time_seconds"])
+        prev_secs = int(prev_stats["total_time_seconds"])
+        cur_h, cur_m = self.time_service.seconds_to_hours_minutes(cur_secs)
+        prev_h, prev_m = self.time_service.seconds_to_hours_minutes(prev_secs)
+
+        cur_done = self._count_done_tasks(week_folder)
+        prev_done = self._count_done_tasks(prev_folder)
+
+        lines = [
+            f"Previous week: {prev_stats['start_date'].strftime('%Y-%m-%d')} – "
+            f"{prev_stats['end_date'].strftime('%Y-%m-%d')}",
+            "",
+            f"Time worked:    {prev_h}h {prev_m:02d}m → {cur_h}h {cur_m:02d}m  "
+            f"{self._delta_time(cur_secs, prev_secs)}",
+            f"Worked days:    {prev_stats['total_worked_days']} → "
+            f"{stats['total_worked_days']}  "
+            f"{self._delta_int(int(stats['total_worked_days']), int(prev_stats['total_worked_days']))}",
+            f"Days at office: {prev_stats['days_at_office']} → {stats['days_at_office']}",
+            f"Days at home:   {prev_stats['days_at_home']} → {stats['days_at_home']}",
+            f"Tasks done:     {prev_done} → {cur_done}  "
+            f"{self._delta_int(cur_done, prev_done)}",
+        ]
+        return "\n".join(lines)
+
+    def _delta_time(self, current: int, previous: int) -> str:
+        diff = current - previous
+        if diff == 0:
+            return "(±0)"
+        hours, minutes = self.time_service.seconds_to_hours_minutes(abs(diff))
+        sign = "+" if diff > 0 else "-"
+        return f"({sign}{hours}h {minutes:02d}m)"
+
+    @staticmethod
+    def _delta_int(current: int, previous: int) -> str:
+        diff = current - previous
+        if diff == 0:
+            return "(±0)"
+        return f"({diff:+d})"
 
     # A ticket carried across several days appears once per day; the last note
     # wins so the report shows where the ticket ended the week.
