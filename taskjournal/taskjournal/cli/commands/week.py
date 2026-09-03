@@ -27,6 +27,7 @@ def build_app() -> Typer:
             "Examples:\n"
             "  wk week report\n"
             "  wk week report --date 2025-08-31\n"
+            "  wk week report --tickets\n"
         ),
     )
     def week_report(
@@ -36,15 +37,20 @@ def build_app() -> Typer:
             "--date",
             help="Any date within the target week: 'YYYY-MM-DD'.",
         ),
+        tickets: bool = Option(
+            False,
+            "--tickets",
+            help="Add a section grouping the week's Jira tickets by status.",
+        ),
     ) -> None:
         m = get_manager(ctx)
         custom_date = get_today(ctx)
-        logger.debug(f"date={date!r}, debug={get_debug(ctx)}")
+        logger.debug(f"date={date!r}, tickets={tickets}, debug={get_debug(ctx)}")
 
         if date:
             custom_date = parse_date(date)
 
-        run(m.create_week_summary(custom_date))
+        run(m.create_week_summary(custom_date, tickets=tickets))
 
     @app.command(
         "recreate-since",

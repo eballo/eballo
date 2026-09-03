@@ -17,6 +17,7 @@ from taskjournal.config import (
     YEAR_REVIEW_TEMPLATE,
     ONE_ON_ONE_TEMPLATE,
 )
+from taskjournal.models.task import Status, Task
 from taskjournal.services.ai.base import AIService
 from taskjournal.services.file import FileService
 from taskjournal.services.calendar.fireman import FiremanService
@@ -28,6 +29,15 @@ from taskjournal.services.task_manager import TaskManager
 from taskjournal.services.time import TimeService
 from taskjournal.services.calendar.working_days import WorkingDaysService
 from taskjournal.services.utils import FormatUtils
+
+# Most-advanced status first, so the weekly ticket rollup reads as progress.
+_TICKET_STATUS_ORDER: list[Status] = [
+    Status.DONE,
+    Status.CODE_REVIEW,
+    Status.IN_PROGRESS,
+    Status.BLOCKED,
+    Status.TODO,
+]
 
 
 class ReportCommands:
@@ -89,7 +99,7 @@ class ReportCommands:
             for line in incomplete:
                 logger.warning(f"  ⚠  {line}")
 
-    async def create_week_summary(self, custom_date: datetime) -> None:
+    async def create_week_summary(self, custom_date: datetime, tickets: bool = False) -> None:
         week_folder = self._get_week_folder(custom_date)
         summary_file = join(week_folder, f"week-summary.{TEMPLATE_FORMAT}")
         week_summary_content = self.file_service.load_template(WEEK_SUMMARY_TEMPLATE)
@@ -120,10 +130,44 @@ class ReportCommands:
             days_at_home=str(stats["days_at_home"]),
             is_fireman_week="Yes" if is_fireman_week else "No",
             summary=summary_ai,
+            tickets=self._collect_week_tickets(week_folder) if tickets else "",
         )
 
         self.file_service.write_to_file(summary_file, week_summary_content)
         console.print(f"[green]✓[/green] Week summary created: {summary_file}")
+
+    # A ticket carried across several days appears once per day; the last note
+    # wins so the report shows where the ticket ended the week.
+    def _collect_week_tickets(self, week_folder: str) -> str:
+        latest_by_key: dict[str, Task] = {}
+        for file_name in sorted(listdir(week_folder)):
+            if not file_name.endswith(f"-DailyNotes.{TEMPLATE_FORMAT}"):
+                continue
+            note = self.parser.parse(join(week_folder, file_name))
+            if note is None:
+                continue
+            for task in [*note.planned_tasks, *note.code_review_tasks]:
+                if task.key:
+                    latest_by_key[task.key] = task
+
+        if not latest_by_key:
+            return ""
+
+        grouped: dict[Status, list[Task]] = {}
+        for task in latest_by_key.values():
+            grouped.setdefault(task.status, []).append(task)
+
+        blocks: list[str] = []
+        for status in _TICKET_STATUS_ORDER:
+            group = sorted(grouped.get(status, []), key=lambda t: t.key or "")
+            if not group:
+                continue
+            lines = [f"{status.value} ({len(group)})"]
+            for task in group:
+                link = f" → {task.link}" if task.link else ""
+                lines.append(f"  - [{task.key}] {task.description.strip()}{link}")
+            blocks.append("\n".join(lines))
+        return "\n\n".join(blocks)
 
     async def recreate_week_summaries(self, start_date: datetime, end_date: datetime) -> None:
         current_date = start_date - timedelta(days=start_date.weekday())
