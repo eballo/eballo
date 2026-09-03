@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.74.0
+
+- Add wk week report --tickets (#105)
+
 ## 0.73.0
 
 - Make TaskFormatter txt-compatible for links (#43)
