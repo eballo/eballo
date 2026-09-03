@@ -61,6 +61,39 @@ class TestTaskFormatter:
         assert TaskFormatter.status_checkbox_char(Status.CODE_REVIEW) == " "
         assert TaskFormatter.status_checkbox_char(Status.DONE) == "x"
 
+    def test_format_task_txt_renders_plain_link_tokens(self) -> None:
+        # given
+        formatter = TaskFormatter(template_format="txt")
+        task = Task(
+            id="1",
+            key="BE-1",
+            description="Implement feature",
+            status=Status.TODO,
+            link="https://jira/task/BE-1",
+            github="https://github/pr/123",
+            assignee=User(name="Enric"),
+        )
+
+        # when
+        result = formatter.format_task(task, with_name=True, with_status=True)
+
+        # then
+        assert result.startswith("[ ] [BE-1] ")
+        assert "](" not in result
+        assert "Implement feature - Enric (To Do)" in result
+        assert result.endswith(" 🔗 https://jira/task/BE-1 🐙 https://github/pr/123")
+
+    def test_format_task_txt_without_optional_fields(self) -> None:
+        # given
+        formatter = TaskFormatter(template_format="txt")
+        task = Task(id="1", description="Plain task", status=Status.DONE)
+
+        # when
+        result = formatter.format_task(task, with_name=False, with_status=False)
+
+        # then
+        assert result == "[x] Plain task"
+
     def test_format_tasks_joins_lines(self, mocker: MockerFixture) -> None:
         # given
         formatter = TaskFormatter()
