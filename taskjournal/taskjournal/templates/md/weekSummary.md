@@ -15,3 +15,10 @@
 ## 📝 General Summary
 
 {{summary}}
+{% if tickets %}
+---
+
+## 🎫 Jira Tickets
+
+{{tickets}}
+{% endif %}

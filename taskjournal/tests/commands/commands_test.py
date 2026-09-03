@@ -392,6 +392,117 @@ class TestCommands:
         assert "start=2025-01-13" in content
         assert "end=2025-01-17" in content
 
+    def test_collect_week_tickets__dedupes_by_key_and_last_note_wins(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        temp_week_folder: str,
+    ) -> None:
+        # given
+        mocker.patch(
+            "taskjournal.commands.reports.listdir",
+            return_value=["2025-01-13-DailyNotes.md", "2025-01-14-DailyNotes.md"],
+        )
+        monday = ParsedNote(
+            planned_tasks=[
+                Task(id="1", key="BE-1", description="Add endpoint",
+                     status=Status.IN_PROGRESS, link="https://jira/BE-1"),
+                Task(id="2", key="BE-2", description="Fix flaky test", status=Status.TODO),
+            ]
+        )
+        tuesday = ParsedNote(
+            planned_tasks=[
+                Task(id="3", key="BE-1", description="Add endpoint",
+                     status=Status.DONE, link="https://jira/BE-1"),
+            ],
+            code_review_tasks=[
+                Task(id="4", key="BE-9", description="Review PR", status=Status.CODE_REVIEW),
+                Task(id="5", description="No key, ignored", status=Status.DONE),
+            ],
+        )
+        mocker.patch.object(cmd.parser, "parse", side_effect=[monday, tuesday])
+
+        # when
+        block = cmd._reports._collect_week_tickets(temp_week_folder)
+
+        # then
+        assert block == (
+            "Done (1)\n"
+            "  - [BE-1] Add endpoint → https://jira/BE-1\n"
+            "\n"
+            "Code Review (1)\n"
+            "  - [BE-9] Review PR\n"
+            "\n"
+            "To Do (1)\n"
+            "  - [BE-2] Fix flaky test"
+        )
+
+    def test_collect_week_tickets__no_keyed_tasks_returns_empty(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        temp_week_folder: str,
+    ) -> None:
+        mocker.patch(
+            "taskjournal.commands.reports.listdir",
+            return_value=["2025-01-13-DailyNotes.md"],
+        )
+        mocker.patch.object(
+            cmd.parser,
+            "parse",
+            return_value=ParsedNote(
+                planned_tasks=[Task(id="1", description="chore", status=Status.DONE)]
+            ),
+        )
+
+        assert cmd._reports._collect_week_tickets(temp_week_folder) == ""
+
+    @mark.asyncio
+    async def test_create_week_summary__tickets_flag_renders_section(
+        self,
+        cmd: CommandManager,
+        mocker: MockerFixture,
+        fixed_datetime: datetime,
+        temp_week_folder: str,
+    ) -> None:
+        # given
+        mocker.patch.object(cmd._reports, "_get_week_folder", return_value=temp_week_folder)
+        cmd.file_service.load_template.return_value = (
+            "{{summary}}\n{% if tickets %}== TICKETS ==\n{{tickets}}{% endif %}"
+        )
+        mocker.patch("taskjournal.commands.reports.listdir", return_value=[])
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.WorkingDaysService.get_week_stats",
+            return_value={
+                "start_date": fixed_datetime,
+                "end_date": fixed_datetime,
+                "total_time_seconds": 0,
+                "total_worked_days": 0,
+                "vacation_days": 0,
+                "days_at_office": 0,
+                "days_at_home": 0,
+            },
+        )
+        mocker.patch(
+            "taskjournal.services.calendar.fireman.FiremanService.is_fireman_week",
+            return_value=False,
+        )
+        mocker.patch.object(cmd.ai_service, "summarize", AsyncMock(return_value="AI"))
+        cmd.time_service.seconds_to_hours_minutes.return_value = (0, 0)
+        mocker.patch.object(
+            cmd._reports, "_collect_week_tickets", return_value="Done (1)\n  - [BE-1] x"
+        )
+
+        # when
+        await cmd.create_week_summary(fixed_datetime, tickets=True)
+
+        # then
+        args, _ = cmd.file_service.write_to_file.call_args
+        content: str = args[1]
+        assert "== TICKETS ==" in content
+        assert "Done (1)" in content
+        assert "[BE-1] x" in content
+
     @mark.asyncio
     async def test_recreate_week_summaries__calls_create_week_summary_for_each_week(
         self,

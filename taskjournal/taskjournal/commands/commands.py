@@ -228,8 +228,8 @@ class CommandManager:
 
     # ── Reports ───────────────────────────────────────────────────────────────
 
-    async def create_week_summary(self, custom_date: datetime) -> None:
-        return await self._reports.create_week_summary(custom_date)
+    async def create_week_summary(self, custom_date: datetime, tickets: bool = False) -> None:
+        return await self._reports.create_week_summary(custom_date, tickets=tickets)
 
     async def recreate_week_summaries(self, start_date: datetime, end_date: datetime) -> None:
         return await self._reports.recreate_week_summaries(start_date, end_date)
