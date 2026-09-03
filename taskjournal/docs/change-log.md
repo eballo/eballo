@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.75.0
+
+- Add wk week report --compare (#102)
+
 ## 0.74.0
 
 - Add wk week report --tickets (#105)

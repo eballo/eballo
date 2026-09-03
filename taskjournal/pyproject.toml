@@ -1,6 +1,6 @@
 [project]
 name = "taskjournal"
-version = "0.74.0"
+version = "0.75.0"
 description = "A Python project for tracking daily work tasks."
 authors = [{name = "Enric Ballo", email = "enric.ballo@gmail.com"}]
 readme = "README.md"
