@@ -297,6 +297,19 @@ class TestParser:
         assert note.planned_tasks[0].description == "Custom task item"
         assert note.planned_tasks[0].status == Status.DONE
 
+    def test_get_strategy_avoids_fallback_until_missing(
+        self, mocker: MockerFixture
+    ) -> None:
+        custom = MarkdownParseStrategy()
+        parser = DailyParserService(strategies={".md": custom})
+        fallback = mocker.patch("taskjournal.services.parser.get_parse_strategy", return_value=custom)
+
+        assert parser.get_strategy("MD") is custom
+        fallback.assert_not_called()
+
+        assert parser.get_strategy(".unknown") is custom
+        fallback.assert_called_once_with(".unknown")
+
     def test_daily_parser_legacy_properties_and_static_methods(self) -> None:
         parser = DailyParserService()
         assert parser.task_regex_txt is not None

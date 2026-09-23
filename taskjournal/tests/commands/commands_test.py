@@ -1043,6 +1043,35 @@ class TestCommands:
         ai_idx = next(i for i, l in enumerate(written) if "AI generated text." in l)
         assert ai_idx < separator_idx
 
+    def test_summary_edits_preserve_distinct_spacing_and_surrounding_sections(
+        self, cmd: CommandManager
+    ) -> None:
+        content = [
+            "## Notes\n", "Earlier notes\n", "---\n", "## 📋 Summary\n",
+            "\n", "Manual summary.\n", "\n", "---\n", "## Next\n",
+        ]
+        cmd.file_service.get_lines.return_value = content
+
+        cmd._daily._append_ai_summary("/day.md", "AI text.")
+        assert cmd.file_service.write_lines_to_file.call_args.args[1] == (
+            content[:7] + ["\nAI text.\n", "\n"] + content[7:]
+        )
+
+        cmd.fix_summary("/day.md", "Replacement.")
+        assert cmd.file_service.write_lines_to_file.call_args.args[1] == (
+            content[:4] + ["\n", "Replacement.\n", "\n"] + content[7:]
+        )
+
+    def test_summary_edits_leave_file_unchanged_when_section_or_delimiter_missing(
+        self, cmd: CommandManager
+    ) -> None:
+        for content in (["## Notes\n", "---\n"], ["## Summary\n", "Old summary\n"]):
+            cmd.file_service.get_lines.return_value = content
+            cmd._daily._append_ai_summary("/day.md", "AI text.")
+            cmd.fix_summary("/day.md", "Replacement.")
+
+        cmd.file_service.write_lines_to_file.assert_not_called()
+
     @mark.asyncio
     async def test_generate_and_write_summary__writes_when_no_existing_summary(
         self, cmd: CommandManager, mocker: MockerFixture
