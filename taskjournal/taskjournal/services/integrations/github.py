@@ -8,6 +8,8 @@ from gidgethub.httpx import GitHubAPI
 from taskjournal.models.github import PullRequest, RepoCommitStat
 from taskjournal.models.task import Status, Task
 from taskjournal.services.base import BaseService, HealthCheckResult, ServiceStatus
+from taskjournal.services.integrations.github_gateway import GitHubGateway
+from taskjournal.services.integrations.github_mapping import commit_stat, map_pending_pr, review_is_approved
 from taskjournal.services.logger import logger
 
 _UNCONFIGURED_TOKEN = "your-github-token"
@@ -20,11 +22,27 @@ class GithubService(BaseService):
         self,
         token: str,
         org_name: str,
+        gateway: GitHubGateway | None = None,
     ) -> None:
         self.token = token
         self.org_name = org_name
-        self.client: AsyncClient | None = None
-        self.gh: GitHubAPI | None = None
+        self.gateway = gateway if gateway is not None else GitHubGateway(token)
+
+    @property
+    def client(self) -> AsyncClient | None:
+        return self.gateway.client
+
+    @client.setter
+    def client(self, value: AsyncClient | None) -> None:
+        self.gateway.client = value
+
+    @property
+    def gh(self) -> GitHubAPI | None:
+        return self.gateway.gh
+
+    @gh.setter
+    def gh(self, value: GitHubAPI | None) -> None:
+        self.gateway.gh = value
 
     @property
     def name(self) -> str:
@@ -47,7 +65,7 @@ class GithubService(BaseService):
             logger.error("GitHub client not initialized.")
             return None
         try:
-            user = await self.gh.getitem("/user")
+            user = await self.gateway.getitem("/user")
             if not isinstance(user, dict):
                 return None
             login = user.get("login")
@@ -84,41 +102,28 @@ class GithubService(BaseService):
         repo_count = 0
 
         try:
-            async for repo in self.gh.getiter(f"/orgs/{self.org_name}/repos?type=all&per_page=100"):
+            async for repo in self.gateway.getiter(f"/orgs/{self.org_name}/repos?type=all&per_page=100"):
                 repo_count += 1
                 repo_name = repo["name"]
 
                 try:
                     # Count user commits
-                    user_count = 0
-                    async for _ in self.gh.getiter(
+                    user_count = await self.gateway.count(
                         f"/repos/{self.org_name}/{repo_name}/commits?author={username}&since={since_str}"
-                    ):
-                        user_count += 1
+                    )
 
                     if only_contributed and user_count == 0:
                         continue
 
                     # Count all commits
-                    total_count = 0
-                    async for _ in self.gh.getiter(
+                    total_count = await self.gateway.count(
                         f"/repos/{self.org_name}/{repo_name}/commits?since={since_str}"
-                    ):
-                        total_count += 1
+                    )
 
                     if total_count == 0:
                         continue
 
-                    percentage = round((user_count / total_count) * 100, 2)
-
-                    commit_stats.append(
-                        RepoCommitStat(
-                            repo=repo_name,
-                            your_commits=user_count,
-                            total_commits=total_count,
-                            percentage=percentage,
-                        )
-                    )
+                    commit_stats.append(commit_stat(repo_name, user_count, total_count))
                 except Exception as e:
                     logger.warning(f"Skipping repo '{repo_name}' due to error: {e}")
 
@@ -190,7 +195,7 @@ class GithubService(BaseService):
             return None
 
         try:
-            pr = await self.gh.getitem(f"/repos/{owner}/{repo}/pulls/{number}")
+            pr = await self.gateway.getitem(f"/repos/{owner}/{repo}/pulls/{number}")
             if pr.get("merged"):
                 # A merged PR has already gone through its review/merge
                 # process, regardless of whether this user personally
@@ -199,36 +204,12 @@ class GithubService(BaseService):
 
             # Iterate all reviews (handles pagination)
             reviews = []
-            async for review in self.gh.getiter(
+            async for review in self.gateway.getiter(
                 f"/repos/{owner}/{repo}/pulls/{number}/reviews"
             ):
-                # Safety: some reviews can be from bots or deleted users
-                u = (review.get("user") or {}).get("login") or ""
-                if u.lower() == user_login.lower():
-                    reviews.append(review)
+                reviews.append(review)
 
-            if not reviews:
-                # No reviews from that user at all
-                return False
-
-            # Consider only the *latest* review from that user
-            # (Only the most recent state counts)
-            latest = max(reviews, key=lambda r: r.get("submitted_at") or "")
-            state = (latest.get("state") or "").upper()
-            # Possible values: APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED, PENDING
-            if state != "APPROVED":
-                return False
-
-            # GitHub does not flip an APPROVED review's state when new commits
-            # are pushed unless "dismiss stale reviews" branch protection is
-            # enabled, so an old approval must be checked against the PR's
-            # current head commit to detect a stale (no longer valid) review.
-            head_sha = (pr.get("head") or {}).get("sha")
-            review_commit_sha = latest.get("commit_id")
-            if head_sha and review_commit_sha and head_sha != review_commit_sha:
-                return False
-
-            return True
+            return review_is_approved(pr, reviews, user_login)
 
         except Exception as e:
             logger.error(f"Failed to fetch reviews for {owner}/{repo}#{number}: {e}")
@@ -320,19 +301,8 @@ class GithubService(BaseService):
             return []
         try:
             query = f"is:pr+is:open+org:{self.org_name}+review-requested:@me"
-            data = await self.gh.getitem(f"/search/issues?q={query}")
-            result: list[PullRequest] = []
-            for item in data.get("items", []):
-                repo_url: str = item.get("repository_url", "")
-                repo = repo_url.rsplit("/", 1)[-1] if repo_url else "unknown"
-                result.append(PullRequest(
-                    number=item["number"],
-                    title=item["title"],
-                    repo=repo,
-                    url=item["html_url"],
-                    author=(item.get("user") or {}).get("login", "unknown"),
-                ))
-            return result
+            data = await self.gateway.getitem(f"/search/issues?q={query}")
+            return [map_pending_pr(item) for item in data.get("items", [])]
         except Exception as e:
             logger.error(f"Failed to fetch PRs pending review: {e}")
             return []
@@ -344,13 +314,7 @@ class GithubService(BaseService):
                 task.status = Status.DONE
 
     async def __aenter__(self) -> "GithubService":
-        self.client = AsyncClient()
-        try:
-            self.gh = GitHubAPI(self.client, requester="taskjournal", oauth_token=self.token)
-            logger.debug("Github successfully initialized")
-        except Exception as e:
-            logger.error(f"Failed to initialize GitHub client: {e}")
-            self.gh = None
+        await self.gateway.open()
         return self
 
     async def __aexit__(self, *_: object) -> None:
@@ -358,5 +322,4 @@ class GithubService(BaseService):
 
     async def close(self) -> None:
         """Gracefully close the underlying httpx client."""
-        if self.client:
-            await self.client.aclose()
+        await self.gateway.close()
