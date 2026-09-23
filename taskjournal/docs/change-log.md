@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.79.0
+
+- refactor: extract AI prompt builders
+
 ## 0.78.0
 
 - refactor: unify working day period aggregation
