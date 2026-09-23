@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.76.0
+
+- Implement Strategy pattern for TaskFormatter
+
 ## 0.75.0
 
 - Add wk week report --compare (#102)
