@@ -1,6 +1,7 @@
 from pytest import raises
 from pytest_mock import MockerFixture
 
+from taskjournal.container import AppContainer
 from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.models.task import Status
 from taskjournal.services.parser import (
@@ -11,6 +12,7 @@ from taskjournal.services.parser import (
     TaskParseStrategy,
     get_parse_strategy,
 )
+from taskjournal.services.parsing import task_strategies
 
 
 class TestParser:
@@ -240,6 +242,17 @@ class TestParser:
         assert isinstance(get_parse_strategy("txt"), PlainTextParseStrategy)
         assert isinstance(get_parse_strategy(".txt"), PlainTextParseStrategy)
         assert isinstance(get_parse_strategy("other"), MarkdownParseStrategy)
+
+    def test_strategy_exports_and_container_parser(self) -> None:
+        assert TaskParseStrategy is task_strategies.TaskParseStrategy
+        assert MarkdownParseStrategy is task_strategies.MarkdownParseStrategy
+        assert PlainTextParseStrategy is task_strategies.PlainTextParseStrategy
+
+        container = AppContainer()
+        parser = container.daily_parser()
+        assert container.task_manager().parser is parser
+        assert isinstance(parser.get_strategy(".md"), task_strategies.MarkdownParseStrategy)
+        assert isinstance(parser.get_strategy(".txt"), task_strategies.PlainTextParseStrategy)
 
     def test_markdown_parse_strategy(self) -> None:
         strategy = MarkdownParseStrategy()
