@@ -3,7 +3,14 @@ from pytest_mock import MockerFixture
 
 from taskjournal.models.parsed_note import ParsedNote
 from taskjournal.models.task import Status
-from taskjournal.services.parser import ParserService, DailyParserService
+from taskjournal.services.parser import (
+    DailyParserService,
+    MarkdownParseStrategy,
+    ParserService,
+    PlainTextParseStrategy,
+    TaskParseStrategy,
+    get_parse_strategy,
+)
 
 
 class TestParser:
@@ -226,3 +233,79 @@ class TestParser:
         # 4. Plain text standard
         data = daily_parser_service._parse_content([lines[3]], ".txt")
         assert data.work_from == "Office"
+
+    def test_get_parse_strategy(self) -> None:
+        assert isinstance(get_parse_strategy("md"), MarkdownParseStrategy)
+        assert isinstance(get_parse_strategy(".md"), MarkdownParseStrategy)
+        assert isinstance(get_parse_strategy("txt"), PlainTextParseStrategy)
+        assert isinstance(get_parse_strategy(".txt"), PlainTextParseStrategy)
+        assert isinstance(get_parse_strategy("other"), MarkdownParseStrategy)
+
+    def test_markdown_parse_strategy(self) -> None:
+        strategy = MarkdownParseStrategy()
+        assert strategy.task_regex is not None
+        assert strategy.parse_task("invalid line") is None
+
+        task = strategy.parse_task(" - [x] [BE-10](https://jira/10)[🐙](https://gh/10)Fix bug")
+        assert task is not None
+        assert task.key == "BE-10"
+        assert task.link == "https://jira/10"
+        assert task.github == "https://gh/10"
+        assert task.description == "Fix bug"
+        assert task.status == Status.DONE
+
+    def test_plain_text_parse_strategy(self) -> None:
+        strategy = PlainTextParseStrategy()
+        assert strategy.task_regex is not None
+        assert strategy.parse_task("invalid line") is None
+
+        task = strategy.parse_task("[>] [FE-20] Build UI 🔗 https://jira/20 🐙 https://gh/20")
+        assert task is not None
+        assert task.key == "FE-20"
+        assert task.link == "https://jira/20"
+        assert task.github == "https://gh/20"
+        assert task.description == "Build UI"
+        assert task.status == Status.IN_PROGRESS
+
+    def test_daily_parser_custom_strategy_injection(self) -> None:
+        class CustomParseStrategy(TaskParseStrategy):
+            @property
+            def task_regex(self):
+                from re import compile
+                return compile(r"^\*\s*\[([ xX])\]\s*(.*)")
+
+            def extract_metadata(self, remainder: str):
+                return None, None, None, remainder
+
+        custom_parser = DailyParserService(strategies={".custom": CustomParseStrategy()})
+        note = ParsedNote()
+        custom_parser._parse_tasks("planned_tasks", note, "* [x] Custom task item", ".custom")
+        assert len(note.planned_tasks) == 1
+        assert note.planned_tasks[0].description == "Custom task item"
+        assert note.planned_tasks[0].status == Status.DONE
+
+    def test_daily_parser_legacy_properties_and_static_methods(self) -> None:
+        parser = DailyParserService()
+        assert parser.task_regex_txt is not None
+        assert parser.task_regex_md is not None
+        assert parser.get_strategy("md") is not None
+
+        key, link, gh, desc = DailyParserService._extract_md_metadata("[BE-1](https://j)[🐙](https://g)desc")
+        assert key == "BE-1"
+        assert link == "https://j"
+        assert gh == "https://g"
+        assert desc == "desc"
+
+        key, link, gh, desc = DailyParserService._extract_txt_metadata("[BE-1] desc 🔗 https://j 🐙 https://g")
+        assert key == "BE-1"
+        assert link == "https://j"
+        assert gh == "https://g"
+        assert desc == "desc"
+
+    def test_daily_parser_parse_breaks_and_file_read(self, tmp_path) -> None:
+        file_path = tmp_path / "2026-01-15.md"
+        file_path.write_text("Date: 2026-01-15\nBreak: 12:30\nBreak: 15:45\n", encoding="utf-8")
+        parser = DailyParserService()
+        note = parser.parse(str(file_path))
+        assert note is not None
+        assert note.breaks == ["12:30", "15:45"]
