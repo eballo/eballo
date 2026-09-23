@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.81.0
+
+- refactor: split daily audit, synchronization and statistics
+
 ## 0.80.0
 
 - refactor: extract AI prompt builders
