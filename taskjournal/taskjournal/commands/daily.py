@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta, date as date_t, time as time_t
-from os import makedirs, listdir, walk, getuid
-from os.path import basename, dirname, exists, expanduser, isdir, join
+from datetime import datetime, timedelta, time as time_t
+from os import makedirs, listdir, getuid
+from os.path import basename, dirname, exists, expanduser, join
 from pathlib import Path
 from re import match as re_match
 from subprocess import run as subprocess_run
@@ -9,18 +9,18 @@ from sys import platform
 from jinja2 import Template
 
 from taskjournal.config import (
-    TEMPLATE_FORMAT,
     DAILY_NOTES_TEMPLATE,
     BASE_DIR,
-    HOLIDAYS_FILE,
 )
 from taskjournal.models.task import Task, Status
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.ai.base import AIService
+from taskjournal.services.daily_audit import DailyAuditService
+from taskjournal.services.daily_sync import DailySyncService
+from taskjournal.services.daily_statistics import DailyStatisticsService
 from taskjournal.services.file import FileService
 from taskjournal.services.calendar.fireman import FiremanService
 from taskjournal.services.integrations.github import GithubService
-from taskjournal.services.calendar.holidays import HolidayService
 from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.logger import console, logger
 from taskjournal.services.parser import DailyParserService
@@ -51,6 +51,9 @@ class DailyCommands:
         recurring_service: RecurringTasksService | None = None,
         daily_alarms_enabled: bool = True,
         debug: bool = False,
+        audit_service: DailyAuditService | None = None,
+        sync_service: DailySyncService | None = None,
+        statistics_service: DailyStatisticsService | None = None,
     ) -> None:
         self.debug = debug
         self._alarms_enabled = daily_alarms_enabled
@@ -63,6 +66,9 @@ class DailyCommands:
         self.time_service = time_service
         self.ai_service = ai_service
         self._recurring = recurring_service or RecurringTasksService()
+        self._audit = audit_service or DailyAuditService(file_service, time_service, parser)
+        self._sync = sync_service or DailySyncService(jira, github, task_formatter, file_service, parser)
+        self._statistics = statistics_service or DailyStatisticsService(parser, self._audit)
 
     def _get_week_folder(self, date: datetime) -> str:
         week_folder = self.file_service.get_week_folder(BASE_DIR, date)
@@ -75,183 +81,25 @@ class DailyCommands:
         return join(week_folder, daily_notes_name)
 
     def _note_issues(self, file_path: str) -> list[str]:
-        issues: list[str] = []
-        try:
-            lines = self.file_service.get_lines(file_path)
-            self.time_service.get_start_time(lines)
-        except (ValueError, FileNotFoundError):
-            issues.append("missing start time")
-        if not self.file_service.check_finalized_in_file(file_path):
-            issues.append("missing end time")
-        note = self.parser.parse(file_path)
-        if note and not note.time_spent.strip():
-            issues.append("missing time spent")
-        if note and not any(line.strip() for line in note.summary):
-            issues.append("missing summary")
-        return issues
+        return self._audit.note_issues(file_path)
 
     def audit_daily_notes(self, year: int) -> list[tuple[str, str, list[str]]]:
-        year_dir = join(str(BASE_DIR), str(year))
-        if not exists(year_dir):
-            return []
-
-        results: list[tuple[str, str, list[str]]] = []
-        for entry in sorted(listdir(year_dir)):
-            week_path = join(year_dir, entry)
-            if not isdir(week_path):
-                continue
-            for file_name in sorted(listdir(week_path)):
-                if not file_name.endswith(f"-DailyNotes.{TEMPLATE_FORMAT}"):
-                    continue
-                file_path = join(week_path, file_name)
-                date_str = file_name.replace(f"-DailyNotes.{TEMPLATE_FORMAT}", "")
-                results.append((date_str, file_path, self._note_issues(file_path)))
-
-        return results
+        return self._audit.audit_daily_notes(year)
 
     def count_week_folders(self, year: int) -> int:
-        year_dir = join(str(BASE_DIR), str(year))
-        if not exists(year_dir):
-            return 0
-        return sum(1 for e in listdir(year_dir) if e.startswith("week") and isdir(join(year_dir, e)))
+        return self._audit.count_week_folders(year)
 
     def audit_weekly_coverage(self, year: int) -> list[tuple[str, list[str]]]:
-        year_dir = join(str(BASE_DIR), str(year))
-        if not exists(year_dir):
-            return []
-
-        today = date_t.today()
-        missing: list[tuple[str, list[str]]] = []
-
-        for entry in sorted(listdir(year_dir)):
-            if not entry.startswith("week"):
-                continue
-            week_path = join(year_dir, entry)
-            if not isdir(week_path):
-                continue
-            try:
-                week_num = int(entry[4:])
-            except ValueError:
-                continue
-
-            week_missing: list[str] = []
-            for day_num in range(1, 6):
-                try:
-                    day = date_t.fromisocalendar(year, week_num, day_num)
-                except ValueError:
-                    continue
-                if day > today:
-                    continue
-                daily_path = join(week_path, f"{day}-DailyNotes.{TEMPLATE_FORMAT}")
-                holiday_path = join(week_path, f"{day}-DailyNotes-Holidays.{TEMPLATE_FORMAT}")
-                if not exists(daily_path) and not exists(holiday_path):
-                    week_missing.append(str(day))
-
-            if week_missing:
-                missing.append((entry, week_missing))
-
-        return missing
+        return self._audit.audit_weekly_coverage(year)
 
     def get_previous_day_issues(self, today: datetime) -> tuple[str, str, list[str]] | None:
-        candidate = today - timedelta(days=1)
-        for _ in range(14):
-            prev_file = self._get_daily_notes_file_path(candidate)
-            if exists(prev_file):
-                issues = self._note_issues(prev_file)
-                return (candidate.strftime("%Y-%m-%d"), prev_file, issues) if issues else None
-            candidate -= timedelta(days=1)
-        return None
+        return self._audit.get_previous_day_issues(today, self._get_daily_notes_file_path)
 
     def _warn_incomplete_week_notes(self, week_date: datetime, week_folder: str) -> None:
-        start_of_week = week_date - timedelta(days=week_date.weekday())
-        incomplete: list[str] = []
-
-        for i in range(5):
-            day = start_of_week + timedelta(days=i)
-            daily_file = join(week_folder, self.time_service.get_daily_notes_name(day))
-            if not exists(daily_file):
-                continue
-            issues = self._note_issues(daily_file)
-            if issues:
-                incomplete.append(f"{day.strftime('%Y-%m-%d')}: {', '.join(issues)}")
-
-        if incomplete:
-            logger.warning("Week report generated with incomplete notes:")
-            for line in incomplete:
-                logger.warning(f"  ⚠  {line}")
+        self._audit.warn_incomplete_week_notes(week_date, week_folder)
 
     def get_streak_stats(self, today: datetime) -> dict[str, object]:
-        from re import compile as re_compile
-        from datetime import timedelta as td
-
-        date_rx = re_compile(r"^(\d{4}-\d{2}-\d{2})")
-        all_dates: set[date_t] = set()
-        for root, _, files in walk(str(BASE_DIR)):
-            for fname in files:
-                if "DailyNotes" not in fname:
-                    continue
-                dm = date_rx.match(fname)
-                if dm:
-                    try:
-                        all_dates.add(datetime.strptime(dm.group(1), "%Y-%m-%d").date())
-                    except ValueError:
-                        pass
-
-        if not all_dates:
-            return {"current": 0, "longest": 0, "longest_start": None, "longest_end": None, "total": 0}
-
-        holiday_cache: dict[int, HolidayService] = {}
-
-        def _is_non_working(d: date_t) -> bool:
-            if d.weekday() >= 5:
-                return True
-            if d.year not in holiday_cache:
-                path = join(str(BASE_DIR), f"{d.year}/{HOLIDAYS_FILE}")
-                holiday_cache[d.year] = HolidayService(filepath=path)
-            return holiday_cache[d.year].is_holiday(datetime(d.year, d.month, d.day)) is not None
-
-        def _next_working(d: date_t) -> date_t:
-            d += td(days=1)
-            while _is_non_working(d):
-                d += td(days=1)
-            return d
-
-        today_date = today.date()
-        current = 0
-        check = today_date
-        while True:
-            if _is_non_working(check):
-                check -= td(days=1)
-                continue
-            if check not in all_dates:
-                break
-            current += 1
-            check -= td(days=1)
-
-        sorted_dates = sorted(all_dates)
-        longest = cur_len = 1
-        longest_start = longest_end = cur_start = sorted_dates[0]
-
-        for i in range(1, len(sorted_dates)):
-            prev, curr = sorted_dates[i - 1], sorted_dates[i]
-            if curr == _next_working(prev):
-                cur_len += 1
-            else:
-                cur_len = 1
-                cur_start = curr
-
-            if cur_len > longest:
-                longest = cur_len
-                longest_start = cur_start
-                longest_end = curr
-
-        return {
-            "current": current,
-            "longest": longest,
-            "longest_start": longest_start,
-            "longest_end": longest_end,
-            "total": len(all_dates),
-        }
+        return self._statistics.get_streak_stats(today)
 
     async def create_daily_notes(
         self,
@@ -806,247 +654,33 @@ class DailyCommands:
             logger.error("Could not calculate working hours.")
 
     async def sync_daily_notes(self, date: datetime) -> tuple[int, int]:
-        """Reconcile today's notes with live Jira/GitHub state.
-
-        Adds any assigned Jira task (any status) or code-review task that's
-        missing, and corrects the checkbox of any task whose local status has
-        gone stale (e.g. a code-review approval, or a Jira status change).
-        """
-        file_path = self._get_daily_notes_file_path(date)
-        if not exists(file_path):
-            raise FileNotFoundError(f"No daily notes for {date.strftime('%Y-%m-%d')}")
-
-        logger.debug("Fetching Jira tasks...")
-        assigned = await self.jira.get_current_sprint_tasks_all_assigned_to_me()
-        code_review = await self.jira.get_current_sprint_tasks_in_code_review()
-
-        lines = self.file_service.get_lines(file_path)
-
-        async with self.github:
-            await self.github.update_status_if_task_reviewed(code_review)
-
-            added = self._insert_missing_tasks_in_section(lines, "planned_tasks", assigned)
-            added += self._insert_missing_tasks_in_section(lines, "code_review_tasks", code_review)
-            updated = self._correct_stale_task_statuses(lines, assigned + code_review)
-            # A ticket can leave Jira's "Code Review" status/sprint (e.g. moved
-            # forward right after merging) before its PR is re-checked here, so
-            # already-tracked code-review lines are re-verified directly against
-            # their linked PR rather than relying only on the live Jira query.
-            updated += await self._correct_existing_code_review_links(lines)
-
-        if added or updated:
-            self.file_service.write_lines_to_file(file_path, lines)
-        else:
-            console.print("[green]✓[/green] Tasks already in sync.")
-
-        return added, updated
+        return await self._sync.sync_daily_notes(date, self._get_daily_notes_file_path(date))
 
     def _insert_missing_tasks_in_section(
         self, lines: list[str], section_name: str, tasks: list[Task]
     ) -> int:
-        from re import compile as re_compile
-        from taskjournal.services.parser import _SECTION_RULES
-
-        to_add = [t for t in tasks if t.key and not any(t.key in raw for raw in lines)]
-        if not to_add:
-            return 0
-
-        task_rx = re_compile(r"^\s*-?\s*\[[ xX>~-]\]")
-        in_section = False
-        last_task_idx = section_header_idx = -1
-
-        for i, raw in enumerate(lines):
-            stripped = raw.strip()
-            for sec_name, pat in _SECTION_RULES:
-                if pat.match(stripped):
-                    in_section = sec_name == section_name
-                    if in_section:
-                        section_header_idx = i
-                    break
-            if in_section and task_rx.match(stripped):
-                last_task_idx = i
-
-        if section_header_idx == -1:
-            return 0
-
-        insert_at = last_task_idx if last_task_idx != -1 else section_header_idx
-        for offset, task in enumerate(to_add):
-            formatted = self.task_formatter.format_task(task, with_name=True, with_status=False)
-            lines.insert(insert_at + 1 + offset, formatted + "\n")
-            console.print(f"  [green]+[/green] {task.description}")
-
-        return len(to_add)
+        return self._sync._insert_missing_tasks_in_section(lines, section_name, tasks)
 
     def _correct_stale_task_statuses(self, lines: list[str], tasks: list[Task]) -> int:
-        from re import compile as re_compile
-
-        checkbox_rx = re_compile(r"\[([ xX>~-])\]")
-        updated = 0
-
-        for task in tasks:
-            if not task.key:
-                continue
-            desired_char = self.task_formatter.status_checkbox_char(task.status)
-            for i, raw in enumerate(lines):
-                if task.key not in raw:
-                    continue
-                m = checkbox_rx.search(raw)
-                if not m or m.group(1).lower() == desired_char:
-                    break
-                lines[i] = raw.replace(f"[{m.group(1)}]", f"[{desired_char}]", 1)
-                console.print(f"  [cyan]~[/cyan] {task.description} → {task.status.value}")
-                updated += 1
-                break
-
-        return updated
+        return self._sync._correct_stale_task_statuses(lines, tasks)
 
     async def _correct_existing_code_review_links(self, lines: list[str]) -> int:
-        from re import compile as re_compile
-        from taskjournal.services.parser import _SECTION_RULES
-
-        link_rx = re_compile(r"\[🐙\]\(([^)]+)\)")
-        checkbox_rx = re_compile(r"\[([ xX>~-])\]")
-        in_section = False
-        updated = 0
-
-        for i, raw in enumerate(lines):
-            stripped = raw.strip()
-            for sec_name, pat in _SECTION_RULES:
-                if pat.match(stripped):
-                    in_section = sec_name == "code_review_tasks"
-                    break
-            if not in_section:
-                continue
-
-            checkbox_match = checkbox_rx.search(raw)
-            link_match = link_rx.search(raw)
-            if not checkbox_match or not link_match:
-                continue
-            if checkbox_match.group(1).lower() == "x":
-                continue
-
-            reviewed = await self.github.has_user_approved_pr(link_match.group(1))
-            if not reviewed:
-                continue
-
-            lines[i] = raw.replace(f"[{checkbox_match.group(1)}]", "[x]", 1)
-            console.print(f"  [cyan]~[/cyan] {stripped} → {Status.DONE.value}")
-            updated += 1
-
-        return updated
+        return await self._sync._correct_existing_code_review_links(lines)
 
     def _iter_daily_notes(self, year: int):  # type: ignore[no-untyped-def]
-        year_dir = join(str(BASE_DIR), str(year))
-        if not exists(year_dir):
-            return
-        for entry in sorted(listdir(year_dir)):
-            week_path = join(year_dir, entry)
-            if not isdir(week_path):
-                continue
-            for file_name in sorted(listdir(week_path)):
-                if not file_name.endswith(f"-DailyNotes.{TEMPLATE_FORMAT}"):
-                    continue
-                date_str = file_name.replace(f"-DailyNotes.{TEMPLATE_FORMAT}", "")
-                try:
-                    day = datetime.strptime(date_str, "%Y-%m-%d")
-                except ValueError:
-                    continue
-                yield day, join(week_path, file_name)
+        yield from self._audit.iter_daily_notes(year)
 
     def get_completion_stats(self, year: int) -> list[tuple[str, int, int]]:
-        results: list[tuple[str, int, int]] = []
-        for day, file_path in self._iter_daily_notes(year):
-            note = self.parser.parse(file_path)
-            if not note:
-                continue
-            tasks = note.planned_tasks
-            if not tasks:
-                continue
-            done = sum(1 for t in tasks if t.status == Status.DONE)
-            results.append((day.strftime("%Y-%m-%d"), done, len(tasks)))
-        return results
+        return self._statistics.get_completion_stats(year)
 
     def get_workload_stats(self, year: int) -> list[tuple[str, int]]:
-        from re import compile as re_compile
-        time_rx = re_compile(r"(\d+):(\d+)")
-        weekly: dict[str, int] = {}
-        for day, file_path in self._iter_daily_notes(year):
-            note = self.parser.parse(file_path)
-            if not note or not note.time_spent:
-                continue
-            m = time_rx.search(note.time_spent)
-            if not m:
-                continue
-            seconds = int(m.group(1)) * 3600 + int(m.group(2)) * 60
-            week_key = f"W{day.isocalendar()[1]:02d}"
-            weekly[week_key] = weekly.get(week_key, 0) + seconds
-        return sorted(weekly.items())
+        return self._statistics.get_workload_stats(year)
 
     def get_pattern_stats(self, year: int) -> dict[str, object]:
-        from collections import defaultdict
-        day_done: dict[int, list[int]] = defaultdict(list)
-        day_total: dict[int, list[int]] = defaultdict(list)
-        hour_done: dict[int, int] = defaultdict(int)
-        carry: list[tuple[str, set[str]]] = []
-
-        prev_pending: set[str] = set()
-        for day, file_path in self._iter_daily_notes(year):
-            note = self.parser.parse(file_path)
-            if not note:
-                continue
-            tasks = note.planned_tasks
-            done = [t.description for t in tasks if t.status == Status.DONE]
-            pending = {t.description for t in tasks if t.status in (Status.TODO, Status.IN_PROGRESS, Status.BLOCKED)}
-            dow = day.weekday()
-            day_done[dow].append(len(done))
-            day_total[dow].append(len(tasks))
-            if note.start_time:
-                try:
-                    start_hour = datetime.strptime(note.start_time[:5], "%H:%M").hour
-                    hour_done[start_hour] += len(done)
-                except (ValueError, TypeError):
-                    pass
-            carry.append((day.strftime("%Y-%m-%d"), prev_pending & {t.description for t in tasks}))
-            prev_pending = pending
-
-        dow_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-        avg_by_day = {
-            dow_names[d]: round(sum(v) / len(v), 1)
-            for d, v in day_done.items() if v and d < 5
-        }
-        best_day = max(avg_by_day, key=lambda k: avg_by_day[k]) if avg_by_day else None
-        best_hour = max(hour_done, key=lambda k: hour_done[k]) if hour_done else None
-
-        total_days = len(carry)
-        carry_days = sum(1 for _, c in carry if c)
-        carry_rate = round(carry_days / total_days * 100) if total_days else 0
-
-        all_done = [n for vals in day_done.values() for n in vals]
-        avg_done = round(sum(all_done) / len(all_done), 1) if all_done else 0
-
-        return {
-            "best_day": best_day,
-            "best_hour": best_hour,
-            "avg_done_per_day": avg_done,
-            "carry_over_rate": carry_rate,
-            "avg_by_day": avg_by_day,
-        }
+        return self._statistics.get_pattern_stats(year)
 
     def get_tags_stats(self, year: int) -> list[tuple[str, int]]:
-        from re import compile as re_compile
-        tags_rx = re_compile(r"^Tags:\s*(.+)$", flags=8)
-        counts: dict[str, int] = {}
-        for _, file_path in self._iter_daily_notes(year):
-            with open(file_path) as f:
-                for line in f:
-                    m = tags_rx.match(line.strip())
-                    if m:
-                        for tag in m.group(1).split(","):
-                            tag = tag.strip()
-                            if tag:
-                                counts[tag] = counts.get(tag, 0) + 1
-                        break
-        return sorted(counts.items(), key=lambda x: x[1], reverse=True)
+        return self._statistics.get_tags_stats(year)
 
     def get_standup(self, today: datetime) -> dict[str, list[str]]:
         yesterday = today - timedelta(days=1)
