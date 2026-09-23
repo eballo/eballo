@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.85.0
+
+- Refactor: retire legacy parser and consolidate shared defaults
+
 ## 0.84.0
 
 - refactor: move parser task strategies into parsing module
