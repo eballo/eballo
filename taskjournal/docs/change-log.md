@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.88.0
+
+- Add safe backup recovery, mixed-format search and actionable CLI checks
+
 ## 0.87.0
 
 - test: raise project coverage to 98.32%
