@@ -12,6 +12,7 @@ from taskjournal.config import (
     DAILY_NOTES_TEMPLATE,
     BASE_DIR,
 )
+from taskjournal.constants import SECTION_SUMMARY
 from taskjournal.models.task import Task, Status
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.ai.base import AIService
@@ -512,20 +513,28 @@ class DailyCommands:
 
     def _append_ai_summary(self, file_path: str, summary_text: str) -> None:
         content = self.file_service.get_lines(file_path)
+        bounds = self._summary_bounds(content)
+        if bounds is None:
+            return
+        _, end_idx = bounds
+        new_content = content[:end_idx] + [f"\n{summary_text}\n", "\n"] + content[end_idx:]
+        self.file_service.write_lines_to_file(file_path, new_content)
+
+    @staticmethod
+    def _summary_bounds(content: list[str]) -> tuple[int, int] | None:
         summary_idx = next(
-            (i for i, l in enumerate(content) if "Summary" in l and l.strip().startswith("#")),
+            (i for i, l in enumerate(content) if SECTION_SUMMARY in l and l.strip().startswith("#")),
             None,
         )
         if summary_idx is None:
-            return
+            return None
         end_idx = next(
             (i for i in range(summary_idx + 1, len(content)) if content[i].strip() == "---"),
             None,
         )
         if end_idx is None:
-            return
-        new_content = content[:end_idx] + [f"\n{summary_text}\n", "\n"] + content[end_idx:]
-        self.file_service.write_lines_to_file(file_path, new_content)
+            return None
+        return summary_idx, end_idx
 
     def _read_breaks_seconds(self, content: list[str]) -> int:
         break_marker = FormatUtils.wrap_with_format("Break:")
@@ -619,21 +628,10 @@ class DailyCommands:
 
     def fix_summary(self, file_path: str, summary_text: str) -> None:
         content = self.file_service.get_lines(file_path)
-
-        summary_idx = next(
-            (i for i, l in enumerate(content) if "Summary" in l and l.strip().startswith("#")),
-            None,
-        )
-        if summary_idx is None:
+        bounds = self._summary_bounds(content)
+        if bounds is None:
             return
-
-        end_idx = next(
-            (i for i in range(summary_idx + 1, len(content)) if content[i].strip() == "---"),
-            None,
-        )
-        if end_idx is None:
-            return
-
+        summary_idx, end_idx = bounds
         new_content = content[:summary_idx + 1] + ["\n", f"{summary_text}\n", "\n"] + content[end_idx:]
         self.file_service.write_lines_to_file(file_path, new_content)
 

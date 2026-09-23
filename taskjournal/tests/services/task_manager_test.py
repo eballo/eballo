@@ -13,7 +13,6 @@ class TestTaskManager:
 
     def test_get_tasks_from_daily_notes(self, mocker: MockerFixture) -> None:
         # given
-        mocker.patch("taskjournal.parser.file_parser.TEMPLATE_FORMAT", "txt")
         mock_file = mocker.mock_open(
             read_data="## Planned Tasks\n[x] Done Task\n[ ] Pending Task\n[ ] Another Pending\n"
         )
@@ -81,7 +80,6 @@ class TestTaskManager:
     def test_get_previous_tasks_success(self, mocker: MockerFixture) -> None:
         # given
         mocker.patch("taskjournal.services.task_manager.TEMPLATE_FORMAT", "txt")
-        mocker.patch("taskjournal.parser.file_parser.TEMPLATE_FORMAT", "txt")
         mocker.patch("taskjournal.services.task_manager.exists", return_value=True)
         mocker.patch(
             "taskjournal.services.task_manager.listdir", return_value=["2025-01-18-DailyNotes.txt", "current.txt"]

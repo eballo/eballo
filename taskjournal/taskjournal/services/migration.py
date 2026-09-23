@@ -6,7 +6,6 @@ from jinja2 import Template
 
 from taskjournal.config import DAILY_NOTES_TEMPLATE
 from taskjournal.models.parsed_note import ParsedNote
-from taskjournal.models.task import Task, Status
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.base import BaseService
 from taskjournal.services.file import FileService
@@ -118,20 +117,6 @@ class MigrationService(BaseService):
         if date.strftime("%A") != "Friday":
             return "18:30:00"
         return "14:00:00"
-
-    @staticmethod
-    def _format_md_task(task: Task) -> str:
-        # Manual formatting to MD style
-        check = " "
-        if task.status == Status.DONE:
-            check = "x"
-        elif task.status == Status.BLOCKED:
-            check = "-"
-
-        # We don't have task.github or task.link populated from regex usually,
-        # unless we improved the regex to capture [BE-123](url).
-        # For now, just dumping the description is safe.
-        return f" - [{check}] {task.description}"
 
     @staticmethod
     def _calculate_time_spent(start_date_time: str, end_date_time: str) -> str:

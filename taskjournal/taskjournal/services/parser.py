@@ -92,7 +92,8 @@ class DailyParserService(ParserService):
         ext = format_extension.lower()
         if not ext.startswith("."):
             ext = f".{ext}"
-        return self._strategies.get(ext, get_parse_strategy(ext))
+        strategy = self._strategies.get(ext)
+        return strategy if strategy is not None else get_parse_strategy(ext)
 
     def parse(self, file_path: str) -> ParsedNote | None:
         try:

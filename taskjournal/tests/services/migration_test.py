@@ -5,7 +5,6 @@ from pytest_mock import MockerFixture
 from datetime import datetime
 
 from taskjournal.models.parsed_note import ParsedNote
-from taskjournal.models.task import Status, Task
 from taskjournal.services.migration import MigrationService
 
 
@@ -188,18 +187,6 @@ class TestMigration:
             MigrationService._get_end_time(datetime(2025, 1, 10, 10, 0, 0))
             == "14:00:00"
         )
-
-    def test_format_md_task_for_all_statuses(self) -> None:
-        # given
-        done = Task(id="1", description="done", status=Status.DONE)
-        blocked = Task(id="2", description="blocked", status=Status.BLOCKED)
-        # when
-        todo = Task(id="3", description="todo", status=Status.TODO)
-
-        # then
-        assert MigrationService._format_md_task(done) == " - [x] done"
-        assert MigrationService._format_md_task(blocked) == " - [-] blocked"
-        assert MigrationService._format_md_task(todo) == " - [ ] todo"
 
     def test_calculate_time_spent_valid_and_fallback(
         self, mocker: MockerFixture

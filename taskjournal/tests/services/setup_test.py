@@ -4,6 +4,7 @@ from pytest import fixture
 from pytest_mock import MockerFixture
 
 from taskjournal.config import TEMPLATE_FORMAT
+from taskjournal.constants import PLACEHOLDER_HOME_WIFI, PLACEHOLDER_OFFICE_WIFI
 from taskjournal.services.setup import SetupService, _DEFAULTS, ENV_PATH
 
 
@@ -25,6 +26,8 @@ class TestSetupService:
 
         assert result["TEMPLATE_FORMAT"] == "md"
         assert result["JIRA_API_TOKEN"] == "your-jira-key"
+        assert result["HOME_WIFI"] == PLACEHOLDER_HOME_WIFI
+        assert result["OFFICE_WIFI"] == PLACEHOLDER_OFFICE_WIFI
         assert result == _DEFAULTS
 
     def test_load_existing_parses_env_file(

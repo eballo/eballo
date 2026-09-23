@@ -4,6 +4,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from taskjournal.constants import PLACEHOLDER_HOME_WIFI, PLACEHOLDER_OFFICE_WIFI
+
 dotenv_path = Path.home() / ".config" / "taskjournal" / ".env"
 
 if not dotenv_path.exists():
@@ -76,8 +78,8 @@ AI_PROVIDER = os.getenv("AI_PROVIDER", "claude_code")
 MANAGER_NAME = os.getenv("MANAGER_NAME", "")
 
 # Wifi
-HOME_WIFI = os.getenv("HOME_WIFI", "CodePI")
-OFFICE_WIFI = os.getenv("OFFICE_WIFI", "TSH")
+HOME_WIFI = os.getenv("HOME_WIFI", PLACEHOLDER_HOME_WIFI)
+OFFICE_WIFI = os.getenv("OFFICE_WIFI", PLACEHOLDER_OFFICE_WIFI)
 
 # Editor
 EDITOR_APP = os.getenv("EDITOR_APP", "Obsidian")

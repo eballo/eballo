@@ -1,6 +1,10 @@
 from collections.abc import Callable
+from importlib import reload
 from unittest.mock import MagicMock
 
+from pytest import MonkeyPatch
+
+import taskjournal.config as config
 from taskjournal.constants import PLACEHOLDER_HOME_WIFI, PLACEHOLDER_OFFICE_WIFI
 from taskjournal.services.base import ServiceStatus
 from taskjournal.services.wifi import WifiService
@@ -37,6 +41,33 @@ class TestWifiService:
         from taskjournal.services.setup import _DEFAULTS
         assert _DEFAULTS["HOME_WIFI"] == PLACEHOLDER_HOME_WIFI
         assert _DEFAULTS["OFFICE_WIFI"] == PLACEHOLDER_OFFICE_WIFI
+
+    def test_config_wifi_defaults_and_overrides(self, monkeypatch: MonkeyPatch) -> None:
+        try:
+            with monkeypatch.context() as patch:
+                patch.setattr(config, "load_dotenv", lambda _: None)
+                patch.delenv("HOME_WIFI", raising=False)
+                patch.delenv("OFFICE_WIFI", raising=False)
+
+                reload(config)
+                assert config.HOME_WIFI == PLACEHOLDER_HOME_WIFI
+                assert config.OFFICE_WIFI == PLACEHOLDER_OFFICE_WIFI
+                assert (
+                    WifiService(config.HOME_WIFI, config.OFFICE_WIFI).health_check().status
+                    == ServiceStatus.UNCONFIGURED
+                )
+
+                patch.setenv("HOME_WIFI", "MyHome")
+                patch.setenv("OFFICE_WIFI", "MyOffice")
+                reload(config)
+                assert config.HOME_WIFI == "MyHome"
+                assert config.OFFICE_WIFI == "MyOffice"
+                assert (
+                    WifiService(config.HOME_WIFI, config.OFFICE_WIFI).health_check().status
+                    == ServiceStatus.OK
+                )
+        finally:
+            reload(config)
 
     def test_get_name_success(
         self,
