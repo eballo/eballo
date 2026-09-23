@@ -1,7 +1,13 @@
 from pytest_mock import MockerFixture
 
 from taskjournal.models.task import Status, Task, User
-from taskjournal.repositories.task_formatter import TaskFormatter
+from taskjournal.repositories.task_formatter import (
+    MarkdownFormatStrategy,
+    PlainTextFormatStrategy,
+    TaskFormatStrategy,
+    TaskFormatter,
+    get_format_strategy,
+)
 
 
 class TestTaskFormatter:
@@ -111,3 +117,25 @@ class TestTaskFormatter:
         assert "Task A" in result
         assert "Task B" in result
         logger.debug.assert_called_once_with(tasks)
+
+    def test_custom_strategy_injection(self) -> None:
+        class CustomStrategy(TaskFormatStrategy):
+            @property
+            def prefix(self) -> str:
+                return "* "
+
+            def format_task(
+                self, task: Task, with_name: bool = False, with_status: bool = False
+            ) -> str:
+                return f"* {task.description}"
+
+        formatter = TaskFormatter(strategy=CustomStrategy())
+        assert formatter.prefix == "* "
+        assert not formatter.is_txt
+        task = Task(id="1", description="Custom task", status=Status.TODO)
+        assert formatter.format_task(task) == "* Custom task"
+
+    def test_get_format_strategy(self) -> None:
+        assert isinstance(get_format_strategy("md"), MarkdownFormatStrategy)
+        assert isinstance(get_format_strategy("txt"), PlainTextFormatStrategy)
+        assert isinstance(get_format_strategy("unknown"), MarkdownFormatStrategy)
