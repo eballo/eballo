@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.78.0
+
+- refactor: unify working day period aggregation
+
 ## 0.77.0
 
 - refactor(parser): implement Strategy pattern for task parsing
