@@ -2,7 +2,11 @@ from dependency_injector import containers, providers
 
 import taskjournal.config as config
 from taskjournal.commands.commands import CommandManager
-from taskjournal.repositories.task_formatter import TaskFormatter
+from taskjournal.repositories.task_formatter import (
+    MarkdownFormatStrategy,
+    PlainTextFormatStrategy,
+    TaskFormatter,
+)
 from taskjournal.services.backup import BackupService
 from taskjournal.services.ai.base import NullAIService
 from taskjournal.services.ai.claude_code import ClaudeCodeService
@@ -72,7 +76,14 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     setup_service = providers.Singleton(SetupService)
-    task_formatter = providers.Singleton(TaskFormatter)
+    md_format_strategy = providers.Singleton(MarkdownFormatStrategy)
+    txt_format_strategy = providers.Singleton(PlainTextFormatStrategy)
+    format_strategy = providers.Selector(
+        lambda: "txt" if config.TEMPLATE_FORMAT == "txt" else "md",
+        md=md_format_strategy,
+        txt=txt_format_strategy,
+    )
+    task_formatter = providers.Singleton(TaskFormatter, strategy=format_strategy)
     recurring_service = providers.Singleton(RecurringTasksService)
     daily_parser = providers.Singleton(DailyParserService)
     feedback_service = providers.Singleton(FeedbackService, base_dir=str(config.BASE_DIR))
