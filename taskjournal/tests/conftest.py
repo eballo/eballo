@@ -283,7 +283,7 @@ def mock_today(mocker: MockerFixture) -> date:
 
 @fixture
 def jira_service(mocker: MockerFixture) -> JiraService:
-    mocker.patch("taskjournal.services.integrations.jira.JIRA", return_value=mocker.MagicMock())
+    mocker.patch("taskjournal.services.integrations.jira_gateway.JIRA", return_value=mocker.MagicMock())
     return JiraService(api_token="test-token", email="test@test.com", board_id="TEST", organization="testorg")
 
 

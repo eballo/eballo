@@ -16,6 +16,8 @@ from taskjournal.services.integrations.github import GithubService
 from taskjournal.services.integrations.github_gateway import GitHubGateway
 from taskjournal.services.calendar.holidays import HolidayService
 from taskjournal.services.integrations.jira import JiraService
+from taskjournal.services.integrations.jira_gateway import JiraGateway
+from taskjournal.services.integrations.jira_mapping import JiraTaskMapper
 from taskjournal.services.migration import MigrationService
 from taskjournal.services.ai.openai import OpenAIService
 from taskjournal.services.parser import DailyParserService
@@ -39,12 +41,21 @@ class AppContainer(containers.DeclarativeContainer):
     time_service = providers.Singleton(TimeService)
 
     # Core services — all config values injected here, not in the service files
+    jira_gateway = providers.Singleton(
+        JiraGateway,
+        api_token=config.JIRA_API_TOKEN,
+        email=config.JIRA_EMAIL,
+        organization=config.JIRA_ORGANIZATION,
+    )
+    jira_task_mapper = providers.Singleton(JiraTaskMapper)
     jira = providers.Singleton(
         JiraService,
         api_token=config.JIRA_API_TOKEN,
         email=config.JIRA_EMAIL,
         board_id=config.JIRA_BOARD_ID,
         organization=config.JIRA_ORGANIZATION,
+        gateway=jira_gateway,
+        mapper=jira_task_mapper,
     )
     github_gateway = providers.Singleton(GitHubGateway, token=config.GIT_HUB_TOKEN)
     github = providers.Singleton(

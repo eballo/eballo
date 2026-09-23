@@ -3,16 +3,15 @@ from __future__ import annotations
 from asyncio import gather
 from datetime import datetime, timedelta
 from json import dumps
-from re import sub
 from typing import Any
-from uuid import uuid4
 
 from httpx import AsyncClient
-from jira import JIRA
 from jira.resources import Sprint
 
-from taskjournal.models.task import Task, Status, Epic, User
+from taskjournal.models.task import Task, Status
 from taskjournal.services.base import BaseService, HealthCheckResult, ServiceStatus
+from taskjournal.services.integrations.jira_gateway import JiraGateway
+from taskjournal.services.integrations.jira_mapping import JiraTaskMapper
 from taskjournal.services.logger import logger
 
 _UNCONFIGURED_TOKEN = "your-jira-key"
@@ -26,22 +25,29 @@ class JiraService(BaseService):
         email: str,
         board_id: str,
         organization: str,
+        gateway: JiraGateway | None = None,
+        mapper: JiraTaskMapper | None = None,
     ) -> None:
         self.board_id = board_id
-        self.base_url = f"https://{organization}.atlassian.net"
-        self.auth = (email, api_token)
         self._api_token = api_token
+        self.gateway = gateway if gateway is not None else JiraGateway(api_token, email, organization)
+        self.mapper = mapper if mapper is not None else JiraTaskMapper()
 
-        if api_token == _UNCONFIGURED_TOKEN:
-            self.jira = None
-            return
+    @property
+    def base_url(self) -> str:
+        return self.gateway.base_url
 
-        try:
-            self.jira = JIRA(server=self.base_url, basic_auth=self.auth)
-            logger.debug("Jira successfully initialized")
-        except Exception as e:
-            logger.error(f"Failed to connect to Jira: {e}")
-            self.jira = None
+    @property
+    def auth(self) -> tuple[str, str]:
+        return self.gateway.auth
+
+    @property
+    def jira(self) -> Any:
+        return self.gateway.jira
+
+    @jira.setter
+    def jira(self, value: Any) -> None:
+        self.gateway.jira = value
 
     @property
     def name(self) -> str:
@@ -69,7 +75,7 @@ class JiraService(BaseService):
             return None
         try:
             # Only fetch active sprints to avoid pagination issues
-            sprints = self.jira.sprints(self.board_id, state="active")
+            sprints = self.gateway.sprints(self.board_id)
             logger.debug(
                 f"Fetched {len(sprints)} active sprints for board {self.board_id}"
             )
@@ -106,24 +112,25 @@ class JiraService(BaseService):
         )
 
     async def get_current_tasks_assigned_to_me_last_month(self) -> list[Task]:
-        last_month_str = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-        jql = f"assignee = currentUser() AND updated >= {last_month_str}"
-        return await self._get_issues(jql)
+        return await self._get_issues(self._recent_tasks_jql(30))
 
     async def get_current_tasks_assigned_to_me_last_6_months(self) -> list[Task]:
-        six_months_ago_str = (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d")
-        jql = f"assignee = currentUser() AND updated >= {six_months_ago_str}"
-        return await self._get_issues(jql)
+        return await self._get_issues(self._recent_tasks_jql(180))
 
     async def get_current_tasks_assigned_to_me_last_quarter(self) -> list[Task]:
-        quarter_ago_str = (datetime.now() - timedelta(days=91)).strftime("%Y-%m-%d")
-        jql = f"assignee = currentUser() AND updated >= {quarter_ago_str}"
-        return await self._get_issues(jql)
+        return await self._get_issues(self._recent_tasks_jql(91))
 
     async def get_current_tasks_assigned_to_me_last_year(self) -> list[Task]:
-        year_ago_str = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
-        jql = f"assignee = currentUser() AND updated >= {year_ago_str}"
-        return await self._get_issues(jql)
+        return await self._get_issues(self._recent_tasks_jql(365))
+
+    @staticmethod
+    def _recent_tasks_jql(days: int) -> str:
+        date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+        return f"assignee = currentUser() AND updated >= {date}"
+
+    @staticmethod
+    def _sprint_jql(sprint_id: str, extra_jql: str) -> str:
+        return f"sprint = {sprint_id}" + (f" AND {extra_jql}" if extra_jql else "")
 
     async def _get_tasks_in_sprint(self, extra_jql: str) -> list[Task]:
         active_sprint = self.get_active_sprint()
@@ -131,73 +138,23 @@ class JiraService(BaseService):
             logger.debug("No active sprint found, skipping task retrieval")
             return []
 
-        jql = f"sprint = {active_sprint.id}"
-        if extra_jql:
-            jql += f" AND {extra_jql}"
-
-        return await self._get_issues(jql)
+        return await self._get_issues(self._sprint_jql(str(active_sprint.id), extra_jql))
 
     async def _fetch_repo_from_dev_status(
         self, client: AsyncClient, issue_id: str, issue_key: str
     ) -> str | None:
-        base = f"{self.base_url}/rest/dev-status/latest/issue/detail"
-        try:
-            resp = await client.get(
-                base,
-                params={
-                    "issueId": issue_id,
-                    "applicationType": "GitHub",
-                    "dataType": "pullrequest",
-                },
-                headers={"Accept": "application/json"},
-            )
-            if resp.status_code == 404 or resp.status_code == 403:
-                return None
-            resp.raise_for_status()
-            data = resp.json() or {}
-
-            logger.debug(f"GitHub - {issue_key} {issue_id}")
-            logger.debug(dumps(data, indent=2))
-
-            details = data.get("detail", [])
-            for detail in details:
-                pull_requests = detail.get("pullRequests", [])
-                for pull_request in pull_requests:
-                    if (
-                        pull_request["status"] in ("OPEN", "MERGED")
-                        and issue_key in pull_request["name"]
-                    ):
-                        return str(pull_request["url"])
-        except Exception as e:
-            logger.debug(f"fetch failed for {issue_id}: {e}")
-
-        return None
+        return await self.gateway.fetch_repo_from_dev_status(client, issue_id, issue_key)
 
     async def _get_issues(self, jql: str) -> list[Task]:
         """
         Calls Jira Cloud API v3 `/rest/api/3/search/jql` asynchronously with httpx.
         Falls back gracefully if Jira is unavailable.
         """
-        url = f"{self.base_url}/rest/api/3/search/jql"
-        params: dict[str, str] = {
-            "jql": jql,
-            "startAt": "0",
-            "maxResults": "100",
-            "fields": "summary,status,assignee,parent,issuetype",
-        }
-
         logger.debug(f"JQL Query: {jql}")
 
         try:
-            async with AsyncClient(timeout=15.0, auth=self.auth) as client:
-                resp = await client.get(
-                    url,
-                    params=params,
-                    headers={"Accept": "application/json"},
-                )
-                resp.raise_for_status()
-
-                data = resp.json()
+            async with self.gateway.client() as client:
+                data = await self.gateway.search(client, jql)
                 issues = data.get("issues", []) or []
 
                 logger.debug(f"Total issues found: {len(issues)}")
@@ -208,32 +165,9 @@ class JiraService(BaseService):
                 idx_by_key: dict[str, int] = {}  # key -> index in tasks
 
                 for issue in issues:
-                    fields = issue.get("fields", {}) or {}
-                    if not fields:
+                    task = self.mapper.map_issue(issue, self.base_url)
+                    if task is None:
                         continue
-
-                    epic = None
-                    parent = fields.get("parent")
-                    if parent:
-                        epic = Epic(
-                            key=parent.get("key"),
-                            summary=parent.get("fields", {}).get("summary"),
-                        )
-
-                    assignee = fields.get("assignee")
-                    user = User(name=assignee["displayName"]) if assignee else None
-
-                    task = Task(
-                        id=str(uuid4()),
-                        key=issue.get("key"),
-                        description=self.sanitize_description(fields.get("summary") or ""),
-                        link=f"{self.base_url}/browse/{issue.get('key')}",
-                        status=self.get_task_status(
-                            fields.get("status", {}).get("name", "")
-                        ),
-                        epic=epic,
-                        assignee=user,
-                    )
                     tasks.append(task)
                     if task.key:
                         idx_by_key[task.key] = len(tasks) - 1
@@ -270,18 +204,8 @@ class JiraService(BaseService):
 
     @staticmethod
     def sanitize_description(text: str) -> str:
-        if not text:
-            return ""
-        # Remove < and > characters
-        return sub(r"[<>]", "", text)
+        return JiraTaskMapper.sanitize_description(text)
 
     @staticmethod
     def get_task_status(jira_status: str) -> Status:
-        status_mapping = {
-            "TO DO": Status.TODO,
-            "IN PROGRESS": Status.IN_PROGRESS,
-            "DONE": Status.DONE,
-            "BLOCKED": Status.BLOCKED,
-            "CODE REVIEW": Status.CODE_REVIEW,
-        }
-        return status_mapping.get(jira_status.upper(), Status.IN_PROGRESS)
+        return JiraTaskMapper.get_task_status(jira_status)

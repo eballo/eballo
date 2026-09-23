@@ -6,8 +6,11 @@ from unittest.mock import AsyncMock
 from pytest import mark
 from pytest_mock import MockerFixture
 
+from taskjournal.container import AppContainer
 from taskjournal.models.task import Status
 from taskjournal.services.integrations.jira import JiraService
+from taskjournal.services.integrations.jira_gateway import JiraGateway
+from taskjournal.services.integrations.jira_mapping import JiraTaskMapper
 
 
 class _FakeResponse:
@@ -57,13 +60,67 @@ class _FakeAsyncClient:
         return self._response
 
 
+def test_container_injects_jira_collaborators() -> None:
+    container = AppContainer()
+    assert container.jira().gateway is container.jira_gateway()
+    assert container.jira().mapper is container.jira_task_mapper()
+
+
+class TestJiraGateway:
+    @mark.asyncio
+    async def test_search_uses_jira_cloud_request(self) -> None:
+        gateway = JiraGateway("your-jira-key", "e@e.com", "org")
+        client = _FakeAsyncClient(response=_FakeResponse(payload={"issues": []}))
+
+        assert await gateway.search(client, "sprint = 42") == {"issues": []}
+        args, kwargs = client.calls[0]
+        assert args == ("https://org.atlassian.net/rest/api/3/search/jql",)
+        assert kwargs["params"] == {
+            "jql": "sprint = 42",
+            "startAt": "0",
+            "maxResults": "100",
+            "fields": "summary,status,assignee,parent,issuetype",
+        }
+        assert kwargs["headers"] == {"Accept": "application/json"}
+
+
+class TestJiraTaskMapper:
+    def test_maps_issue_with_epic_assignee_and_status(self) -> None:
+        mapper = JiraTaskMapper()
+        task = mapper.map_issue({
+            "key": "BE-1",
+            "fields": {
+                "summary": "Fix <this>",
+                "status": {"name": "CODE REVIEW"},
+                "parent": {"key": "EP-1", "fields": {"summary": "Epic"}},
+                "assignee": {"displayName": "Alice"},
+            },
+        }, "https://org.atlassian.net")
+
+        assert task is not None
+        assert task.key == "BE-1"
+        assert task.description == "Fix this"
+        assert task.link == "https://org.atlassian.net/browse/BE-1"
+        assert task.status == Status.CODE_REVIEW
+        assert task.epic is not None and task.epic.summary == "Epic"
+        assert task.assignee is not None and task.assignee.name == "Alice"
+
+    def test_missing_fields_are_ignored_and_unknown_status_defaults(self) -> None:
+        mapper = JiraTaskMapper()
+        assert mapper.map_issue({"key": "BE-1", "fields": {}}, "url") is None
+        task = mapper.map_issue({"fields": {"summary": "Task"}}, "url")
+        assert task is not None
+        assert task.key is None
+        assert task.status == Status.IN_PROGRESS
+
+
 class TestJira:
 
     def test_init_success_creates_jira_client(self, mocker: MockerFixture) -> None:
         # given
         jira_client = mocker.MagicMock()
         jira_ctor = mocker.patch(
-            "taskjournal.services.integrations.jira.JIRA", return_value=jira_client
+            "taskjournal.services.integrations.jira_gateway.JIRA", return_value=jira_client
         )
 
         # when
@@ -77,7 +134,7 @@ class TestJira:
 
     def test_init_failure_sets_jira_none(self, mocker: MockerFixture) -> None:
         # given
-        mocker.patch("taskjournal.services.integrations.jira.JIRA", side_effect=RuntimeError("boom"))
+        mocker.patch("taskjournal.services.integrations.jira_gateway.JIRA", side_effect=RuntimeError("boom"))
 
         # when
         service = JiraService(api_token="tok", email="e@e.com", board_id="BD", organization="org")
@@ -86,7 +143,7 @@ class TestJira:
         assert service.jira is None
 
     def test_init_skips_connection_when_unconfigured(self, mocker: MockerFixture) -> None:
-        jira_ctor = mocker.patch("taskjournal.services.integrations.jira.JIRA")
+        jira_ctor = mocker.patch("taskjournal.services.integrations.jira_gateway.JIRA")
 
         service = JiraService(
             api_token="your-jira-key", email="e@e.com", board_id="BD", organization="org"
@@ -390,7 +447,7 @@ class TestJira:
 
         # when
         fake_client = _FakeAsyncClient(response=_FakeResponse(payload=payload))
-        mocker.patch("taskjournal.services.integrations.jira.AsyncClient", return_value=fake_client)
+        mocker.patch("taskjournal.services.integrations.jira_gateway.AsyncClient", return_value=fake_client)
         mocker.patch.object(
             jira_service,
             "_fetch_repo_from_dev_status",
@@ -429,7 +486,7 @@ class TestJira:
         # given
         response = _FakeResponse(raise_exc=RuntimeError("http 500"))
         fake_client = _FakeAsyncClient(response=response)
-        mocker.patch("taskjournal.services.integrations.jira.AsyncClient", return_value=fake_client)
+        mocker.patch("taskjournal.services.integrations.jira_gateway.AsyncClient", return_value=fake_client)
 
         # when
         tasks = await jira_service._get_issues("assignee = currentUser()")
