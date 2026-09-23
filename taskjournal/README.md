@@ -1,7 +1,7 @@
 # Task Journal
 
 [![Version](https://img.shields.io/badge/version-0.85.0-blue.svg)](#task-journal)
-[![Python](https://img.shields.io/badge/python-3.12%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.14%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/badge/deps-uv-DE5FE9.svg?logo=astral&logoColor=white)](https://docs.astral.sh/uv/)
 [![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC.svg?logo=pytest&logoColor=white)](https://docs.pytest.org/)
 
@@ -211,7 +211,7 @@ Key variables:
 
 ## Requirements
 
-- Python 3.12+
+- Python 3.14+
 - [uv](https://docs.astral.sh/uv/) for dependency management and packaging
 
 ## Installation

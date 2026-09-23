@@ -3,7 +3,7 @@
 ## Project overview
 
 `taskjournal` is a Python CLI tool (`wk`) for managing engineering journals.
-Stack: Python 3.12, Typer, Rich, dependency-injector, uv.
+Stack: Python 3.14, Typer, Rich, dependency-injector, uv.
 
 ---
 
@@ -71,7 +71,7 @@ def process(data: dict[str, str], items: list[str]) -> bool:
     ...
 ```
 
-### 3. Use Python 3.12+ type syntax
+### 3. Use Python 3.14+ type syntax
 
 Never use `typing.List`, `typing.Dict`, `typing.Optional`, or `typing.Tuple`.
 

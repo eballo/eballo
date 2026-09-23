@@ -29,23 +29,21 @@ jobs:
         with:
           fetch-depth: 0  # Important for SonarCloud SCM data
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.14
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Install dependencies
         working-directory: taskjournal
-        run: poetry install
+        run: uv sync --frozen --python 3.14
 
       - name: Run checks with poe
         working-directory: taskjournal
-        run: poetry run poe coverage
+        run: uv run --frozen poe coverage
 
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@v8

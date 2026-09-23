@@ -7,7 +7,15 @@ from taskjournal.cli.context import get_manager, get_today, parse_date
 from taskjournal.models.task import Status
 from taskjournal.services.logger import console, logger
 
-_DOW_CHOICES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+_DOW_CHOICES = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+]
 
 
 def build_app() -> Typer:
@@ -30,12 +38,24 @@ def build_app() -> Typer:
             return
 
         _STATUS_STYLE: dict[str, tuple[str, str, str]] = {
-            "Done":        ("[green]✓[/green]",    "[green]done[/green]",          "[dim]{desc}[/dim]"),
-            "Blocked":     ("[red]✗[/red]",         "[bold red]blocked[/bold red]", "[bold red]{desc}[/bold red]"),
-            "In Progress": ("[blue]▶[/blue]",       "[blue]wip[/blue]",             "{desc}"),
-            "Code Review": ("[cyan]~[/cyan]",       "[cyan]review[/cyan]",          "[cyan]{desc}[/cyan]"),
+            "Done": ("[green]✓[/green]", "[green]done[/green]", "[dim]{desc}[/dim]"),
+            "Blocked": (
+                "[red]✗[/red]",
+                "[bold red]blocked[/bold red]",
+                "[bold red]{desc}[/bold red]",
+            ),
+            "In Progress": ("[blue]▶[/blue]", "[blue]wip[/blue]", "{desc}"),
+            "Code Review": (
+                "[cyan]~[/cyan]",
+                "[cyan]review[/cyan]",
+                "[cyan]{desc}[/cyan]",
+            ),
         }
-        _DEFAULT_STYLE: tuple[str, str, str] = ("[dim]○[/dim]", "[dim]todo[/dim]", "[dim]{desc}[/dim]")
+        _DEFAULT_STYLE: tuple[str, str, str] = (
+            "[dim]○[/dim]",
+            "[dim]todo[/dim]",
+            "[dim]{desc}[/dim]",
+        )
 
         table = Table(show_header=False, box=None, padding=(0, 1))
         table.add_column("icon", width=4)
@@ -152,7 +172,9 @@ def build_app() -> Typer:
             days = [d.strip().lower() for d in every.split(",")]
             invalid = [d for d in days if d not in _DOW_CHOICES]
             if invalid:
-                logger.error(f"Unknown days: {', '.join(invalid)}. Valid: {', '.join(_DOW_CHOICES)}")
+                logger.error(
+                    f"Unknown days: {', '.join(invalid)}. Valid: {', '.join(_DOW_CHOICES)}"
+                )
                 sys_exit(1)
         try:
             get_manager(ctx).add_recurring_task(description, days, monthly)
@@ -162,7 +184,9 @@ def build_app() -> Typer:
                 when = f"every {every}"
             else:
                 when = "every day"
-            console.print(f"[green]✓[/green] Recurring task added ({when}): {description}")
+            console.print(
+                f"[green]✓[/green] Recurring task added ({when}): {description}"
+            )
         except ValueError as e:
             logger.error(str(e))
             sys_exit(1)
@@ -185,7 +209,7 @@ def build_app() -> Typer:
             elif days == "monthly_first_workday":
                 when = "first workday of each month"
             else:
-                when = ", ".join(days)  # type: ignore[arg-type]
+                when = ", ".join(days)
             table.add_row(str(t.get("description", "")), when)
 
         console.print(table)
