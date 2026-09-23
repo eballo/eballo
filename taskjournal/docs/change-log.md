@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.84.0
+
+- refactor: move parser task strategies into parsing module
+
 ## 0.83.0
 
 - refactor: extract Jira gateway and task mapper
