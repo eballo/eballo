@@ -1503,7 +1503,6 @@ class TestCommands:
             f.write("## Planned Tasks\n[ ] Fix the bug\n[ ] Review PR\n")
 
         mocker.patch("taskjournal.commands.search.BASE_DIR", note_dir)
-        mocker.patch("taskjournal.commands.search.TEMPLATE_FORMAT", "md")
 
         results = cmd.search_notes("fix")
 
@@ -1525,7 +1524,6 @@ class TestCommands:
             f.write("Match here too\n")
 
         mocker.patch("taskjournal.commands.search.BASE_DIR", note_dir)
-        mocker.patch("taskjournal.commands.search.TEMPLATE_FORMAT", "md")
 
         daily_results = cmd.search_notes("match", note_type="daily")
         week_results = cmd.search_notes("match", note_type="week")

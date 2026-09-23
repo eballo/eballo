@@ -521,7 +521,7 @@ class TestDailyCheck:
 
         result = invoke_cli(["daily", "check"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "No tasks found" in result.output
 
     @freeze_time("2026-01-19 10:00:00")
@@ -574,7 +574,7 @@ class TestDailyCheck:
 
         result = invoke_cli(["daily", "check"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "issues" in caplog.text
 
 

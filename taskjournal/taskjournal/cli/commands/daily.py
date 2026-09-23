@@ -356,6 +356,7 @@ def build_app() -> Typer:
             console.print("[green]✓[/green] All checks passed.")
         else:
             logger.warning(f"{issues} issue{'s' if issues > 1 else ''} found.")
+            sys_exit(1)
 
     @app.command(
         "sync",

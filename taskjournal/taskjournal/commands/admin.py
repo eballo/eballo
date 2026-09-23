@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 from taskjournal.constants import (
     JIRA_MODE_ALL,
@@ -41,9 +42,17 @@ class AdminCommands:
         backup_file = self.backup_service.create()
         console.print(f"[green]✓[/green] Backup created at: {backup_file}")
 
+    def inspect_backup(self, backup_file: Path) -> list[tuple[Path, bool]]:
+        return self.backup_service.inspect(backup_file)
+
+    def restore_backup(self, backup_file: Path) -> list[Path]:
+        return self.backup_service.restore(backup_file)
+
     def schedule_backup(self, hour: int, minute: int) -> None:
         self.schedule_service.install(hour, minute)
-        console.print(f"[green]✓[/green] Backup schedule installed: runs daily at {hour:02d}:{minute:02d}")
+        console.print(
+            f"[green]✓[/green] Backup schedule installed: runs daily at {hour:02d}:{minute:02d}"
+        )
 
     def disable_backup_schedule(self) -> None:
         self.schedule_service.uninstall()

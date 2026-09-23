@@ -11,7 +11,7 @@ from taskjournal.commands.search import SearchCommands
 @fixture
 def notes_dir(tmp_path: Path, mocker: MockerFixture) -> Path:
     mocker.patch("taskjournal.commands.search.BASE_DIR", tmp_path)
-    mocker.patch("taskjournal.commands.search.TEMPLATE_FORMAT", "md")
+    mocker.patch("taskjournal.config.TEMPLATE_FORMAT", "md")
     return tmp_path
 
 
@@ -28,7 +28,7 @@ class TestSearchCommands:
         first.write_text("not axb\nfirst a.b  \nA.B again\n", encoding="utf-8")
         second = earlier / "2025-01-02-week-summary.md"
         second.write_text("a.b in summary\n", encoding="utf-8")
-        (earlier / "ignored.txt").write_text("a.b\n", encoding="utf-8")
+        (earlier / "ignored.rst").write_text("a.b\n", encoding="utf-8")
         (earlier / "ignored.MD").write_text("a.b\n", encoding="utf-8")
 
         result = SearchCommands().search_notes("a.b")
@@ -141,12 +141,16 @@ class TestSearchCommands:
 
         assert SearchCommands().search_notes("needle") == [(str(readable), 1, "needle")]
 
-    def test_search_notes__uses_configured_extension(
+    def test_search_notes__finds_both_extensions(
         self, notes_dir: Path, mocker: MockerFixture
     ) -> None:
-        mocker.patch("taskjournal.commands.search.TEMPLATE_FORMAT", "txt")
+        mocker.patch("taskjournal.config.TEMPLATE_FORMAT", "txt")
         matching = notes_dir / "notes.txt"
         matching.write_text("needle\n")
-        (notes_dir / "notes.md").write_text("needle\n")
+        markdown = notes_dir / "notes.md"
+        markdown.write_text("needle\n")
 
-        assert SearchCommands().search_notes("needle") == [(str(matching), 1, "needle")]
+        assert SearchCommands().search_notes("needle") == [
+            (str(markdown), 1, "needle"),
+            (str(matching), 1, "needle"),
+        ]

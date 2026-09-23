@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 from taskjournal.commands.admin import AdminCommands
 from taskjournal.commands.daily import DailyCommands
@@ -286,6 +287,12 @@ class CommandManager:
 
     def create_backup(self) -> None:
         return self._admin.create_backup()
+
+    def inspect_backup(self, backup_file: Path) -> list[tuple[Path, bool]]:
+        return self._admin.inspect_backup(backup_file)
+
+    def restore_backup(self, backup_file: Path) -> list[Path]:
+        return self._admin.restore_backup(backup_file)
 
     def schedule_backup(self, hour: int, minute: int) -> None:
         return self._admin.schedule_backup(hour, minute)

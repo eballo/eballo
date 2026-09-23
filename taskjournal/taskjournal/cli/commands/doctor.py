@@ -2,7 +2,7 @@ from pathlib import Path
 
 from rich.panel import Panel
 from rich.table import Table
-from typer import Context, Typer
+from typer import Context, Exit, Typer
 
 from taskjournal.cli.context import get_container
 from taskjournal.services.base import HealthCheckResult, ServiceStatus
@@ -49,6 +49,8 @@ def build_app() -> Typer:
         checks.append(("AI", container.ai_service().health_check()))
 
         _print_report(checks)
+        if any(result.status == ServiceStatus.ERROR for _, result in checks):
+            raise Exit(1)
 
     return app
 

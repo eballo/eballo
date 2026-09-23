@@ -47,6 +47,8 @@ For the full explanation of features, configuration, and command examples, see:
 
 `wk daily start` and `wk daily finish` display a brief animated marquee after completing (transient — leaves no trace in the terminal).
 
+`wk daily check` exits nonzero if the note is missing or has issues, making it suitable for automation.
+
 ### Alarm management (`wk alarm`)
 
 `wk daily start` automatically creates two macOS Reminders: a calm-down notice 30 minutes before the estimated finish, and a wrap-up notice at the estimated finish. `wk daily finish` cancels both. This feature can be toggled via `wk setup` or by setting `DAILY_ALARMS_ENABLED=false` in `.env`.
@@ -151,12 +153,18 @@ All commands accept `--date YYYY-MM-DD` to set the entry date (default: today).
 - `wk search -q <keyword> --from YYYY-MM-DD --to YYYY-MM-DD` — filter by date range
 - `wk search -q <keyword> --type daily|week` — filter by file type
 
+Search includes both Markdown and historical plain-text files, regardless of the currently configured template format.
+
 ### Admin (`wk setup`, `wk doctor`, `wk backup`, `wk migrate`)
 
 - `wk setup` — interactive wizard to configure paths, Jira, GitHub, AI provider, WiFi, editor, and manager
 - `wk doctor` — health check of configuration and all external integrations
+- `wk doctor` returns a nonzero exit code if any check reports a problem
 - `wk info show` — show current date, week, file paths, and integration status
 - `wk backup run` — create a backup of all notes
+- `wk backup verify <archive.zip>` — check ZIP integrity and reject unsafe entries without restoring anything
+- `wk backup restore <archive.zip>` — preview missing/existing files and confirm before restoring to `BASE_DIR`
+- `wk backup restore <archive.zip> --yes` — confirm noninteractively; existing notes are never overwritten
 - `wk backup schedule --time HH:MM` — schedule an automatic daily backup via cron
 - `wk backup schedule --disable` — remove the scheduled backup
 - `wk migrate daily <path>` — migrate legacy `.txt` daily notes to `.md` format
