@@ -3,7 +3,8 @@ from typing import Any
 from httpx import AsyncClient, TimeoutException, HTTPStatusError
 
 from taskjournal.models.parsed_note import ParsedNote
-from taskjournal.services.ai.base import AIService, build_daily_prompt, build_prompt
+from taskjournal.services.ai.base import AIService
+from taskjournal.services.ai.prompts import build_daily_prompt, build_prompt
 from taskjournal.services.base import HealthCheckResult, ServiceStatus
 from taskjournal.services.logger import logger
 
