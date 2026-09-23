@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.77.0
+
+- refactor(parser): implement Strategy pattern for task parsing
+
 ## 0.76.0
 
 - Implement Strategy pattern for TaskFormatter
