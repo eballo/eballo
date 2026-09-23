@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.87.0
+
+- test: raise project coverage to 98.32%
+
 ## 0.86.0
 
 - chore: upgrade project to Python 3.14
