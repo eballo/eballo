@@ -1,7 +1,9 @@
+from typing import Any
+
 from taskjournal.models.github import PullRequest, RepoCommitStat
 
 
-def map_pending_pr(item: dict) -> PullRequest:
+def map_pending_pr(item: dict[str, Any]) -> PullRequest:
     repo_url: str = item.get("repository_url", "")
     repo = repo_url.rsplit("/", 1)[-1] if repo_url else "unknown"
     return PullRequest(
@@ -13,11 +15,14 @@ def map_pending_pr(item: dict) -> PullRequest:
     )
 
 
-def review_is_approved(pr: dict, reviews: list[dict], user_login: str) -> bool:
+def review_is_approved(
+    pr: dict[str, Any], reviews: list[dict[str, Any]], user_login: str
+) -> bool:
     if pr.get("merged"):
         return True
     own_reviews = [
-        review for review in reviews
+        review
+        for review in reviews
         if ((review.get("user") or {}).get("login") or "").lower() == user_login.lower()
     ]
     if not own_reviews:

@@ -4,7 +4,7 @@ version = "0.84.0"
 description = "A Python project for tracking daily work tasks."
 authors = [{name = "Enric Ballo", email = "enric.ballo@gmail.com"}]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "rich>=13.9.4",
     "typer>=0.15.2",
@@ -42,10 +42,10 @@ build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 88
-target-version = ['py312']
+target-version = ['py314']
 
 [tool.mypy]
-python_version = 3.12
+python_version = 3.14
 ignore_missing_imports = true
 strict = true
 

@@ -1,5 +1,5 @@
 from json import dumps
-from typing import Any
+from typing import Any, cast
 
 from httpx import AsyncClient
 from jira import JIRA
@@ -25,7 +25,7 @@ class JiraGateway:
     def sprints(self, board_id: str) -> list[Any]:
         if self.jira is None:
             raise RuntimeError("Jira service unavailable.")
-        return self.jira.sprints(board_id, state="active")
+        return cast(list[Any], self.jira.sprints(board_id, state="active"))
 
     def client(self) -> AsyncClient:
         return AsyncClient(timeout=15.0, auth=self.auth)
@@ -42,7 +42,7 @@ class JiraGateway:
             headers={"Accept": "application/json"},
         )
         resp.raise_for_status()
-        return resp.json()
+        return cast(dict[str, Any], resp.json())
 
     async def fetch_repo_from_dev_status(
         self, client: AsyncClient, issue_id: str, issue_key: str
