@@ -38,8 +38,54 @@ class TestDoctor:
 
         result = invoke_cli(["doctor"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "wk setup" in result.output
+        assert "1 error" in result.output
+
+    def test_doctor_service_error_exits_nonzero(
+        self,
+        cli_container: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        env_file = tmp_path / ".env"
+        env_file.write_text("KEY=value")
+        mocker.patch("taskjournal.cli.commands.doctor.ENV_PATH", env_file)
+        cli_container.jira().health_check.return_value = HealthCheckResult(
+            ServiceStatus.ERROR, "Jira unavailable"
+        )
+
+        result = invoke_cli(["doctor"])
+
+        assert result.exit_code == 1
+        assert "Jira unavailable" in result.output
+        assert "1 error" in result.output
+
+    def test_doctor_warning_without_errors_succeeds(
+        self,
+        cli_container: MagicMock,
+        invoke_cli: Callable[[list[str]], Result],
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        env_file = tmp_path / ".env"
+        env_file.write_text("KEY=value")
+        mocker.patch("taskjournal.cli.commands.doctor.ENV_PATH", env_file)
+        mocker.patch.object(
+            cli_container.backup_service(),
+            "health_check",
+            return_value=HealthCheckResult(ServiceStatus.OK, "Backup paths OK"),
+        )
+        cli_container.jira().health_check.return_value = HealthCheckResult(
+            ServiceStatus.WARNING, "Jira warning"
+        )
+
+        result = invoke_cli(["doctor"])
+
+        assert result.exit_code == 0
+        assert "Jira warning" in result.output
+        assert "1 warning" in result.output
 
     def test_check_config_file_ok(
         self,
@@ -87,6 +133,7 @@ class TestDoctor:
         ]
         buf = StringIO()
         import taskjournal.cli.commands.doctor as _mod
+
         original = _mod.console
         _mod.console = Console(file=buf, highlight=False)
         try:
@@ -112,6 +159,7 @@ class TestDoctor:
         ]
         buf = StringIO()
         import taskjournal.cli.commands.doctor as _mod
+
         original = _mod.console
         _mod.console = Console(file=buf, highlight=False)
         try:

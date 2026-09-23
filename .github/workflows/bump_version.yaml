@@ -17,7 +17,7 @@ jobs:
   bump-version:
     if: "!contains(github.event.head_commit.message, 'Bump version:')"
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout main (full history + tags)

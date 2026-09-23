@@ -3,7 +3,7 @@ from os import walk
 from os.path import join
 from re import compile as re_compile, escape as re_escape, IGNORECASE, Pattern
 
-from taskjournal.config import TEMPLATE_FORMAT, BASE_DIR
+from taskjournal.config import BASE_DIR
 from taskjournal.services.logger import logger
 
 
@@ -23,7 +23,7 @@ class SearchCommands:
         for root, dirs, files in walk(str(BASE_DIR)):
             dirs.sort()
             for fname in sorted(files):
-                if not fname.endswith(f".{TEMPLATE_FORMAT}"):
+                if not fname.endswith((".md", ".txt")):
                     continue
                 if note_type == "daily" and "DailyNotes" not in fname:
                     continue
