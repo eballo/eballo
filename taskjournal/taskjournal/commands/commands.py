@@ -11,6 +11,9 @@ from taskjournal.models.task import Task
 from taskjournal.repositories.task_formatter import TaskFormatter
 from taskjournal.services.ai.base import AIService
 from taskjournal.services.backup import BackupService
+from taskjournal.services.daily_audit import DailyAuditService
+from taskjournal.services.daily_sync import DailySyncService
+from taskjournal.services.daily_statistics import DailyStatisticsService
 from taskjournal.services.feedback import FeedbackService
 from taskjournal.services.file import FileService
 from taskjournal.services.integrations.github import GithubService
@@ -43,6 +46,9 @@ class CommandManager:
         screen_time_service: ScreenTimeService | None = None,
         daily_alarms_enabled: bool = True,
         debug: bool = False,
+        daily_audit: DailyAuditService | None = None,
+        daily_sync: DailySyncService | None = None,
+        daily_statistics: DailyStatisticsService | None = None,
     ) -> None:
         self.jira = jira
         self.github = github
@@ -70,6 +76,9 @@ class CommandManager:
             recurring_service=self._recurring,
             daily_alarms_enabled=daily_alarms_enabled,
             debug=debug,
+            audit_service=daily_audit,
+            sync_service=daily_sync,
+            statistics_service=daily_statistics,
         )
         self._tasks = TaskCommands(
             parser=parser,

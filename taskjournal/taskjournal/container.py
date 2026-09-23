@@ -25,6 +25,9 @@ from taskjournal.services.time import TimeService
 from taskjournal.services.wifi import WifiService
 from taskjournal.services.calendar.working_days import WorkingDaysService
 from taskjournal.services.recurring import RecurringTasksService
+from taskjournal.services.daily_audit import DailyAuditService
+from taskjournal.services.daily_sync import DailySyncService
+from taskjournal.services.daily_statistics import DailyStatisticsService
 from taskjournal.services.feedback import FeedbackService
 from taskjournal.services.integrations.screentime import ScreenTimeService
 
@@ -106,6 +109,26 @@ class AppContainer(containers.DeclarativeContainer):
         wifi_service=wifi_service,
     )
 
+    daily_audit = providers.Singleton(
+        DailyAuditService,
+        file_service=file_service,
+        time_service=time_service,
+        parser=daily_parser,
+    )
+    daily_sync = providers.Singleton(
+        DailySyncService,
+        jira=jira,
+        github=github,
+        task_formatter=task_formatter,
+        file_service=file_service,
+        parser=daily_parser,
+    )
+    daily_statistics = providers.Singleton(
+        DailyStatisticsService,
+        parser=daily_parser,
+        audit=daily_audit,
+    )
+
     # Composite services
     migration = providers.Singleton(
         MigrationService,
@@ -130,4 +153,7 @@ class AppContainer(containers.DeclarativeContainer):
         feedback_service=feedback_service,
         screen_time_service=screen_time_service,
         daily_alarms_enabled=config.DAILY_ALARMS_ENABLED,
+        daily_audit=daily_audit,
+        daily_sync=daily_sync,
+        daily_statistics=daily_statistics,
     )
