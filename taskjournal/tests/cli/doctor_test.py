@@ -72,6 +72,11 @@ class TestDoctor:
         env_file = tmp_path / ".env"
         env_file.write_text("KEY=value")
         mocker.patch("taskjournal.cli.commands.doctor.ENV_PATH", env_file)
+        mocker.patch.object(
+            cli_container.backup_service(),
+            "health_check",
+            return_value=HealthCheckResult(ServiceStatus.OK, "Backup paths OK"),
+        )
         cli_container.jira().health_check.return_value = HealthCheckResult(
             ServiceStatus.WARNING, "Jira warning"
         )
