@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.83.0
+
+- refactor: extract Jira gateway and task mapper
+
 ## 0.82.0
 
 - refactor: extract GitHub gateway and response mapping
