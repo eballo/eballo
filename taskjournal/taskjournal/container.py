@@ -13,6 +13,7 @@ from taskjournal.services.ai.claude_code import ClaudeCodeService
 from taskjournal.services.file import FileService
 from taskjournal.services.calendar.fireman import FiremanService
 from taskjournal.services.integrations.github import GithubService
+from taskjournal.services.integrations.github_gateway import GitHubGateway
 from taskjournal.services.calendar.holidays import HolidayService
 from taskjournal.services.integrations.jira import JiraService
 from taskjournal.services.migration import MigrationService
@@ -45,10 +46,12 @@ class AppContainer(containers.DeclarativeContainer):
         board_id=config.JIRA_BOARD_ID,
         organization=config.JIRA_ORGANIZATION,
     )
+    github_gateway = providers.Singleton(GitHubGateway, token=config.GIT_HUB_TOKEN)
     github = providers.Singleton(
         GithubService,
         token=config.GIT_HUB_TOKEN,
         org_name=config.GIT_HUB_ORGANIZATION_NAME,
+        gateway=github_gateway,
     )
     openai = providers.Singleton(
         OpenAIService,

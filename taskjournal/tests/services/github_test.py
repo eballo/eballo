@@ -6,9 +6,12 @@ from unittest.mock import AsyncMock, patch
 from pytest import LogCaptureFixture, mark, raises
 from pytest_mock import MockerFixture
 
+from taskjournal.container import AppContainer
 from taskjournal.models.github import RepoCommitStat
 from taskjournal.models.task import Task, Status
 from taskjournal.services.integrations.github import GithubService
+from taskjournal.services.integrations.github_gateway import GitHubGateway
+from taskjournal.services.integrations.github_mapping import commit_stat, map_pending_pr, review_is_approved
 
 
 def make_fake_repos(names: Sequence[str]) -> list[dict[str, str]]:
@@ -39,6 +42,68 @@ def make_fake_getiter(
                             yield {}
 
     return fake_getiter
+
+
+class TestGitHubGateway:
+    @mark.asyncio
+    async def test_requests_use_the_injected_client(self, mocker: MockerFixture) -> None:
+        gateway = GitHubGateway("secret")
+        gh = mocker.MagicMock()
+        gh.getitem = mocker.AsyncMock(return_value={"login": "me"})
+        gh.getiter = make_fake_getiter([{"name": "repo"}], {})
+        gateway.gh = gh
+
+        assert await gateway.getitem("/user") == {"login": "me"}
+        assert [item async for item in gateway.getiter("/orgs/o/repos?type=all")] == [
+            {"name": "repo"}
+        ]
+        gh.getitem.assert_awaited_once_with("/user")
+
+    @mark.asyncio
+    async def test_count_pages_and_close(self, mocker: MockerFixture) -> None:
+        gateway = GitHubGateway("secret")
+        gh = mocker.MagicMock()
+
+        async def commits(_path: str) -> AsyncIterator[dict]:
+            for _ in range(3):
+                yield {}
+
+        gh.getiter = commits
+        gateway.gh = gh
+        gateway.client = mocker.MagicMock()
+        gateway.client.aclose = mocker.AsyncMock()
+
+        assert await gateway.count("/repos/o/r/commits") == 3
+        await gateway.close()
+        gateway.client.aclose.assert_awaited_once()
+
+    @mark.asyncio
+    async def test_requests_need_initialized_client(self) -> None:
+        gateway = GitHubGateway("secret")
+        with raises(RuntimeError, match="not initialized"):
+            await gateway.getitem("/user")
+        with raises(RuntimeError, match="not initialized"):
+            gateway.getiter("/user")
+
+
+def test_github_mapping_keeps_review_and_pr_rules() -> None:
+    pr = map_pending_pr({"number": 7, "title": "Fix", "html_url": "url", "user": None})
+    assert (pr.number, pr.repo, pr.author) == (7, "unknown", "unknown")
+    assert commit_stat("repo", 1, 4).percentage == 25.0
+
+    reviews = [
+        {"user": {"login": "ME"}, "state": "APPROVED", "submitted_at": "2025-01-01", "commit_id": "old"},
+        {"user": {"login": "me"}, "state": "APPROVED", "submitted_at": "2025-01-02", "commit_id": "new"},
+    ]
+    assert review_is_approved({"head": {"sha": "new"}}, reviews, "me") is True
+    assert review_is_approved({"head": {"sha": "later"}}, reviews, "me") is False
+    assert review_is_approved({"merged": True}, [], "me") is True
+    assert review_is_approved({}, [], "me") is False
+
+
+def test_container_injects_single_gateway_into_github_service() -> None:
+    container = AppContainer()
+    assert container.github().gateway is container.github_gateway()
 
 
 class TestGithub:
@@ -424,9 +489,9 @@ class TestGithub:
     ) -> None:
         # given
         mocker.patch(
-            "taskjournal.services.integrations.github.GitHubAPI", side_effect=Exception("boom")
+            "taskjournal.services.integrations.github_gateway.GitHubAPI", side_effect=Exception("boom")
         )
-        logger_mock = mocker.patch("taskjournal.services.integrations.github.logger")
+        logger_mock = mocker.patch("taskjournal.services.integrations.github_gateway.logger")
 
         # when
         service = GithubService(token="t", org_name="o")
