@@ -308,6 +308,45 @@ class TestWorkingDays:
         assert stats["days_at_office"] == 1
         assert stats["days_at_home"] == 1
 
+    def test_get_period_stats_includes_boundaries_and_ignores_missing_weekends(
+        self,
+        mocker: MockerFixture,
+        working_days_service_factory: Callable[[str], WorkingDaysService],
+    ) -> None:
+        service = working_days_service_factory("2026")
+        start_date = date(2026, 1, 2)  # Friday
+        end_date = date(2026, 1, 5)  # Monday
+
+        mocker.patch(
+            "taskjournal.services.time.TimeService.get_daily_notes_name",
+            side_effect=lambda day: f"{day.isoformat()}-DailyNotes.md",
+        )
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.exists",
+            side_effect=lambda path: "2026-01-02" in path,
+        )
+        mocker.patch(
+            "taskjournal.services.time.TimeService.get_total_time_from_daily_notes",
+            return_value=3600,
+        )
+        mocker.patch(
+            "taskjournal.services.calendar.working_days.DailyParserService.parse",
+            return_value=ParsedNote(work_from="office", summary=["Boundary note"]),
+        )
+
+        stats = service._get_period_stats(start_date, end_date, "/dummy/base")
+
+        assert stats == {
+            "start_date": start_date,
+            "end_date": end_date,
+            "total_time_seconds": 3600,
+            "total_worked_days": 1,
+            "vacation_days": 1,
+            "days_at_office": 1,
+            "days_at_home": 0,
+            "daily_summaries": ["Boundary note"],
+        }
+
     def test_get_quarter_stats(
         self,
         mocker: MockerFixture,
