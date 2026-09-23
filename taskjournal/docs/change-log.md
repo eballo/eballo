@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.80.0
+
+- refactor: extract AI prompt builders
+
 ## 0.79.0
 
 - refactor: extract AI prompt builders
