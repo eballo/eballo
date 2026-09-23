@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.82.0
+
+- refactor: extract GitHub gateway and response mapping
+
 ## 0.81.0
 
 - refactor: split daily audit, synchronization and statistics
