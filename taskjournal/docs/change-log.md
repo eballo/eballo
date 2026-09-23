@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.86.0
+
+- chore: upgrade project to Python 3.14
+
 ## 0.85.0
 
 - Refactor: retire legacy parser and consolidate shared defaults
