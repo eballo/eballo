@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.88.1
+
+- chore: refresh locked dependencies and add Dependabot config
+
 ## 0.88.0
 
 - Add safe backup recovery, mixed-format search and actionable CLI checks
