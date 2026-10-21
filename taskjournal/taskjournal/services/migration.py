@@ -87,7 +87,7 @@ class MigrationService(BaseService):
         start_date_time = note.start_time if note.start_time else "09:00:00"
         end_date_time = note.end_time if note.end_time else self._get_end_time(date)
 
-        daily_notes_content = Template(template_content).render(
+        daily_notes_content: str = Template(template_content).render(
             day_name=date.strftime("%A"),
             sprint_name=note.sprint_name if note.sprint_name else "No active sprint",
             date=note.date if note.date else date.strftime("%Y-%m-%d"),
