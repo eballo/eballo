@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.89.0
+
+- Bump the github-actions group with 2 updates
+
 ## 0.88.1
 
 - chore: refresh locked dependencies and add Dependabot config
