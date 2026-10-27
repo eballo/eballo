@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.90.0
+
+- Bump astral-sh/setup-uv from 10.3.0 to 10.3.2 in the github-actions group
+
 ## 0.89.0
 
 - Bump the github-actions group with 2 updates
