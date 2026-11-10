@@ -1,8 +1,5 @@
 # Brewfile - Security
 
-tap "homebrew/bundle"
-tap "homebrew/services"
-
 # Install Homebrew packages
 # brew "aircrack-ng"           # next-gen auth cracker [https://aircrack-ng.org/]
 # brew "certbot" if OS.linux?  # formerly letsencrypt [https://certbot.eff.org/]
@@ -12,6 +9,7 @@ brew "fzf"                   # cli fuzzy finder (in Go) [https://github.com/june
 # brew "hydra"                 # net logon cracker [https://github.com/vanhauser-thc/thc-hydra]
 # brew "john"                  # password cracker [https://www.openwall.com/john/]
 brew "nmap"                  # port scanner [https://nmap.org/]
+brew "clamav"                # antivirus engine [https://www.clamav.net/]
 # brew "rustscan"              # a modern port scanner [https://github.com/RustScan/RustScan]
 # brew "socat"                 # bidirectional byte streams [http://www.dest-unreach.org/socat/]
 # brew "sslscan"               # sslscan test suite [https://github.com/rbsec/sslscan]

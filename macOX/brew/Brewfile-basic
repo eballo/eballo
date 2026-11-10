@@ -1,9 +1,5 @@
 # Brewfile - Basic
 
-tap "homebrew/services"
-tap "homebrew/bundle"
-tap "homebrew/services"
-
 # Install Homebrew packages
 brew "git"
 brew "zsh"
@@ -21,6 +17,9 @@ brew "zsh-syntax-highlighting"
 brew "mas"
 brew "vim"
 brew "ffmpeg"
+brew "imagemagick"
+brew "gnu-sed"
+brew "pre-commit"
 
 # Install Homebrew Cask applications (GUI apps)
 cask "google-chrome"
@@ -28,7 +27,7 @@ cask "firefox"
 cask "opera"
 cask "iterm2"
 cask "spectacle"
-cask "docker"
+cask "docker-desktop"
 cask "spotify"
 cask "vlc"
 cask "visual-studio-code"
@@ -44,6 +43,8 @@ cask "font-oswald"
 cask "font-poppins"
 cask "font-raleway"
 cask "font-roboto"
+cask "font-monaspace"
 
 # Install Mac App Store apps
 mas "Xcode", id: 497799835
+mas "WhatsApp", id: 310633997

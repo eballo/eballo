@@ -40,24 +40,22 @@ handle_choice(){
   case $choice in
       1)
           echo "Basic"
-          brew bundle --file=brew/Brewfile-basic -v --no-lock
+          brew bundle --file=brew/Brewfile-basic -v
           ;;
       2)
           echo "Work"
-          brew bundle --file=brew/Brewfile-work -v --no-lock
+          brew bundle --file=brew/Brewfile-work -v
           ;;
       3)
           echo "Extra"
-          brew bundle --file=brew/Brewfile-extra -v --no-lock
+          brew bundle --file=brew/Brewfile-extra -v
           ;;
       4)
           echo "Security"
-          brew bundle --file=brew/Brewfile-extra -v --no-lock
+          brew bundle --file=brew/Brewfile-security -v
           ;;
       9)
           echo "Exiting..."
-          # shellcheck disable=SC2104
-          break
           ;;
       *)
           echo "Invalid choice, please try again."
@@ -80,8 +78,8 @@ homebrew_bundle_file_selection(){
     read choice
     handle_choice $choice
 
-        # Ensure we break out of the loop when Option 4 is chosen
-    if [[ $choice -eq 4 ]]; then
+    # Exit the loop when option 9 is chosen
+    if [[ $choice -eq 9 ]]; then
         break
     fi
   done
