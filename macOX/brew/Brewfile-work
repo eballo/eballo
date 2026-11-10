@@ -13,9 +13,17 @@ brew "terraform"             # automate infrastructure [https://www.terraform.io
 brew "terragrunt"            # thin wrapper for terraform [https://terragrunt.gruntwork.io/]
 brew "sops"                  # encrypted secrets management [https://github.com/getsops/sops]
 brew "uv"                    # fast python package/project manager [https://github.com/astral-sh/uv]
+brew "composer"              # PHP dependency manager [https://getcomposer.org/]
+brew "mkcert"                # locally-trusted dev certificates [https://github.com/FiloSottile/mkcert]
+brew "nss"                   # needed by mkcert for Firefox
+brew "openjdk@17"
+brew "openjdk@21"
 
 cask "slack"
 cask "jetbrains-toolbox"
+cask "dbeaver-community"
+cask "pgadmin4"
+cask "poedit"
 
 # brew libpq                 # postgres tool
 # brew "postgresql"

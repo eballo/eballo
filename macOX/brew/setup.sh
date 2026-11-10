@@ -52,12 +52,10 @@ handle_choice(){
           ;;
       4)
           echo "Security"
-          brew bundle --file=brew/Brewfile-extra -v --no-lock
+          brew bundle --file=brew/Brewfile-security -v --no-lock
           ;;
       9)
           echo "Exiting..."
-          # shellcheck disable=SC2104
-          break
           ;;
       *)
           echo "Invalid choice, please try again."
@@ -80,8 +78,8 @@ homebrew_bundle_file_selection(){
     read choice
     handle_choice $choice
 
-        # Ensure we break out of the loop when Option 4 is chosen
-    if [[ $choice -eq 4 ]]; then
+    # Exit the loop when option 9 is chosen
+    if [[ $choice -eq 9 ]]; then
         break
     fi
   done

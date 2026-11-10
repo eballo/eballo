@@ -1,8 +1,9 @@
 # Brewfile - Extra
 
 brew "graphviz"
+brew "stockfish"
 cask "adobe-digital-editions"
-cask "vnc-viewer"
+cask "realvnc-connect-viewer"
 cask "little-snitch"
 cask "raspberry-pi-imager"
 cask "discord"
@@ -10,3 +11,6 @@ cask "keka"
 cask "calibre"
 cask "sony-ps-remote-play"
 cask "textual"
+cask "inkscape"
+cask "gramps"
+cask "openscad@snapshot"
