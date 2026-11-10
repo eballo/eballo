@@ -1,9 +1,5 @@
 # Brewfile - Basic
 
-tap "homebrew/services"
-tap "homebrew/bundle"
-tap "homebrew/services"
-
 # Install Homebrew packages
 brew "git"
 brew "zsh"

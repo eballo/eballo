@@ -1,8 +1,5 @@
 # Brewfile - Work
 
-tap "homebrew/bundle"
-tap "homebrew/cask"
-
 brew "npm"
 brew "nvm"
 brew "yarn"

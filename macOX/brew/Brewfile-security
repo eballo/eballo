@@ -1,8 +1,5 @@
 # Brewfile - Security
 
-tap "homebrew/bundle"
-tap "homebrew/services"
-
 # Install Homebrew packages
 # brew "aircrack-ng"           # next-gen auth cracker [https://aircrack-ng.org/]
 # brew "certbot" if OS.linux?  # formerly letsencrypt [https://certbot.eff.org/]

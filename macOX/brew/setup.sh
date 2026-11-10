@@ -40,19 +40,19 @@ handle_choice(){
   case $choice in
       1)
           echo "Basic"
-          brew bundle --file=brew/Brewfile-basic -v --no-lock
+          brew bundle --file=brew/Brewfile-basic -v
           ;;
       2)
           echo "Work"
-          brew bundle --file=brew/Brewfile-work -v --no-lock
+          brew bundle --file=brew/Brewfile-work -v
           ;;
       3)
           echo "Extra"
-          brew bundle --file=brew/Brewfile-extra -v --no-lock
+          brew bundle --file=brew/Brewfile-extra -v
           ;;
       4)
           echo "Security"
-          brew bundle --file=brew/Brewfile-security -v --no-lock
+          brew bundle --file=brew/Brewfile-security -v
           ;;
       9)
           echo "Exiting..."
