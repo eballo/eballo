@@ -1,6 +1,6 @@
 # Task Journal — Roadmap
 
-> Based on analysis of the current codebase (v0.37.0). Organised into four horizons: foundational technical improvements, new features, extended features, and long-term ideas.
+> Reviewed against the codebase and open GitHub issues at v0.90.0 (2026-11-23). Organised into four horizons: foundational technical improvements, new features, extended features, and long-term ideas. Open GitHub issues are linked next to their roadmap entries.
 
 ---
 
@@ -369,17 +369,15 @@ These are not operational logs — they are user-facing output. Using `logger.in
 
 ---
 
-### 1.20 Holidays file: log level i auto-creació a l'audit
+### 1.20 Holidays file: log level and auto-creation in the audit (partially done)
 
-**Problema 1 — log sorollós en anys antics:**
-`get_streak_stats` (`commands/daily.py`) escaneja tots els fitxers DailyNotes de tots els anys per calcular el streak. Per cada any trobat intenta carregar `{BASE_DIR}/{year}/holidays/holidays.md`. Si l'any és passat i no té fitxer de holidays (p.ex. 2024), `HolidayService.load_and_parse` registrava `logger.error(...)` tot i que és una situació esperada. Ja corregit: canviat a `logger.warning`.
+**Problem 1 — noisy log for old years (✅ done):**
+`get_streak_stats` scans every DailyNotes file of every year to compute the streak and tries to load `{BASE_DIR}/{year}/holidays/holidays.md` for each. Past years without a holidays file (e.g. 2024) are an expected situation, so `HolidayService.load_and_parse` now logs `logger.warning` instead of `logger.error`.
 
-**Problema 2 — `wk daily audit` no crea el fitxer de holidays si no existeix:**
-`wk daily audit` detecta setmanes sense cobertura però no pot arreglar-ho si no existeix el fitxer `holidays/holidays.md` per aquell any. Si l'usuari executa `wk daily audit` i el fitxer de holidays no existeix, hauria d'oferir creuar-lo (o crear-lo automàticament buit) en lloc de fallar en silenci o mostrar un warning sense acció.
+**Problem 2 — `wk daily audit` does not create the holidays file when missing (⏳ pending):**
+`wk daily audit` detects weeks without coverage but cannot fix them when `holidays/holidays.md` does not exist for that year. It should offer to create it (or create an empty one automatically) instead of failing silently or showing a warning with no action.
 
-**Proposta:**
-1. ~~`logger.error` → `logger.warning`~~ en `HolidayService.load_and_parse` quan el fitxer no existeix (ja fet).
-2. `wk daily audit` hauria de detectar si `{BASE_DIR}/{year}/holidays/holidays.md` no existeix i oferir crear-lo via `wk setup` o copiar el template. Alternativament, `DailyCommands.audit_weekly_coverage` podria crear el fitxer buit si no existeix, igual que `wk setup` fa quan s'inicialitza el projecte.
+**Proposal:** `wk daily audit` detects a missing `{BASE_DIR}/{year}/holidays/holidays.md` and offers to create it from the template, as `wk setup` does when initialising the project. Entry point: `DailyCommands.audit_weekly_coverage` / `cli/commands/daily.py`.
 
 ---
 
@@ -909,6 +907,39 @@ wk feedback list --type received   # or: given
 
 ---
 
+## Horizon 2C — Ideas from GitHub issues
+
+Open issues that were not yet tracked in the roadmap.
+
+### 2C.1 `wk daily pending` — [#104](https://github.com/eballo/eballo/issues/104)
+
+Detect every `[ ]` task left open across daily notes and interactively ask which to carry to tomorrow, which to close and which to convert into new tickets. Builds on the carry-forward deduplication from 1.10 and the previous-day check from 1.8.
+
+---
+
+### 2C.2 `wk sprint report` — [#103](https://github.com/eballo/eballo/issues/103)
+
+A sprint report (default 2 weeks) as the natural step between the weekly and monthly reports. Daily notes already store `sprint_name`, which can be used to group days.
+
+---
+
+### 2C.3 Month report improvements — [#106](https://github.com/eballo/eballo/issues/106)
+
+- Month-over-month trends (hours, tasks, contribution %), which needs a lightweight history of monthly totals.
+- Code review breakdown (PRs reviewed, authors).
+- ASCII histogram of hours per weekday.
+- Planned vs reactive ratio (requires tagging unplanned tasks).
+- `wk month report --interactive` to answer the reflection questions and store the answers, so the next report can compare against them.
+- "Tasks carried to next month" section with the open `[ ]` items from all dailies of the month.
+
+---
+
+### 2C.4 Monthly report reminder — [#3](https://github.com/eballo/eballo/issues/3)
+
+Remind the user (e.g. on `wk daily start` near the end of the month) that the monthly report is due. Not implemented yet.
+
+---
+
 ## Horizon 3 — Long-term ideas
 
 Broader ideas that require more planning or depend on new infrastructure.
@@ -947,7 +978,7 @@ wk --profile internal week report
 
 ### 3.4 Calendar sync
 
-Read the calendar (Google Calendar / Outlook via API) to automatically populate the day's meetings in the notes section.
+Read the calendar (Google Calendar / Outlook via API) to automatically populate the day's meetings in the notes section. Tracked in [#112](https://github.com/eballo/eballo/issues/112) (Google Calendar integration) and [#6](https://github.com/eballo/eballo/issues/6) (only important meetings). Not implemented; `services/calendar/` currently only holds holidays, fireman weeks and working days.
 
 ---
 
@@ -1075,6 +1106,11 @@ Fallback: if the API is unreachable (timeout 5s), pick from a local hardcoded li
 | 2B.16 | Epic tags per daily note + `wk statistics tags` | Medium | High |
 | 2B.17 | macOS Screen Time integration — app usage in daily + week report | Medium | High |
 | 2B.18 | `wk feedback received/given` — capture feedback for performance reviews | Low | High |
+| 1.20 | Holidays file: auto-create on `wk daily audit` (log level part done) | Low | Medium |
+| 2C.1 | `wk daily pending` (#104) | Medium | High |
+| 2C.2 | `wk sprint report` (#103) | Medium | Medium |
+| 2C.3 | Month report improvements (#106) | Medium | High |
+| 2C.4 | Monthly report reminder (#3) | Low | Medium |
 | 3.1 | `wk export` | High | Medium |
 | 3.2 | TUI dashboard | High | High |
 | 3.3 | Multi-profile | High | Low |
